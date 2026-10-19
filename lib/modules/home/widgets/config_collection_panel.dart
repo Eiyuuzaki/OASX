@@ -541,7 +541,30 @@ class _SearchField extends StatelessWidget {
       decoration: InputDecoration(
         prefixIcon: const Icon(Icons.search_rounded),
         hintText: I18n.homeScriptSearchHint.tr,
-        border: const OutlineInputBorder(),
+        // 玻璃拟物化：半透明底 + 浅色描边，让底层 Acrylic 透出来
+        filled: true,
+        fillColor: Colors.white.withValues(alpha: 0.20),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: Colors.white.withValues(alpha: 0.35),
+            width: 1,
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: Colors.white.withValues(alpha: 0.35),
+            width: 1,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
+            width: 1.5,
+          ),
+        ),
         isDense: true,
       ),
       onChanged: onChanged,

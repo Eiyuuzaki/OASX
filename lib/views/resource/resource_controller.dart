@@ -1,4 +1,4 @@
-﻿part of resource;
+part of resource;
 
 /// 「资产」页状态管理。
 ///
@@ -26,17 +26,61 @@ class ResourceController extends GetxController {
   /// 过滤后的资源（只保留本地有图标的项），供界面直接渲染
   final visibleItems = <ResourceItemModel>[].obs;
 
+  /// 置顶的资源键（形如 `icon_gouyu`），置顶项永远排在网格最前。
+  ///
+  /// 用**图标名**作为键而不是 ID：资产本身由 (图标, 名称) 聚合得到，
+  /// 图标名稳定（跨期不变），换号/换期都不会失效。
+  final pinnedKeys = <String>{}.obs;
+
   Timer? _pollTimer;
+
+  /// 置顶状态的持久化 key（按配置隔离，不同脚本各自记住）
+  String get _pinStorageKey => 'resource.pinned.$name';
 
   @override
   void onInit() {
     super.onInit();
+    _loadPinned();
     bootstrap();
     // 采集器在后台跑，前端每 30 秒静默刷新一次
     _pollTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       if (!loading.value) _loadDay();
     });
   }
+
+  // ------------------------------------------------------------------ 置顶
+  void _loadPinned() {
+    try {
+      final raw = GetStorage().read(_pinStorageKey);
+      if (raw is List) {
+        pinnedKeys.assignAll(raw.map((e) => e.toString()).toSet());
+      }
+    } catch (_) {
+      // 读取失败不影响主流程
+    }
+  }
+
+  void _savePinned() {
+    try {
+      GetStorage().write(_pinStorageKey, pinnedKeys.toList());
+    } catch (_) {}
+  }
+
+  /// 切换某项的置顶状态
+  void togglePin(ResourceItemModel item) {
+    final key = stripImageExt(item.icon);
+    if (pinnedKeys.contains(key)) {
+      pinnedKeys.remove(key);
+    } else {
+      pinnedKeys.add(key);
+    }
+    _savePinned();
+    _applyIconFilter(); // 重新排序
+  }
+
+  /// 某项是否置顶
+  bool isPinned(ResourceItemModel item) =>
+      pinnedKeys.contains(stripImageExt(item.icon));
 
   @override
   void onClose() {
@@ -165,9 +209,16 @@ class ResourceController extends GetxController {
       }
     });
 
-    // 排序：按 |delta| 降序（与后端一致），再按名称
+    // 排序规则：
+    // 1. **置顶项永远最前**（用户主动钉住的，如勾玉）
+    // 2. 其余按 |delta| 降序（变动大的优先）
+    // 3. 最后按名称，保证顺序稳定
     final result = merged.values.toList()
       ..sort((a, b) {
+        final pa = isPinned(a);
+        final pb = isPinned(b);
+        if (pa != pb) return pa ? -1 : 1;
+
         final da = (a.delta ?? 0).abs();
         final db = (b.delta ?? 0).abs();
         if (da != db) return db.compareTo(da);

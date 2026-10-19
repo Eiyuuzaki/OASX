@@ -114,14 +114,17 @@ class TaskStatusRow extends StatelessWidget {
   }
 
   /// Resolves the row background by task bucket.
+  ///
+  /// 玻璃拟物化：所有状态都用低透明度，让卡片下的壁纸晕染上来。
   Color _rowBackground(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return switch (task.type) {
       TaskStatusType.running =>
-        scheme.tertiaryContainer.withValues(alpha: 0.24),
+        scheme.tertiaryContainer.withValues(alpha: 0.34),
       TaskStatusType.pending =>
-        scheme.secondaryContainer.withValues(alpha: 0.2),
-      TaskStatusType.waiting => scheme.surfaceContainerHigh,
+        scheme.secondaryContainer.withValues(alpha: 0.30),
+      // 原来是 surfaceContainerHigh（实色），会挡住玻璃质感
+      TaskStatusType.waiting => Colors.white.withValues(alpha: 0.08),
     };
   }
 

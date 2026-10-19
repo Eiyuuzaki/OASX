@@ -29,24 +29,50 @@ String? resourceIconAsset(String icon) {
 ///
 /// 图标放在 `OASX/assets/currency/`，文件名 = 游戏配置表里的 `icon` 字段（补 `.png`）。
 /// 找不到时退化为「首字 + 稳定配色」的圆形占位，保证任何情况下都能看。
+///
+/// **置顶**：右上角图钉按钮，钉住后该资产永远排在最前，
+/// 卡片同时加上主题色描边 + 图钉角标，与普通项明显区分。
 class ResourceCard extends StatelessWidget {
-  const ResourceCard({Key? key, required this.item, this.onTap}) : super(key: key);
+  const ResourceCard({
+    Key? key,
+    required this.item,
+    this.onTap,
+    this.pinned = false,
+    this.onTogglePin,
+  }) : super(key: key);
 
   final ResourceItemModel item;
   final VoidCallback? onTap;
 
+  /// 是否已置顶
+  final bool pinned;
+
+  /// 切换置顶（为 null 时不显示图钉按钮）
+  final VoidCallback? onTogglePin;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // 置顶项用主题色描边 + 略高的背景不透明度，视觉上明显"浮"出来
+    final borderColor = pinned
+        ? theme.colorScheme.primary.withValues(alpha: 0.75)
+        : theme.dividerColor.withValues(alpha: 0.3);
+    final bgColor = pinned
+        ? theme.colorScheme.primaryContainer.withValues(alpha: 0.28)
+        : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.45);
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        padding: const EdgeInsets.fromLTRB(10, 8, 6, 8),
         decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
+          color: bgColor,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: theme.dividerColor.withValues(alpha: 0.3)),
+          border: Border.all(
+            color: borderColor,
+            width: pinned ? 1.5 : 1,
+          ),
         ),
         child: Row(
           children: [
@@ -57,10 +83,25 @@ class ResourceCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(item.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall),
+                  Row(
+                    children: [
+                      if (pinned) ...[
+                        Icon(Icons.push_pin_rounded,
+                            size: 12, color: theme.colorScheme.primary),
+                        const SizedBox(width: 3),
+                      ],
+                      Flexible(
+                        child: Text(item.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              fontWeight:
+                                  pinned ? FontWeight.w600 : FontWeight.normal,
+                              color: pinned ? theme.colorScheme.primary : null,
+                            )),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 2),
                   Text(item.displayCount,
                       maxLines: 1,
@@ -70,9 +111,36 @@ class ResourceCard extends StatelessWidget {
                 ],
               ),
             ),
-            if (item.hasDelta) _delta(theme),
+            // 增量数值与图钉按钮分开，避免挤在一起
+            if (item.hasDelta) ...[
+              const SizedBox(width: 6),
+              _delta(theme),
+            ],
+            if (onTogglePin != null) ...[
+              const SizedBox(width: 4),
+              _pinButton(context),
+            ],
           ],
         ),
+      ),
+    );
+  }
+
+  /// 图钉按钮：置顶后填充显示，未置顶时半透明描边
+  Widget _pinButton(BuildContext context) {
+    final theme = Theme.of(context);
+    return IconButton(
+      onPressed: onTogglePin,
+      visualDensity: VisualDensity.compact,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints.tightFor(width: 26, height: 26),
+      tooltip: pinned ? '取消置顶' : '置顶',
+      icon: Icon(
+        pinned ? Icons.push_pin : Icons.push_pin_outlined,
+        size: 15,
+        color: pinned
+            ? theme.colorScheme.primary
+            : theme.disabledColor.withValues(alpha: 0.6),
       ),
     );
   }
@@ -114,23 +182,32 @@ class ResourceCard extends StatelessWidget {
   Widget _delta(ThemeData theme) {
     final positive = (item.delta ?? 0) > 0;
     final color = positive ? const Color(0xFF2E9E5B) : const Color(0xFFD0453B);
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Text(
-          item.displayDelta,
-          style: theme.textTheme.bodySmall
-              ?.copyWith(color: color, fontWeight: FontWeight.w600),
-        ),
-        Text(
-          item.deltaFrom == 'yesterday'
-              ? I18n.resource_vs_yesterday.tr
-              : I18n.resource_vs_earlier.tr,
-          style: theme.textTheme.labelSmall
-              ?.copyWith(color: theme.disabledColor, fontSize: 10),
-        ),
-      ],
+    return ConstrainedBox(
+      // 限宽：增量可能是 +1,234,567 这样的长数字，
+      // 不限制会把图钉按钮挤出卡片
+      constraints: const BoxConstraints(maxWidth: 88),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(
+            item.displayDelta,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodySmall
+                ?.copyWith(color: color, fontWeight: FontWeight.w600),
+          ),
+          Text(
+            item.deltaFrom == 'yesterday'
+                ? I18n.resource_vs_yesterday.tr
+                : I18n.resource_vs_earlier.tr,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.labelSmall
+                ?.copyWith(color: theme.disabledColor, fontSize: 10),
+          ),
+        ],
+      ),
     );
   }
 }

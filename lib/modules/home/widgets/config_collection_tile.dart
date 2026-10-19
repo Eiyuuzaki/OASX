@@ -44,9 +44,11 @@ class ConfigCollectionTile extends StatelessWidget {
               ConfigCollectionTile._compactLayoutThreshold +
               (showLinkCheckbox ? 64 : 0);
           final isCompact = constraints.maxWidth < compactThreshold;
+          // 玻璃拟物化：默认近乎透明，让卡片下的壁纸透上来；
+          // 选中态用主题色的低透明度版本做区分。
           final rowColor = isActive
-              ? theme.colorScheme.primaryContainer.withValues(alpha: 0.24)
-              : theme.cardColor;
+              ? theme.colorScheme.primaryContainer.withValues(alpha: 0.45)
+              : Colors.white.withValues(alpha: 0.06);
           final accentColor = _accentColor(
             context,
             controller.scriptCollectionStateFor(script),

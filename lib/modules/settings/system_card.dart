@@ -11,6 +11,7 @@ import 'package:oasx/service/app_update_service.dart';
 import 'package:oasx/service/locale_service.dart';
 import 'package:oasx/service/theme_service.dart';
 import 'package:oasx/service/window_service.dart';
+import 'package:oasx/service/acrylic_service.dart';
 import 'package:oasx/translation/i18n_content.dart';
 import 'package:oasx/utils/check_version.dart';
 import 'package:oasx/utils/platform_utils.dart';
@@ -31,6 +32,19 @@ class SystemSettingsCard extends StatelessWidget {
           left: Text(I18n.changeLanguage.tr),
           right: const LanguageToggle(),
         ),
+        if (PlatformUtils.isDesktop)
+          SettingItem(
+            left: Row(
+              children: [
+                Text('窗口毛玻璃'),
+                Tooltip(
+                  message: 'Acrylic 高斯模糊材质，让窗口透出桌面壁纸',
+                  child: const Icon(Icons.help_outline, size: 16),
+                ).paddingOnly(left: 5),
+              ],
+            ),
+            right: const AcrylicSwitch(),
+          ),
         if (PlatformUtils.isDesktop)
           SettingItem(
             left: Text(I18n.rememberWindowPositionSize.tr),
@@ -126,6 +140,9 @@ class LanguageToggle extends StatelessWidget {
   }
 }
 
+/// 主题切换：跟随系统 / 浅色 / 深色 三选一。
+///
+/// 与语言切换用同样的 ToggleButtons 样式，视觉一致且一目了然。
 class ThemeSwitcher extends StatelessWidget {
   const ThemeSwitcher({super.key});
 
@@ -133,13 +150,47 @@ class ThemeSwitcher extends StatelessWidget {
   Widget build(BuildContext context) {
     final themeService = Get.find<ThemeService>();
     return Obx(() {
-      return IconButton(
-        onPressed: themeService.switchTheme,
-        icon: const Icon(Icons.light_mode),
-        selectedIcon: const Icon(Icons.dark_mode),
-        isSelected: themeService.isDarkMode,
-      );
+      final mode = themeService.mode.value;
+      return ToggleButtons(
+        isSelected: [
+          mode == AppThemeMode.system,
+          mode == AppThemeMode.light,
+          mode == AppThemeMode.dark,
+        ],
+        onPressed: (index) => themeService.setMode(
+          switch (index) {
+            0 => AppThemeMode.system,
+            1 => AppThemeMode.light,
+            _ => AppThemeMode.dark,
+          },
+        ),
+        borderRadius: BorderRadius.circular(10),
+        children: [
+          Icon(Icons.brightness_auto, size: 18).paddingSymmetric(horizontal: 10),
+          Icon(Icons.light_mode, size: 18).paddingSymmetric(horizontal: 10),
+          Icon(Icons.dark_mode, size: 18).paddingSymmetric(horizontal: 10),
+        ],
+      ).constrained(maxHeight: 40);
     });
+  }
+}
+
+/// 窗口毛玻璃（Acrylic）开关。
+///
+/// 切换后立即应用材质并持久化；不支持材质的平台不渲染。
+class AcrylicSwitch extends StatelessWidget {
+  const AcrylicSwitch({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    if (!AcrylicService.supported) return const SizedBox.shrink();
+    return Obx(() => Switch(
+          value: AcrylicService.enabled.value,
+          onChanged: (value) => AcrylicService.setEnabled(
+            value,
+            dark: Get.find<ThemeService>().isDarkMode,
+          ),
+        ));
   }
 }
 

@@ -1,4 +1,4 @@
-﻿library resource;
+library resource;
 
 import 'dart:async';
 import 'dart:math' as math;
@@ -7,6 +7,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show AssetManifest, rootBundle;
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 
 import 'package:oasx/api/api_client.dart';
 import 'package:oasx/modules/common/widgets/frosted_bars.dart';
@@ -234,7 +235,9 @@ class _Empty extends StatelessWidget {
   }
 }
 
-/// 资源卡片网格：只渲染有图标的项，按增量绝对值排序（后端已排好）。
+/// 资源卡片网格：只渲染有图标的项。
+///
+/// 排序：**置顶项永远最前**，其余按 |delta| 降序（变动大的优先）。
 class _Grid extends StatelessWidget {
   const _Grid({required this.controller});
 
@@ -250,7 +253,8 @@ class _Grid extends StatelessWidget {
         padding: const EdgeInsets.all(10),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: columns,
-          mainAxisExtent: 70,
+          // 加了图钉按钮，卡片略高一点避免挤压
+          mainAxisExtent: 74,
           crossAxisSpacing: 8,
           mainAxisSpacing: 8,
         ),
@@ -259,6 +263,8 @@ class _Grid extends StatelessWidget {
           final item = items[index];
           return ResourceCard(
             item: item,
+            pinned: controller.isPinned(item),
+            onTogglePin: () => controller.togglePin(item),
             onTap: () => controller.showHistory(item),
           );
         },
