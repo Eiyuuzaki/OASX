@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:oasx/service/acrylic_service.dart';
 import 'package:oasx/modules/common/models/config_drag_payload.dart';
 import 'package:oasx/modules/home/controllers/dashboard_controller.dart';
 import 'package:oasx/modules/home/models/config_model.dart';
@@ -541,9 +542,12 @@ class _SearchField extends StatelessWidget {
       decoration: InputDecoration(
         prefixIcon: const Icon(Icons.search_rounded),
         hintText: I18n.homeScriptSearchHint.tr,
-        // 玻璃拟物化：半透明底 + 浅色描边，让底层 Acrylic 透出来
+        // 毛玻璃生效时用半透明底让底层透出来；否则用实色，避免白底白框
         filled: true,
-        fillColor: Colors.white.withValues(alpha: 0.20),
+        fillColor: AcrylicService.transparentBackground
+            ? Colors.white.withValues(alpha: 0.20)
+            : Theme.of(context).colorScheme.surfaceContainerHighest
+                .withValues(alpha: 0.6),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(

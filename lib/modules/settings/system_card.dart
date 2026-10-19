@@ -32,7 +32,8 @@ class SystemSettingsCard extends StatelessWidget {
           left: Text(I18n.changeLanguage.tr),
           right: const LanguageToggle(),
         ),
-        if (PlatformUtils.isDesktop)
+        // 只在桌面显示：移动端没有系统材质，开关点了也没用
+        if (AcrylicService.supported)
           SettingItem(
             left: Row(
               children: [

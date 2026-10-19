@@ -1,3 +1,4 @@
+import 'package:oasx/service/acrylic_service.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:oasx/modules/home/controllers/dashboard_controller.dart';
@@ -44,11 +45,17 @@ class ConfigCollectionTile extends StatelessWidget {
               ConfigCollectionTile._compactLayoutThreshold +
               (showLinkCheckbox ? 64 : 0);
           final isCompact = constraints.maxWidth < compactThreshold;
-          // 玻璃拟物化：默认近乎透明，让卡片下的壁纸透上来；
-          // 选中态用主题色的低透明度版本做区分。
+          // 选中态：毛玻璃下用主题色的低透明度，否则用较实的容器色
+          // 未选中：毛玻璃下近乎透明，否则用中性灰，避免白底白字
+          final glass = AcrylicService.transparentBackground;
           final rowColor = isActive
-              ? theme.colorScheme.primaryContainer.withValues(alpha: 0.45)
-              : Colors.white.withValues(alpha: 0.06);
+              ? (glass
+                  ? theme.colorScheme.primaryContainer.withValues(alpha: 0.45)
+                  : theme.colorScheme.primaryContainer.withValues(alpha: 0.55))
+              : (glass
+                  ? Colors.white.withValues(alpha: 0.06)
+                  : theme.colorScheme.surfaceContainerHighest
+                      .withValues(alpha: 0.55));
           final accentColor = _accentColor(
             context,
             controller.scriptCollectionStateFor(script),

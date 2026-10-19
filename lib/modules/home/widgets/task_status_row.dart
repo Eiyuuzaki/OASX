@@ -1,3 +1,4 @@
+import 'package:oasx/service/acrylic_service.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -115,16 +116,19 @@ class TaskStatusRow extends StatelessWidget {
 
   /// Resolves the row background by task bucket.
   ///
-  /// 玻璃拟物化：所有状态都用低透明度，让卡片下的壁纸晕染上来。
+  /// 毛玻璃生效时用低透明度让壁纸晕染上来；否则用较实的容器色，
+  /// 避免没有系统材质时白底白字。
   Color _rowBackground(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final glass = AcrylicService.transparentBackground;
     return switch (task.type) {
-      TaskStatusType.running =>
-        scheme.tertiaryContainer.withValues(alpha: 0.34),
-      TaskStatusType.pending =>
-        scheme.secondaryContainer.withValues(alpha: 0.30),
-      // 原来是 surfaceContainerHigh（实色），会挡住玻璃质感
-      TaskStatusType.waiting => Colors.white.withValues(alpha: 0.08),
+      TaskStatusType.running => scheme.tertiaryContainer
+          .withValues(alpha: glass ? 0.34 : 0.55),
+      TaskStatusType.pending => scheme.secondaryContainer
+          .withValues(alpha: glass ? 0.30 : 0.55),
+      TaskStatusType.waiting => glass
+          ? Colors.white.withValues(alpha: 0.08)
+          : scheme.surfaceContainerHigh,
     };
   }
 
