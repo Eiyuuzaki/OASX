@@ -1,14 +1,10 @@
-import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:oasx/model/const/storage_key.dart';
+import 'package:oasx/api/api_client.dart';
+import 'package:oasx/modules/common/models/storage_key.dart';
 
-import 'package:oasx/config/translation/i18n.dart';
-import 'package:path_provider/path_provider.dart';
-
-class LocaleService extends GetxService with DynamicMessages {
+class LocaleService extends GetxService {
   final _storage = GetStorage();
   final language = 'zh-CN'.obs;
 
@@ -18,7 +14,6 @@ class LocaleService extends GetxService with DynamicMessages {
 
   @override
   void onInit() {
-    loadMessage();
     language.value = _storage.read(StorageKey.language.name) ?? 'zh-CN';
     _updateLocale(language.value);
     super.onInit();
@@ -44,59 +39,24 @@ class LocaleService extends GetxService with DynamicMessages {
     if (code == null) return fallbackLocale;
     return Locale(code);
   }
-}
 
-mixin DynamicMessages {
-  late final Messages _messages = Messages();
-  Messages get messages => _messages;
+  Future<void> refreshTransFromRemote() async {
+    final additionalTrans = await ApiClient().getAdditionalTranslate();
+    Get.appendTranslations(additionalTrans);
 
-  Future<bool> loadMessage() async {
-    await _loadLocaleMessage('zh-CN');
-    await _loadLocaleMessage('en-US');
-    return true;
-  }
-
-  Future<bool> _loadLocaleMessage(String lang) async {
+    // 任务名（Exploration → 探索 等）不在 assets/i18n 里，
+    // 后端 /home/task_name_translate 从 zh-CN.json 过滤生成。
+    // 统计图的横条标签用 `taskName.tr` 渲染，缺了这批词条会显示英文原类名，
+    // 在固定宽度的标签栏里两行截断，视觉上就是"错位"。
     try {
-      Directory appDocDir = await getApplicationCacheDirectory();
-      // final json = await rootBundle.loadString('assets/i18n/$lang.json');
-      String filePath = '${appDocDir.path}/i18n/$lang.json';
-      File file = File(filePath);
-      String json = await file.readAsString();
-      final dataMap = jsonDecode(json) as Map<String, dynamic>;
-      dataMap.forEach(
-          (key, value) => _messages.translateUpdate(key, value, locale: lang));
-    } catch (e) {
-      printError(info: e.toString());
-    }
-    return true;
-  }
-
-  Future<bool> saveAdditionalTranslate(
-      Map<String, Map<String, String>> data) async {
-    await _saveAdditionalTranslate(data["zh-CN"]!, lang: 'zh-CN');
-    await _saveAdditionalTranslate(data["en-US"]!, lang: 'en-US');
-    return true;
-  }
-
-  Future<bool> _saveAdditionalTranslate(Map<String, String> data,
-      {String lang = "zh-CN"}) async {
-    try {
-      JsonEncoder encoder = const JsonEncoder.withIndent('  ');
-      String jsonString = encoder.convert(data);
-      Directory appDocDir = await getApplicationCacheDirectory();
-      String i18nDirPath = '${appDocDir.path}/i18n';
-      Directory i18nDir = Directory(i18nDirPath);
-      if (!i18nDir.existsSync()) {
-        i18nDir.createSync(recursive: true);
+      final taskNames = await ApiClient().getTaskNameTranslate();
+      if (taskNames.isNotEmpty) {
+        Get.appendTranslations({'zh-CN': taskNames});
       }
-      String filePath = '$i18nDirPath/$lang.json';
-      printInfo(info: 'Save additional translate to $filePath');
-      File file = File(filePath);
-      await file.writeAsString(jsonString);
-    } catch (e) {
-      printError(info: e.toString());
+    } catch (_) {
+      // 翻译失败不影响主流程：任务名回落为英文
     }
-    return true;
+
+    _updateLocale(language.value);
   }
 }

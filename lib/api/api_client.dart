@@ -1,147 +1,238 @@
-import 'package:flutter_nb_net/flutter_net.dart';
-import 'package:get/get.dart';
+﻿import 'dart:convert';
+
+import 'config_transfer_api.dart';
+import 'config_transfer_models.dart';
+
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_file_store/dio_cache_interceptor_file_store.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
+import 'package:flutter_nb_net/flutter_net.dart';
+import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:oasx/api/api_interceptor.dart';
-
-import 'package:oasx/component/dio_http_cache/dio_http_cache.dart';
-import 'package:oasx/config/translation/i18n.dart';
-import 'package:oasx/config/translation/i18n_content.dart';
-import 'package:oasx/utils/check_version.dart';
 import 'package:oasx/config/constants.dart';
-import 'package:oasx/controller/settings.dart';
+import 'package:oasx/modules/common/models/storage_key.dart';
+import 'package:oasx/modules/home/models/script_statistics_models.dart';
+import 'package:oasx/translation/i18n.dart';
+import 'package:oasx/translation/i18n_content.dart';
+import 'package:oasx/api/github_release_model.dart';
+import 'package:oasx/service/profile_service.dart';
+
 import './home_model.dart';
 import './update_info_model.dart';
+import 'dio_http_cache/dio_http_cache.dart';
 
-/// common result
+part 'api_client_menu_config.dart';
+part 'api_client_script.dart';
+part 'api_client_feedback.dart';
+part 'api_client_statistics.dart';
+part 'api_client_resource.dart';
+
+part 'api_client_config_transfer.dart';
+
 class ApiResult<T> {
+  ApiResult({this.data, this.error, this.code});
+
   final T? data;
   final String? error;
   final int? code;
 
-  bool get isSuccess => data != null;
+  bool get isSuccess => error == null || error!.isEmpty;
 
-  ApiResult.success(this.data)
-      : error = null,
-        code = null;
+  ApiResult.success(this.data) : error = null, code = null;
 
   ApiResult.failure(this.error, [this.code]) : data = null;
+
+  factory ApiResult.fromJson(Map<String, dynamic> json) {
+    return ApiResult(
+      data: json['data'],
+      error: json['error'],
+      code: json['code'],
+    );
+  }
+
+  factory ApiResult.fromResponse(dynamic value) {
+    if (value is Map<String, dynamic> &&
+        (value.containsKey('data') ||
+            value.containsKey('error') ||
+            value.containsKey('code'))) {
+      return ApiResult.fromJson(value);
+    }
+    return ApiResult.success(value as T?);
+  }
+
+  Map<String, dynamic> toJson() {
+    return {'data': data, 'error': error, 'code': code};
+  }
 }
 
 class ApiClient {
-  // 单例
+  static const String _defaultAddress = ProfileService.isPreview
+      ? 'http://127.0.0.1:22391'
+      : 'http://127.0.0.1:22288';
   static final ApiClient _instance = ApiClient._internal();
+
   factory ApiClient() => _instance;
-  ApiClient._internal() {
+
+  late final CacheOptions _cacheOptions;
+  final Future<ApiResult<dynamic>> Function(String path)?
+  _statisticsGetOverride;
+  bool? _statisticsSupported;
+  Future<bool>? _statisticsProbe;
+
+  /// Null until the backend's OpenAPI document has been checked.
+  bool? get statisticsSupported => _statisticsSupported;
+
+  @visibleForTesting
+  ApiClient.forTesting({
+    required Future<ApiResult<dynamic>> Function(String path) statisticsGet,
+  }) : _statisticsGetOverride = statisticsGet;
+
+  ApiClient._internal() : _statisticsGetOverride = null {
+    final temporaryDirectory =
+        GetStorage().read(StorageKey.temporaryDirectory.name) ?? '';
+    final cacheStore = kIsWeb
+        ? MemCacheStore()
+        : FileCacheStore(temporaryDirectory);
+    _cacheOptions = CacheOptions(
+      store: cacheStore,
+      policy: CachePolicy.request,
+      hitCacheOnErrorExcept: [401, 403],
+      maxStale: const Duration(days: 7),
+      priority: CachePriority.normal,
+      cipher: null,
+      keyBuilder: CacheOptions.defaultCacheKeyBuilder,
+      allowPostMethod: false,
+    );
     NetOptions.instance
         .setConnectTimeout(const Duration(seconds: 3))
         .enableLogger(false)
-        .addInterceptor(DioCacheInterceptor(
-            options: CacheOptions(
-          store:
-              FileCacheStore(Get.find<SettingsController>().temporaryDirectory),
-          policy: CachePolicy.request,
-          hitCacheOnErrorExcept: [401, 403],
-          maxStale: const Duration(days: 7),
-          priority: CachePriority.normal,
-          cipher: null,
-          keyBuilder: CacheOptions.defaultCacheKeyBuilder,
-          allowPostMethod: false,
-        )))
+        .addInterceptor(DioCacheInterceptor(options: _cacheOptions))
         .addInterceptor(ApiInterceptor())
         .create();
+    setAddress(_defaultAddress);
   }
 
-  // http://$address 地址的前缀开头
-  String address = '127.0.0.1:22288';
+  String address = _defaultAddress;
+
+  bool get hasConfiguredBackendAddress => address.trim().isNotEmpty;
+
+  static String resolveAddress(
+    String address, {
+    bool preview = ProfileService.isPreview,
+  }) {
+    if (preview) return 'http://127.0.0.1:22391';
+    final normalized = address.trim();
+    if (normalized.isEmpty) return '';
+    return normalized.startsWith('http://') || normalized.startsWith('https://')
+        ? normalized
+        : 'http://$normalized';
+  }
 
   void setAddress(String address) {
-    this.address = address;
-    NetOptions.instance.dio.options.baseUrl = address;
+    final normalized = resolveAddress(address);
+    if (this.address != normalized) {
+      _statisticsSupported = null;
+      _statisticsProbe = null;
+    }
+    this.address = normalized;
+    if (_statisticsGetOverride == null) {
+      NetOptions.instance.dio.options.baseUrl = normalized.isEmpty
+          ? _defaultAddress
+          : normalized;
+    }
   }
 
-  /// common request method
-  Future<ApiResult<T>> request<T>(Future<Result<T>> Function() apiFn) async {
+  void resetAddress() {
+    setAddress(_defaultAddress);
+  }
+
+  void clearAddress() {
+    setAddress('');
+  }
+
+  Future<ApiResult<T>> request<T>(
+    Future<Result<dynamic>> Function() apiFn, {
+    void Function(String msg, int code)? onError,
+  }) async {
     try {
       final res = await apiFn();
       return res.when(
-        success: (data) => ApiResult.success(data),
+        success: (data) => ApiResult.fromResponse(data),
         failure: (msg, code) {
-          printError(info: '${I18n.network_error_code}: $msg | $code'.tr);
-          switch (code) {
-            case 403:
-              break;
-            case 404:
-              showNetErrCodeSnackBar(I18n.network_not_found.tr, code);
-              break;
-            default:
-              showNetErrCodeSnackBar(msg, code);
-              break;
-          }
+          onError?.call(msg, code);
           return ApiResult.failure(msg, code);
         },
       );
     } catch (e) {
-      printError(info: '${I18n.network_error.tr}: $e');
-      showNetErrSnackBar();
+      printError(info: '$e');
       return ApiResult.failure(e.toString());
     }
   }
 
-// ----------------------------------   服务端地址测试   ----------------------------------
   Future<bool> testAddress() async {
-    final res = await request(() => get('/test'));
+    final res = await request(() => get('/test'), onError: (msg, code) {});
     return res.isSuccess && res.data == 'success';
   }
 
   Future<bool> killServer() async {
-    final res = await request(() => get('/home/kill_server'));
+    final res = await request(
+      () => get('/home/kill_server'),
+      onError: (msg, code) {},
+    );
     return res.isSuccess && res.data == 'success';
   }
 
-// ----------------------------------   杂接口  --------------------------------------------
   Future<bool> notifyTest(String setting, String title, String content) async {
-    final res = await request(() => post(
-          '/home/notify_test',
-          queryParameters: {
-            'setting': setting,
-            'title': title,
-            'content': content
-          },
-        ));
+    final res = await request(
+      () => post(
+        '/home/notify_test',
+        queryParameters: {
+          'setting': setting,
+          'title': title,
+          'content': content,
+        },
+      ),
+    );
     if (res.isSuccess && res.data == true) {
-      Get.snackbar(I18n.notify_test_success.tr, '');
+      Get.snackbar(I18n.notifyTestSuccess.tr, '');
       return true;
     }
-    Get.snackbar(I18n.notify_test_failed.tr, res.data.toString());
+    Get.snackbar(I18n.notifyTestFailed.tr, res.data.toString());
     return false;
   }
 
-  Future<GithubVersionModel> getGithubVersion() async {
-    final res = await request(() => get(
-          updateUrlGithub,
-          options: buildCacheOptions(const Duration(days: 7)),
-          decodeType: GithubVersionModel(),
-        ));
-    return res.isSuccess ? res.data : GithubVersionModel();
+  Future<GithubReleaseModel> getGithubRelease() async {
+    final res = await getGithubReleaseResult();
+    return res.isSuccess && res.data != null ? res.data! : GithubReleaseModel();
+  }
+
+  Future<ApiResult<GithubReleaseModel>> getGithubReleaseResult() async {
+    final res = await request<GithubReleaseModel>(
+      () => get(updateUrlGithub, decodeType: GithubReleaseModel()),
+    );
+    return res;
   }
 
   Future<ReadmeGithubModel> getGithubReadme() async {
-    final res = await request(() => get(
-          readmeUrlGithub,
-          options: buildCacheOptions(const Duration(days: 7),
-              options: Options(extra: {"cache": true})),
-          decodeType: ReadmeGithubModel(),
-        ));
+    final res = await request(
+      () => get(
+        readmeUrlGithub,
+        options: buildCacheOptions(
+          const Duration(days: 7),
+          options: Options(extra: {'cache': true}),
+        ),
+        decodeType: ReadmeGithubModel(),
+      ),
+    );
     return res.isSuccess ? res.data : ReadmeGithubModel();
   }
 
   Future<UpdateInfoModel> getUpdateInfo() async {
-    final res = await request(() => get(
-          '/home/update_info',
-          decodeType: UpdateInfoModel(),
-        ));
-    return res.isSuccess ? res.data : UpdateInfoModel();
+    final res = await request(() => get('/home/update_info'));
+    return res.isSuccess
+        ? UpdateInfoModel.fromJson(res.data)
+        : UpdateInfoModel();
   }
 
   Future<String?> getExecuteUpdate() async {
@@ -153,127 +244,27 @@ class ApiClient {
     return res.data;
   }
 
-  Future<Map?> exportDiagnostic({String configName = ''}) async {
-    final res = await request(
-        () => get('/home/export_diagnostic', queryParameters: {'config_name': configName}));
-    if (res.isSuccess && res.data is Map) {
-      return res.data as Map;
-    }
-    return null;
-  }
-
   Future<bool> putChineseTranslate() async {
-    final res = await request(() => put(
-          '/home/chinese_translate',
-          data: Messages().all_cn_translate,
-        ));
+    final res = await request(
+      () => put('/home/chinese_translate', data: Messages().all_cn_translate),
+    );
     return res.isSuccess && res.data == true;
   }
 
   Future<Map<String, Map<String, String>>> getAdditionalTranslate() async {
     final res = await request(() => get('/home/additional_translate'));
-    Map<String, Map<String, String>> result = {};
-    if (res.isSuccess) {
-      result["zh-CN"] = res.data["zh-CN"].cast<String, String>();
-      result["en-US"] = res.data["en-US"].cast<String, String>();
+    final result = <String, Map<String, String>>{};
+    if (res.isSuccess && res.data is Map) {
+      for (final language in ['zh-CN', 'en-US']) {
+        final entries =
+            res.data[language] ?? res.data[language.replaceAll('-', '_')];
+        if (entries is Map) {
+          result[language.replaceAll('-', '_')] = entries.map(
+            (key, value) => MapEntry(key.toString(), value.toString()),
+          );
+        }
+      }
     }
     return result;
-  }
-
-// ----------------------------------   菜单项管理   ----------------------------------
-  Future<Map<String, List<String>>> getScriptMenu() async {
-    final res = await request(() => get('/script_menu'));
-    return ((res.data ?? {}) as Map).map((k, v) =>
-        MapEntry(k.toString(), (v as List).map((e) => e.toString()).toList()));
-  }
-
-  Future<Map<String, List<String>>> getHomeMenu() async {
-    final res = await request(() => get('/home/home_menu'));
-    return ((res.data ?? {}) as Map).map((k, v) =>
-        MapEntry(k.toString(), (v as List).map((e) => e.toString()).toList()));
-  }
-
-// ----------------------------------   配置文件管理   ----------------------------------
-  Future<List<String>> getConfigList() async {
-    final res = await request(() => get('/config_list'));
-    return ['Home', ...(res.data?.cast<String>() ?? [])];
-  }
-
-  Future<List<String>> getScriptList() async {
-    final res = await request(() => get('/config_list'));
-    return [...(res.data?.cast<String>() ?? [])];
-  }
-
-  Future<String> getNewConfigName() async {
-    final res = await request(() => get('/config_new_name'));
-    return res.isSuccess ? res.data : '';
-  }
-
-  Future<List<String>> configCopy(String newName, String template) async {
-    final res = await request(() => post(
-          '/config_copy',
-          queryParameters: {'file': newName, 'template': template},
-        ));
-    return ['Home', ...(res.data?.cast<String>() ?? [])];
-  }
-
-  Future<List<String>> getConfigAll() async {
-    final res = await request(() => get('/config_all'));
-    return res.data?.cast<String>() ?? ['template'];
-  }
-
-  Future<bool> deleteConfig(String name) async {
-    final res = await request(() => delete(
-          '/config',
-          queryParameters: {'name': name},
-        ));
-    return res.isSuccess && res.data;
-  }
-
-  Future<bool> renameConfig(String oldName, String newName) async {
-    final res = await request(() => put(
-          '/config',
-          queryParameters: {'old_name': oldName, 'new_name': newName},
-        ));
-    return res.isSuccess && res.data;
-  }
-
-// ---------------------------------   脚本实例管理   ----------------------------------
-
-  Future<Map<String, dynamic>> getScriptTask(
-      String scriptName, String taskName) async {
-    final res = await request(() => get('/$scriptName/$taskName/args'));
-    return res.data ?? {};
-  }
-
-  Future<bool> putScriptArg(
-    String scriptName,
-    String taskName,
-    String groupName,
-    String argumentName,
-    String type,
-    dynamic value,
-  ) async {
-    final res = await request(() => put(
-          '/$scriptName/$taskName/$groupName/$argumentName/value',
-          queryParameters: {'types': type, 'value': value},
-        ));
-    return res.isSuccess && res.data == true;
-  }
-
-// ---------------------------------   Snackbar --------------------------------
-  void showDialog(String title, String content) {
-    Get.snackbar(title, content);
-  }
-
-  void showNetErrSnackBar() {
-    Get.snackbar(I18n.network_error.tr, I18n.network_connect_timeout.tr,
-        duration: const Duration(seconds: 2));
-  }
-
-  void showNetErrCodeSnackBar(String msg, int code) {
-    Get.snackbar(
-        I18n.network_error.tr, '${I18n.network_error_code.tr}: $code | $msg',
-        duration: const Duration(seconds: 2));
   }
 }

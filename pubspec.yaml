@@ -38,7 +38,7 @@ dependencies:
   device_preview: ^1.2.0 # 模拟设备进行响应式调试
   responsive_builder: ^0.7.0 # 响应式布局
   styled_widget: ^0.4.1 # 优雅的写UI,扔掉嵌套地狱吧
-  flutter_form_builder: ^9.1.0 # 表单
+  flutter_form_builder: ^10.2.0 # 表单
   form_builder_validators: ^11.0.0 # 表单验证
   get_storage: ^2.1.1 # 本地存储
   expansion_tile_group: ^1.2.3 # 多级列表
@@ -50,6 +50,12 @@ dependencies:
   flutter_client_sse: ^2.0.1 # sse
   flutter_nb_net: ^2.0.2 # 基于Dio的封装
   flutter_pickers: ^2.1.9 # 时间选择
+  fl_chart: ^0.71.0 # 统计图表（任务耗时/战斗次数趋势）
+  system_tray: ^2.0.3
+  flutter_staggered_grid_view: ^0.7.0
+  flutter_slidable: ^4.0.3
+  intl: ^0.20.2
+  crypto: ^3.0.6
   web_socket_channel: ^2.4.0 # ws
   flutter_markdown: ^0.6.18+2 # 渲染MD
   markdown_widget: ^2.3.1
@@ -67,6 +73,7 @@ dependencies:
   chinese_font_library: ^1.2.0 # 桌面平台中文字体处理
   yaml: ^3.1.2 # yaml文件处理
   logger: ^2.6.2 # 日志
+  flutter_acrylic: ^1.1.4
 
 flutter_launcher_icons:
   android: true
@@ -111,6 +118,9 @@ flutter:
   assets:
     - assets/release.txt
     - assets/images/Icon-app.png
+    # 资产页资源图标：文件名 = 游戏配置表里的 icon 字段 + .png
+    # 目录必须存在且至少有一个文件，否则 pub get 会报错
+    - assets/currency/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware

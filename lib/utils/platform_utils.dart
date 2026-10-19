@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
@@ -118,4 +118,5 @@ class PlatformUtils {
   static bool get isMobile => isAndroid || isIOS || isFuchsia;
 
   static bool get isDesktop => isWindows || isMacOS || isLinux;
+  static bool get usesDesktopLayout => isDesktop || isWeb;
 }
