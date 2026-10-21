@@ -42,6 +42,12 @@ OAS 先试过 Qt for Python + QML + FluentUI，问题反而更多：QML 生态�
 后端没有统计路由时不会报错——启动时先查 `/openapi.json`，缺路由就显示空态。
 任务名走后端 `/home/task_name_translate` 映射成中文（182 条）。
 
+本分支按 Material 3 重做了统计界面：概览三指标块（Card.filled tonal）、
+进度条改 8px 细轨 + 圆角覆盖段（数值独立右列）、明细列表两行布局
+（tabular figures 等宽对齐时长、primaryContainer 序号头像）。
+连接状态指示只在「今天」有实时流时出现——历史数据是静态的，
+放个「云端已同步」云图标语义是错的（数据从不上云）。
+
 ### 资产面板
 
 本分支新增。用 Frida attach 到游戏进程，借游戏内嵌的 CPython 读
@@ -60,6 +66,8 @@ OAS 先试过 Qt for Python + QML + FluentUI，问题反而更多：QML 生态�
   不做轮询。
 - **可以置顶**。常用的资产（比如勾玉）钉在网格最前，位置不再随当天增量变化。
   置顶状态存在 GetStorage，按脚本配置隔离。
+- **工具条按 M3 重做**。角色与日期为胶囊下拉按钮（MenuAnchor），
+  采集状态用 8px 小圆点表意，空状态有 tonal 圆形容器托底 + 胶囊 FilledButton。
 
 ### 服务器显示名
 
@@ -67,10 +75,12 @@ OAS 先试过 Qt for Python + QML + FluentUI，问题反而更多：QML 生态�
 原来两个字段容易混：`ServerName` 是渠道注册用的，`showName` 才是玩家看到的。
 映射取自 `ServerManager.getServerDefineByServerID()`，155 个服务器全量。
 
-### 窗口毛玻璃
+### 窗口材质
 
-Windows 用 Acrylic（高斯模糊），macOS 用振动材质，失败时依次退回 mica / tabbed / 纯色。
-设置页有开关，状态持久化。
+Windows 用 **Mica Alt（tabbed）**，DWM 系统材质、按桌面壁纸取色，开销远低于
+Acrylic 的实时模糊；失败时依次退退 mica / acrylic / 纯色。macOS 用振动材质。
+默认开启、无开关——实测 Acrylic 模糊的是「窗口背后的内容」，背后铺着白色网页时
+40% tint 糊上去就是一片平坦浅灰，观感等同没有玻璃；Mica 不受背后窗口影响。
 
 踩过的坑记录一下，免得后来人重走：
 
@@ -80,6 +90,8 @@ Windows 用 Acrylic（高斯模糊），macOS 用振动材质，失败时依次�
   深色主题下材质仍是亮的，白字压在亮玻璃上几乎看不清
 - 材质生效时 scaffold 必须完全透明；但 `ThemeData` 写成顶层变量只在启动时求值一次，
   开关切换后主题还停在旧值，所以改成了 getter
+- MicaForEveryone 之类会给别的窗口改 `TitleBarColor` 的工具会把本窗口的
+  `IMMERSIVE_DARK_MODE` 强制改回浅色，深色主题下标题栏会发白——不是本项目的 bug
 
 ### 深浅色
 
@@ -108,9 +120,11 @@ Android 构建需要 SDK 34（`platforms;android-34` + `build-tools;34.0.0`）�
 
 ```powershell
 flutter pub get
-flutter build windows --debug                  # 桌面
-flutter build apk --release --split-per-abi    # Android，单架构约 22MB
+flutter build windows --debug                       # 桌面
+flutter build apk --release --target-platform android-arm64   # Android，约 22MB
 ```
+
+> 只构建 arm64，不要 `--split-per-abi`——v7a / x86_64 用不上。
 
 后端地址默认 `127.0.0.1:22288`；Android 模拟器访问宿主机用 `10.0.2.2:22288`。
 
@@ -123,7 +137,7 @@ flutter build apk --release --split-per-abi    # Android，单架构约 22MB
 flutter test
 ```
 
-覆盖置顶排序、主题模式映射、旧配置兼容。
+覆盖置顶排序、主题模式映射、旧配置兼容、统计面板渲染。
 
 ## 许可证
 
