@@ -11,7 +11,6 @@ import 'package:oasx/service/app_update_service.dart';
 import 'package:oasx/service/locale_service.dart';
 import 'package:oasx/service/theme_service.dart';
 import 'package:oasx/service/window_service.dart';
-import 'package:oasx/service/acrylic_service.dart';
 import 'package:oasx/translation/i18n_content.dart';
 import 'package:oasx/utils/check_version.dart';
 import 'package:oasx/utils/platform_utils.dart';
@@ -32,20 +31,7 @@ class SystemSettingsCard extends StatelessWidget {
           left: Text(I18n.changeLanguage.tr),
           right: const LanguageToggle(),
         ),
-        // 只在桌面显示：移动端没有系统材质，开关点了也没用
-        if (AcrylicService.supported)
-          SettingItem(
-            left: Row(
-              children: [
-                Text('窗口毛玻璃'),
-                Tooltip(
-                  message: 'Acrylic 高斯模糊材质，让窗口透出桌面壁纸',
-                  child: const Icon(Icons.help_outline, size: 16),
-                ).paddingOnly(left: 5),
-              ],
-            ),
-            right: const AcrylicSwitch(),
-          ),
+        // 窗口材质默认开启（Mica，系统材质开销低），不再提供开关
         if (PlatformUtils.isDesktop)
           SettingItem(
             left: Text(I18n.rememberWindowPositionSize.tr),
@@ -173,25 +159,6 @@ class ThemeSwitcher extends StatelessWidget {
         ],
       ).constrained(maxHeight: 40);
     });
-  }
-}
-
-/// 窗口毛玻璃（Acrylic）开关。
-///
-/// 切换后立即应用材质并持久化；不支持材质的平台不渲染。
-class AcrylicSwitch extends StatelessWidget {
-  const AcrylicSwitch({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    if (!AcrylicService.supported) return const SizedBox.shrink();
-    return Obx(() => Switch(
-          value: AcrylicService.enabled.value,
-          onChanged: (value) => AcrylicService.setEnabled(
-            value,
-            dark: Get.find<ThemeService>().isDarkMode,
-          ),
-        ));
   }
 }
 

@@ -104,8 +104,7 @@ Future<void> initService() async {
 
   // 材质设置必须在 window_manager 完成所有窗口样式操作**之后**，
   // 否则会被 window_manager 的后续调用覆盖掉（表现为调用成功但无效果）。
-  // 先读用户开关偏好（依赖 GetStorage，所以必须放在 ProfileService 之后）。
-  AcrylicService.loadPreference();
+  // 材质默认开启（Mica，开销低），没有开关需要读取。
   await AcrylicService.applyEffect(
     dark: Get.find<ThemeService>().isDarkMode,
   );

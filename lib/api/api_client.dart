@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 
 import 'config_transfer_api.dart';
 import 'config_transfer_models.dart';
