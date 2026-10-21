@@ -14,6 +14,8 @@ const _kHistoryAxisSpacing = 8.0;
 const _kHistoryRowHeight = 44.0;
 const _kHistoryRowSpacing = 10.0;
 const _kHistoryMaxVisibleRows = 5;
+// 数值列固定宽：右对齐、不与进度条重叠
+const _kHistoryValueColumnWidth = 64.0;
 
 /// Task comparison chart with a fixed top axis.
 class ScriptStatisticsHistoryChart extends StatelessWidget {
@@ -282,51 +284,40 @@ class _HistoryBarRow extends StatelessWidget {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final ratio = axisMax <= 0 ? 0.0 : value / axisMax;
-              final barWidth =
-                  math.max(constraints.maxWidth * ratio, 8.0).toDouble();
               final scheme = Theme.of(context).colorScheme;
               return Tooltip(
                 preferBelow: false,
                 verticalOffset: 20,
                 message: _tooltipText(),
                 child: InkWell(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(8),
                   onTap: onTap,
                   child: SizedBox(
                     height: _kHistoryRowHeight,
                     child: Stack(
                       alignment: Alignment.centerLeft,
                       children: [
+                        // Track：浅灰底层轨道，完全圆角
                         Container(
-                          height: 20,
+                          height: 8,
                           decoration: BoxDecoration(
-                            color: scheme.surfaceContainerHighest
-                                .withValues(alpha: 0.5),
+                            color: scheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(999),
                           ),
                         ),
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 220),
-                          curve: Curves.easeOutCubic,
-                          width: barWidth,
-                          height: focused ? 28 : 24,
-                          decoration: BoxDecoration(
-                            color:
-                                color.withValues(alpha: focused ? 0.92 : 0.76),
-                            borderRadius: BorderRadius.circular(999),
-                            border: Border.all(
-                              color: focused ? scheme.onSurface : color,
-                              width: focused ? 1.3 : 1,
+                        // Active indicator：任务色进度段，圆角端点（rounded caps）
+                        FractionallySizedBox(
+                          alignment: Alignment.centerLeft,
+                          widthFactor: ratio.clamp(0.0, 1.0),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 220),
+                            curve: Curves.easeOutCubic,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: color.withValues(
+                                  alpha: focused ? 1.0 : 0.85),
+                              borderRadius: BorderRadius.circular(999),
                             ),
-                          ),
-                        ),
-                        Positioned(
-                          right: 0,
-                          child: _HistoryValueBadge(
-                            label: formatStatisticsMetricByType(value, metric),
-                            color: color,
-                            flashing: flashing,
-                            flashToken: flashToken,
                           ),
                         ),
                       ],
@@ -335,6 +326,18 @@ class _HistoryBarRow extends StatelessWidget {
                 ),
               );
             },
+          ),
+        ),
+        const SizedBox(width: _kHistoryTaskLabelSpacing),
+        // 数值列：Label Medium、primary 高对比、固定宽度右对齐，
+        // 不再覆盖在进度条上（替代原 _HistoryValueBadge 叠层方案）
+        SizedBox(
+          width: _kHistoryValueColumnWidth,
+          child: _HistoryValueBadge(
+            label: formatStatisticsMetricByType(value, metric),
+            color: color,
+            flashing: flashing,
+            flashToken: flashToken,
           ),
         ),
       ],
@@ -378,6 +381,7 @@ class _HistoryValueBadge extends StatelessWidget {
       builder: (context, value, child) {
         final pulse = flashing ? value : 0.0;
         return DecoratedBox(
+          // 实时更新脉冲：轻微 tonal 底色闪烁（无阴影、无描边）
           decoration: BoxDecoration(
             color: Color.lerp(
               Colors.transparent,
@@ -385,31 +389,20 @@ class _HistoryValueBadge extends StatelessWidget {
               pulse,
             ),
             borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color: Color.lerp(
-                    Colors.transparent,
-                    color.withValues(alpha: 0.56),
-                    pulse,
-                  ) ??
-                  Colors.transparent,
-            ),
-            boxShadow: pulse > 0
-                ? [
-                    BoxShadow(
-                      color: color.withValues(alpha: 0.26 * pulse),
-                      blurRadius: 12,
-                      spreadRadius: 1,
-                    ),
-                  ]
-                : const [],
           ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
             child: Text(
               label,
+              textAlign: TextAlign.right,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              // M3：Label Medium、高对比主色调（聚焦/脉冲时切 onSurface 强调）
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: pulse > 0.02 ? scheme.onSurface : null,
+                    color: pulse > 0.02
+                        ? scheme.onSurface
+                        : scheme.onSurface,
                   ),
             ),
           ),
