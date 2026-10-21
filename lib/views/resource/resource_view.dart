@@ -44,11 +44,21 @@ class ResourceView extends StatelessWidget {
         if (c.loading.value && c.day.value.isEmpty) {
           return const Center(child: CircularProgressIndicator());
         }
+        final scheme = Theme.of(context).colorScheme;
+        // 不套页面级背景色：本页嵌在侧栏 Card 里，Card 已有自己的底，
+        // 再叠 surfaceContainerLowest（浅色主题下≈纯白）会与周围割裂。
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _Toolbar(controller: c),
-            const Divider(height: 1),
+            // 分隔：非贯穿式浅分割线（indent 16px + outlineVariant 低对比）
+            Divider(
+              height: 1,
+              thickness: 1,
+              indent: 16,
+              endIndent: 16,
+              color: scheme.outlineVariant.withValues(alpha: 0.6),
+            ),
             Expanded(child: _body(c)),
           ],
         );
@@ -103,6 +113,7 @@ class _Hint extends StatelessWidget {
   }
 }
 
+/// 采集状态：小圆点 + 文本，颜色即状态（运行=绿，未采集=灰）。
 class _StatusChip extends StatelessWidget {
   const _StatusChip({required this.controller});
 
@@ -110,20 +121,27 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final running = controller.collectorRunning.value;
     return Tooltip(
       message: running
           ? I18n.resource_collector_on.tr
           : I18n.resource_collector_off.tr,
       child: Row(mainAxisSize: MainAxisSize.min, children: [
+        // 状态圆点：未采集时用低饱和的 onSurfaceVariant 表「非活动」，
+        // 运行时用 primary 表「活动」（比纯绿更贴 M3 色板）
         Icon(Icons.circle,
-            size: 10, color: running ? Colors.green : Colors.grey),
-        const SizedBox(width: 4),
+            size: 8,
+            color: running ? scheme.primary : scheme.onSurfaceVariant),
+        const SizedBox(width: 6),
         Text(
           running
               ? I18n.resource_collector_on.tr
               : I18n.resource_collector_off.tr,
-          style: Theme.of(context).textTheme.bodySmall,
+          style: theme.textTheme.labelMedium?.copyWith(
+            color: scheme.onSurfaceVariant,
+          ),
         ),
       ]),
     );
@@ -131,6 +149,9 @@ class _StatusChip extends StatelessWidget {
 }
 
 /// 角色下拉：多账号时用来切换查看对象。
+///
+/// M3：胶囊形下拉按钮（MenuAnchor），带下拉箭头、悬停 tonal 底、
+/// 点开为标准菜单；替代旧的无边框 DropdownButton。
 class _RoleSelector extends StatelessWidget {
   const _RoleSelector({required this.controller});
 
@@ -139,63 +160,83 @@ class _RoleSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final roles = controller.roles;
     final current = controller.selectedRoleKey.value;
     final exists = roles.any((r) => r.roleKey == current);
+    // 单角色且无服务器名可省略时也保留按钮（切换入口不能消失），
+    // 但禁用箭头提示单选项
+    final single = roles.length <= 1 && exists;
 
-    return Tooltip(
-      message: I18n.resource_role_hint.tr,
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(Icons.person_outline,
-            size: 18, color: theme.colorScheme.primary),
-        const SizedBox(width: 4),
-        // isDense + 限宽：displayLabel 可能很长（名字+等级+服务器），
-        // 不约束时 DropdownButton 按最宽 item 撑开，把整行 Row 挤溢出，
-        // 最大化窗口后宽度更宽但右侧元素也随之增多，同样会溢出。
-        DropdownButton<String>(
-          isDense: true,
-          underline: const SizedBox.shrink(),
-          value: exists ? current : null,
-          hint: ConstrainedBox(
-            // 三行布局下行1 独占 360px：320 放得下
-            // 「英雄崎凛 (Lv60 · 海外加速区)」；还放不下就换两行，不省略
-            constraints: const BoxConstraints(maxWidth: 320),
-            child: Text(
-              current.isEmpty ? I18n.resource_role_unknown.tr : _shortLabel,
-              maxLines: 2,
-              overflow: TextOverflow.fade,
-              softWrap: true,
-            ),
-          ),
-          items: roles
-              .map((r) => DropdownMenuItem(
-                    value: r.roleKey,
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: MenuAnchor(
+        alignmentOffset: const Offset(0, 4),
+        menuChildren: roles.isEmpty
+            ? [
+                MenuItemButton(
+                  onPressed: null,
+                  child: Text(I18n.resource_role_unknown.tr),
+                ),
+              ]
+            : [
+                for (final r in roles)
+                  MenuItemButton(
+                    leadingIcon: r.roleKey == current
+                        ? Icon(Icons.check_rounded,
+                            size: 18, color: scheme.primary)
+                        : null,
+                    onPressed: () => controller.changeRole(r.roleKey),
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 320),
-                      child: Text(r.displayLabel,
-                          maxLines: 2, overflow: TextOverflow.fade),
+                      child: Text(
+                        r.displayLabel,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ))
-              .toList(),
-          onChanged: (v) {
-            if (v != null) controller.changeRole(v);
-          },
-        ),
-        // 多角色时给个数量提示，提醒用户数据是分开的
-        if (roles.length > 1)
-          Padding(
-            padding: const EdgeInsets.only(left: 4),
-            child: Text(
-              '(${roles.length})',
-              style: theme.textTheme.labelSmall
-                  ?.copyWith(color: theme.disabledColor),
+                  ),
+              ],
+        builder: (context, menu, _) {
+          return TextButton.icon(
+            style: TextButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+              shape: const StadiumBorder(),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             ),
-          ),
-      ]),
+            onPressed:
+                single ? null : () => menu.isOpen ? menu.close() : menu.open(),
+            icon: Icon(Icons.person_outline,
+                size: 18, color: scheme.primary),
+            label: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ConstrainedBox(
+                  // displayLabel 可能很长（名字+等级+服务器），限宽省略
+                  constraints: const BoxConstraints(maxWidth: 320),
+                  child: Text(
+                    current.isEmpty || !exists
+                        ? I18n.resource_role_unknown.tr
+                        : _shortLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 2),
+                Icon(Icons.arrow_drop_down_rounded,
+                    size: 18, color: scheme.onSurfaceVariant),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
-  /// 收起状态的角色显示名（hint 用）：名字 + 等级，不含服务器与完整 role_key
+  /// 收起状态的角色显示名：名字 + 等级，不含服务器与完整 role_key
   String get _shortLabel {
     final matched = controller.roles
         .where((r) => r.roleKey == controller.selectedRoleKey.value)
@@ -212,24 +253,54 @@ class _Empty extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.inbox_outlined,
-              size: 48, color: Theme.of(context).disabledColor),
-          const SizedBox(height: 12),
-          Text(I18n.resource_empty.tr,
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // M3：tonal 容器托底，让图标有分量（浅紫圆形 + primary 图标）
+            Container(
+              width: 72,
+              height: 72,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: scheme.primaryContainer.withValues(alpha: 0.5),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.inbox_outlined,
+                size: 36,
+                color: scheme.primary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              I18n.resource_empty.tr,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium),
-          const SizedBox(height: 16),
-          FilledButton.icon(
-            onPressed:
-                controller.collecting.value ? null : controller.collectNow,
-            icon: const Icon(Icons.download_rounded),
-            label: Text(I18n.resource_collect_now.tr),
-          ),
-        ],
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 20),
+            // Filled Button：胶囊、primary 底、自带 ripple 与按压/禁用态
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                shape: const StadiumBorder(),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+              ),
+              onPressed:
+                  controller.collecting.value ? null : controller.collectNow,
+              icon: const Icon(Icons.download_rounded, size: 18),
+              label: Text(I18n.resource_collect_now.tr),
+            ),
+          ],
+        ),
       ),
     );
   }

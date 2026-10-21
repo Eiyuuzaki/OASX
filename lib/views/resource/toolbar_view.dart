@@ -1,21 +1,18 @@
 part of resource;
 
-/// 顶部工具条：**三行结构**，任何窗口宽度都不溢出。
+/// 顶部工具条：Material 3 规范排列。
 ///
-/// 演进史：
-/// - 单行（角色+日期+状态+时间+2按钮）：需求 628px > 侧栏 560px，溢出；
-/// - 两行（身份 / 状态+时间+按钮）：最大化 OK，但行2 的 258px 在
-///   移动端/窄窗口（<260px 可用）仍放不下；
-/// - **三行（身份 / 状态 / 时间+按钮）**：每行最坏 ≤230px，
-///   覆盖移动端最小宽度，数学上不可能溢出。
+/// 结构（从上到下）：
+/// ```
+/// ┌──────────────────────────────────────┐
+/// │ 行1: 角色下拉 ▾            (2)        │  ← MenuAnchor + DropdownMenuButton
+/// │ 行2: [📅 10-19 ▾]      ● 未在采集     │  ← 日期(同一层级) + 状态圆点
+/// │ 行3: 更新于 02:35:52        (⬇) (⟳)  │  ← 时间 + 圆形 IconButton
+/// └──────────────────────────────────────┘
+/// ```
 ///
-/// ```
-/// ┌──────────────────────────────┐
-/// │ 👤 英雄崎凛 (Lv60) (2)▾       │  ← 行1 身份（含服务器名，见 _RoleSelector）
-/// │ 📅 [10-19 ▾]   ● 自动采集中   │  ← 行2 日期 + 状态
-/// │ 更新于 02:35:52      [⬇][⟳]  │  ← 行3 时间 + 按钮
-/// └──────────────────────────────┘
-/// ```
+/// 三行结构保留（演进史见 git）：任何窗口宽度都不溢出，
+/// 行1 最坏 ≈ 角色名，行2 ≈ 230px，行3 时间可缩。
 class _Toolbar extends StatelessWidget {
   const _Toolbar({required this.controller});
 
@@ -29,14 +26,14 @@ class _Toolbar extends StatelessWidget {
     final updatedAt = controller.day.value.updatedAt;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(10, 6, 8, 6),
+      padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ---- 行1：身份（角色选择，含服务器名）----
+          // ---- 行1：角色（MenuAnchor 下拉按钮，带箭头 + 悬停反馈）----
           _RoleSelector(controller: controller),
-          const SizedBox(height: 2),
-          // ---- 行2：日期 + 采集状态 ----
+          const SizedBox(height: 8),
+          // ---- 行2：日期 + 状态 ----
           Row(
             children: [
               Flexible(
@@ -46,11 +43,12 @@ class _Toolbar extends StatelessWidget {
                   onChanged: controller.changeDate,
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 12),
               _StatusChip(controller: controller),
             ],
           ),
-          // ---- 行3：更新时间 + 按钮 ----
+          const SizedBox(height: 6),
+          // ---- 行3：更新时间 + 操作按钮（同层级，圆形 IconButton）----
           Row(
             children: [
               Expanded(
@@ -58,14 +56,15 @@ class _Toolbar extends StatelessWidget {
                   updatedAt.isEmpty
                       ? I18n.resource_updated_at.tr
                       : '${I18n.resource_updated_at.tr} $updatedAt',
-                  style: theme.textTheme.labelSmall
-                      ?.copyWith(color: theme.disabledColor),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
+              // 采集：进行中转圈、平时标准图标（M3 默认圆形 hover/按压底色）
               IconButton(
-                visualDensity: VisualDensity.compact,
                 tooltip: I18n.resource_collect_now.tr,
                 onPressed: controller.collecting.value
                     ? null
@@ -77,8 +76,8 @@ class _Toolbar extends StatelessWidget {
                         child: CircularProgressIndicator(strokeWidth: 2))
                     : const Icon(Icons.download_rounded, size: 20),
               ),
+              const SizedBox(width: 4),
               IconButton(
-                visualDensity: VisualDensity.compact,
                 tooltip: I18n.resource_refresh.tr,
                 onPressed:
                     controller.loading.value ? null : controller.reload,
@@ -92,7 +91,7 @@ class _Toolbar extends StatelessWidget {
   }
 }
 
-/// 日期下拉。
+/// 日期下拉（MenuAnchor + 胶囊按钮）。
 class _DateDropdown extends StatelessWidget {
   const _DateDropdown({
     required this.dates,
@@ -107,23 +106,52 @@ class _DateDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return DropdownButton<String>(
-      isDense: true,
-      value: dates.contains(current) ? current : null,
-      hint: Text(current,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: theme.textTheme.bodySmall),
-      items: dates
-          .map((d) => DropdownMenuItem(
-              value: d,
-              child: Text(d,
+    if (dates.isEmpty) {
+      return Text(current, style: theme.textTheme.bodyMedium);
+    }
+    return MenuAnchor(
+      alignmentOffset: const Offset(0, 4),
+      menuChildren: [
+        for (final d in dates)
+          MenuItemButton(
+            leadingIcon: d == current
+                ? Icon(Icons.check_rounded,
+                    size: 18, color: theme.colorScheme.primary)
+                : null,
+            onPressed: () => onChanged(d),
+            child: Text(d),
+          ),
+      ],
+      builder: (context, menu, _) {
+        // 胶囊按钮：tonal 底 + 日历图标 + 箭头，InkWell 自带水波纹
+        return TextButton.icon(
+          style: TextButton.styleFrom(
+            visualDensity: VisualDensity.compact,
+            shape: const StadiumBorder(),
+            backgroundColor: theme.colorScheme.surfaceContainerHigh,
+            foregroundColor: theme.colorScheme.onSurface,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          ),
+          onPressed: () => menu.isOpen ? menu.close() : menu.open(),
+          icon: Icon(Icons.calendar_today_rounded,
+              size: 16, color: theme.colorScheme.onSurfaceVariant),
+          label: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 100),
+                child: Text(
+                  current.isEmpty ? '-' : current,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall)))
-          .toList(),
-      onChanged: (v) {
-        if (v != null) onChanged(v);
+                  style: theme.textTheme.labelLarge,
+                ),
+              ),
+              Icon(Icons.arrow_drop_down_rounded,
+                  size: 18, color: theme.colorScheme.onSurfaceVariant),
+            ],
+          ),
+        );
       },
     );
   }
