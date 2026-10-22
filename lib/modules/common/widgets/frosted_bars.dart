@@ -41,12 +41,15 @@ class FrostedBars {
     );
   }
 
-  /// 半透明底色：浅色 78% / 深色 72%（深色下透一点更通透）。
+  /// 半透明底色：浅色 55% / 深色 60%。
+  ///
+  /// 原来 0.78 几乎不透明，模糊效果看不出来（用户反馈"没有毛玻璃"）。
+  /// 压到 0.55 让下方内容明显被模糊透出，同时保证导航文字可读。
   static Color _tint(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return scheme.brightness == Brightness.light
-        ? scheme.surface.withValues(alpha: 0.78)
-        : scheme.surface.withValues(alpha: 0.72);
+        ? scheme.surface.withValues(alpha: 0.55)
+        : scheme.surface.withValues(alpha: 0.60);
   }
 }
 

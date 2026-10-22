@@ -2,6 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:chinese_font_library/chinese_font_library.dart';
 import 'package:oasx/service/acrylic_service.dart';
 
+/// scaffold 是否让出透明底。
+///
+/// 两种情况需要透明：
+/// 1. 桌面：系统窗口材质（Mica）已生效，Flutter 实色会盖住它
+/// 2. 移动端：没有系统材质，但 `FrostedBars` 的 BackdropFilter 只能模糊
+///    "下方已绘制的内容"；scaffold 若为实色，底栏/AppBar 下无物可糊，
+///    毛玻璃在视觉上等于不存在
+bool get _usesTransparentScaffold =>
+    AcrylicService.transparentBackground ||
+    AcrylicService.mobileFrostedBackground;
+
 /// 用枚举太麻烦了
 enum ColorSeed {
   baseColor('M3 Baseline', Color(0xff6750a4)),
@@ -53,12 +64,10 @@ ThemeData get lightTheme => ThemeData(
     // titleMedium: TextStyle(fontWeight: FontWeight.w600),
     titleSmall: TextStyle(),
   ).apply(fontFamily: 'LatoLato').useSystemChineseFont(Brightness.light),
-  // 亚克力开启时给半透明浅色底，让窗口模糊层透出来；移动端/Web 走纯色
-  // 材质生效时必须完全透明，否则 Flutter 的实色会盖住系统材质。
-  // 非材质环境回退到实色。
-  // 毛玻璃开启 → 透明（让系统材质透出）；
-  // 关闭 → 实色（否则会露出窗口底色，浅色主题下显得发黑）
-  scaffoldBackgroundColor: AcrylicService.transparentBackground
+  // 桌面材质生效时完全透明（让系统 Mica 透出）；
+  // 移动端同样透明——那里没有系统材质，但 FrostedBars 的 BackdropFilter
+  // 只能模糊"下方已绘制的内容"，scaffold 若是实色则底栏/AppBar 下无物可糊。
+  scaffoldBackgroundColor: _usesTransparentScaffold
       ? Colors.transparent
       : const Color(0xFFFBF9FF),
   navigationRailTheme: const NavigationRailThemeData(
@@ -87,7 +96,7 @@ ThemeData get lightTheme => ThemeData(
 
 // AMOLED 纯黑深色主题：设置页可切换（OLED 省电 + 对比度拉满）
 ThemeData get amoledDarkTheme => darkTheme.copyWith(
-  scaffoldBackgroundColor: AcrylicService.transparentBackground
+  scaffoldBackgroundColor: _usesTransparentScaffold
       ? Colors.transparent
       : Colors.black,
   navigationRailTheme: const NavigationRailThemeData(
@@ -116,7 +125,7 @@ ThemeData get darkTheme => ThemeData(
     titleMedium: TextStyle(),
     titleSmall: TextStyle(),
   ).apply(fontFamily: 'LatoLato').useSystemChineseFont(Brightness.dark),
-  scaffoldBackgroundColor: AcrylicService.transparentBackground
+  scaffoldBackgroundColor: _usesTransparentScaffold
       ? Colors.transparent
       : const Color.fromRGBO(49, 48, 51, 1),
   navigationRailTheme: const NavigationRailThemeData(
