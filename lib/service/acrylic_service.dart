@@ -1,6 +1,6 @@
 import 'dart:io' show Platform;
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_acrylic/flutter_acrylic.dart';
 import 'package:get/get.dart';
@@ -29,11 +29,30 @@ class AcrylicService {
   static bool _pluginReady = false;
 
   /// 材质是否已实际生效（供主题层判断要不要把背景设为透明）。
+  ///
+  /// - 桌面（Windows/macOS）：由系统材质下发成功与否决定
+  /// - 移动端：恒为 false——系统没有窗口材质，但**主题仍需让出透明底**，
+  ///   否则 `FrostedBars` 的 `BackdropFilter` 下方是不透明纯色，毛玻璃看不出来。
+  ///   移动端的透明底由 [mobileFrostedBackground] 单独判定。
   static bool transparentBackground = false;
+
+  /// 移动端是否需要透明 scaffold 底（供 `FrostedBars` 生效）。
+  ///
+  /// 移动端没有系统窗口材质，毛玻璃是 Flutter 自渲染的 `BackdropFilter`：
+  /// 它只会模糊**下方已绘制的内容**。若 scaffold 画不透明底色，
+  /// 底栏/AppBar 的模糊层下面就是纯色，视觉上等于没有毛玻璃。
+  /// 因此移动端把 scaffold 底设为透明，让页面内容/壁纸透上来。
+  static bool get mobileFrostedBackground => _isMobile;
 
   /// 支持系统材质的平台。
   static bool get _supported =>
       !kIsWeb && (Platform.isWindows || Platform.isMacOS);
+
+  /// 移动平台（Android/iOS）。
+  static bool get _isMobile =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS);
 
   /// 设备是否支持（不支持的平台不渲染相关 UI）。
   static bool get supported => _supported;
@@ -102,5 +121,16 @@ class AcrylicService {
     // 主题里的 scaffold/card 颜色依赖 transparentBackground，
     // 它可能刚变过，需要让界面重建一次才能生效。
     Get.forceAppUpdate();
+  }
+
+  /// 仅重设 DWM 材质，不触发界面重建。
+  ///
+  /// 用于窗口状态变化（最小化/还原、最大化、托盘恢复）后补回丢失的材质：
+  /// Windows 在这些时机可能重建合成层，把 SYSTEMBACKDROP_TYPE 重置掉，
+  /// 表现为 Mica 突然消失。此时 `transparentBackground` 没变，
+  /// 界面无需重建，只把材质重新下发一次即可。
+  static Future<void> reapply({bool dark = false}) async {
+    if (!_supported || !_pluginReady) return;
+    await applyEffect(dark: dark);
   }
 }

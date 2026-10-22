@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'package:oasx/modules/common/widgets/device_badge.dart';
 import 'package:oasx/modules/common/widgets/title.dart';
 
 const double _compactActionBaseThreshold = 280;
@@ -112,6 +113,9 @@ class _WindowsCaptionBarState extends State<WindowsCaptionBar>
                           ),
                         ),
                       ),
+                      // 设备徽标：常驻显示当前连接的安卓实例，点击切换。
+                      // 放在拖拽区之外保证可点击；窄窗口下自动退化为纯图标。
+                      DeviceBadge(compact: hideTrailingActions),
                       if (!hideTrailingActions &&
                           widget.trailingActions.isNotEmpty)
                         const SizedBox(width: 8),

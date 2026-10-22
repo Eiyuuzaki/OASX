@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'dart:io' show Platform;
 import 'package:get/get.dart';
 import 'package:oasx/modules/home/models/config_model.dart';
+import 'package:oasx/service/acrylic_service.dart';
 import 'package:oasx/service/script_service.dart';
+import 'package:oasx/service/theme_service.dart';
 import 'package:oasx/service/window_service.dart';
 import 'package:oasx/translation/i18n_content.dart';
 import 'package:oasx/utils/platform_utils.dart';
@@ -13,6 +16,16 @@ class SystemTrayService extends GetxService {
   final AppWindow _appWindow = AppWindow();
 
   bool _isTrayVisible = false;
+
+  /// 重新应用窗口材质（托盘恢复后补回可能丢失的 Mica）。
+  void _reapplyMaterial() {
+    final themeService = Get.isRegistered<ThemeService>()
+        ? Get.find<ThemeService>()
+        : null;
+    unawaited(
+      AcrylicService.reapply(dark: themeService?.isDarkMode ?? false),
+    );
+  }
   bool get isTrayVisible => _isTrayVisible;
   Future<bool>? _initializing;
   Future<void>? _destroying;
@@ -53,7 +66,8 @@ class SystemTrayService extends GetxService {
           // 单击默认显示窗口
           await windowManager.show();
           await windowManager.focus();
-        } else if (eventName == kSystemTrayEventRightClick) {
+          // 从托盘恢复同样可能丢 DWM 材质，重设一次
+          _reapplyMaterial();        } else if (eventName == kSystemTrayEventRightClick) {
           // 右键打开菜单
           await _rebuildMenu();
           Platform.isWindows
