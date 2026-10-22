@@ -6,6 +6,7 @@ import 'package:oasx/modules/home/widgets/statistics_detail_section.dart';
 import 'package:oasx/modules/home/widgets/statistics_formatters.dart';
 import 'package:oasx/modules/home/widgets/statistics_history_chart.dart';
 import 'package:oasx/translation/i18n_content.dart';
+import 'package:oasx/ui/ui.dart';
 
 const double _kGap = 12;
 const double _kPagePadding = 16;
@@ -149,44 +150,42 @@ class _StatTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    return Card.filled(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                Icon(icon, size: 16, color: scheme.primary),
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
+    return AppCard(
+      variant: AppCardVariant.filled,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 16, color: scheme.primary),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: scheme.onSurfaceVariant,
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(
-                value,
-                maxLines: 1,
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              maxLines: 1,
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w700,
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -208,11 +207,10 @@ class _StatsToolbar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    return Card.outlined(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-        child: Column(
+    return AppCard(
+      variant: AppCardVariant.outlined,
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+      child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
@@ -290,8 +288,7 @@ class _StatsToolbar extends StatelessWidget {
                 ),
               ],
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -487,11 +484,10 @@ class _ChartCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Obx(() {
       final loading = controller.historyChartLoading.value;
-      return Card.outlined(
-        margin: EdgeInsets.zero,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-          child: Column(
+      return AppCard(
+        variant: AppCardVariant.outlined,
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+        child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (entries.isEmpty)
@@ -522,7 +518,6 @@ class _ChartCard extends StatelessWidget {
               ),
             ],
           ),
-        ),
       );
     });
   }

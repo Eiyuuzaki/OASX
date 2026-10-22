@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:styled_widget/styled_widget.dart';
 
+import 'package:oasx/modules/common/widgets/device_badge.dart';
 import 'package:oasx/modules/common/widgets/frosted_bars.dart';
 import 'package:oasx/modules/common/widgets/title.dart';
 import 'package:oasx/modules/common/widgets/windows_caption_bar.dart';
@@ -68,7 +69,8 @@ PreferredSizeWidget _desktopAppbar(
   return AppBar(
     title: getTitle(context, routePath: routePath),
     automaticallyImplyLeading: _shouldAutoImplyLeading(),
-    actions: trailingActions.isEmpty ? null : trailingActions,
+    // 设备徽标常驻：桌面其它平台（Linux/macOS）同样显示
+    actions: [const DeviceBadge(), ...trailingActions],
   );
 }
 
@@ -87,6 +89,7 @@ PreferredSizeWidget _webAppbar(
             routePath: routePath,
           ).padding(left: 16, top: 10, bottom: 10),
         ),
+        const DeviceBadge(),
         ...trailingActions,
         if (trailingActions.isNotEmpty) const SizedBox(width: 8),
       ],
@@ -110,6 +113,13 @@ PreferredSizeWidget _mobileTabletAppbar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
+        // 移动端没有自绘标题栏，设备徽标放这里；窄屏用紧凑模式（只显示图标）
+        actions: [
+          DeviceBadge(
+            compact: MediaQuery.sizeOf(context).width < 420,
+          ),
+          const SizedBox(width: 4),
+        ],
       ),
     ),
   );

@@ -27,6 +27,7 @@ part 'api_client_script.dart';
 part 'api_client_feedback.dart';
 part 'api_client_statistics.dart';
 part 'api_client_resource.dart';
+part 'api_client_device.dart';
 
 part 'api_client_config_transfer.dart';
 
