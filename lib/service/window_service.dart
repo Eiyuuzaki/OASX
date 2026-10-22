@@ -6,11 +6,13 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:oasx/api/api_client.dart';
 import 'package:oasx/api/backend_exit_client.dart';
+import 'package:oasx/service/acrylic_service.dart';
 import 'package:oasx/service/app_exit_service.dart';
 import 'package:oasx/service/profile_service.dart';
 import 'package:oasx/modules/common/models/storage_key.dart';
 import 'package:oasx/modules/common/models/window_state.dart';
 import 'package:oasx/service/system_tray_service.dart';
+import 'package:oasx/service/theme_service.dart';
 import 'package:oasx/translation/i18n_content.dart';
 import 'package:oasx/utils/platform_utils.dart';
 import 'package:window_manager/window_manager.dart';
@@ -131,9 +133,9 @@ class WindowService extends GetxService with WindowListener {
       minimumSize: minimumSize,
     );
     return WindowOptions(
-      title: ProfileService.isPreview
-          ? 'OASX AzurTian Preview - 22391'
-          : 'OASX AzurTian Runhey - 22289',
+      // 标题跟随实际后端地址，不再硬编码端口（曾经写死 22289，
+      // 而真实默认是 22288，标题与实际连接对不上，容易误导排查）
+      title: _buildWindowTitle(),
       size: initialSize,
       center: lastState == null,
       minimumSize: minimumSize,
@@ -141,6 +143,25 @@ class WindowService extends GetxService with WindowListener {
       skipTaskbar: false,
       titleBarStyle: TitleBarStyle.hidden,
     );
+  }
+
+  /// 生成窗口标题：`OASX · <host:port>`。
+  ///
+  /// 预览模式显示 Preview 标记；否则取 ApiClient 当前地址
+  /// （启动时已由 setAddress 按用户配置初始化）。
+  static String _buildWindowTitle() {
+    if (ProfileService.isPreview) {
+      return 'OASX · Preview';
+    }
+    String address = '';
+    try {
+      address = ApiClient().address;
+    } catch (_) {
+      // 取不到就不显示地址
+    }
+    // 去掉协议前缀，标题更简洁
+    final display = address.replaceFirst(RegExp(r'^https?://'), '').trim();
+    return display.isEmpty ? 'OASX' : 'OASX · $display';
   }
 
   Size _resolveInitialWindowSize(
@@ -212,6 +233,30 @@ class WindowService extends GetxService with WindowListener {
   void onWindowMove() => _scheduleSave();
   @override
   void onWindowResize() => _scheduleSave();
+
+  // ── 窗口状态变化后补回 DWM 材质 ──────────────────────────────
+  //
+  // Windows 在最小化/还原、最大化切换、从托盘恢复等时机可能重建
+  // 窗口合成层，把 SYSTEMBACKDROP_TYPE 重置掉，表现为 Mica 突然消失。
+  // 这里在 WindowService 全局监听（不依赖 UI 组件是否挂载），
+  // 状态变化后重设一次材质，代价极小且幂等。
+
+  @override
+  void onWindowRestore() => _reapplyMaterial();
+  @override
+  void onWindowMaximize() => _reapplyMaterial();
+  @override
+  void onWindowUnmaximize() => _reapplyMaterial();
+
+  void _reapplyMaterial() {
+    if (!PlatformUtils.isDesktop) return;
+    final themeService = Get.isRegistered<ThemeService>()
+        ? Get.find<ThemeService>()
+        : null;
+    unawaited(
+      AcrylicService.reapply(dark: themeService?.isDarkMode ?? false),
+    );
+  }
 
   @override
   void onWindowClose() {

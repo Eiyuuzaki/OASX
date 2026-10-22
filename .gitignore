@@ -42,6 +42,8 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+# Gradle 构建报告（android/build/reports 等），不属于源码
+/android/build/
 
 /normal/*
 .claude/settings.local.json

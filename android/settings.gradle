@@ -19,7 +19,10 @@ pluginManagement {
 plugins {
     id "dev.flutter.flutter-plugin-loader" version "1.0.0"
     id "com.android.application" version "8.12.1" apply false
-    id "org.jetbrains.kotlin.android" version "1.8.22" apply false
+    // Kotlin 2.1.0：shared_preferences_android 2.4.x 用了
+    // KotlinAndroidProjectExtension.compilerOptions（Kotlin 2.x 的 DSL），
+    // 1.8.22 会报 "void ...compilerOptions(...)" 找不到方法。
+    id "org.jetbrains.kotlin.android" version "2.1.0" apply false
 }
 
 include ":app"
