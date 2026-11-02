@@ -29,7 +29,7 @@
                         <ui:TextBox x:Name="BackendBox" MinHeight="34"
                                     PlaceholderText="http://127.0.0.1:22288" />
                         <Button Grid.Column="1" Click="SaveBackend_Click"
-                                Style="{StaticResource AccentButtonStyle}"
+                               
                                 Margin="8,0,0,0">保存</Button>
                     </Grid>
                 </StackPanel>

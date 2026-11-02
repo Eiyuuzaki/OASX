@@ -44,12 +44,24 @@ public static class OasSettings
     {
         lock (Gate)
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
-            File.WriteAllText(FilePath,
-                JsonSerializer.Serialize(_cache, new JsonSerializerOptions
-                {
-                    WriteIndented = true,
-                }));
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
+                File.WriteAllText(FilePath,
+                    JsonSerializer.Serialize(_cache, new JsonSerializerOptions
+                    {
+                        WriteIndented = true,
+                    }));
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // 目录被提权实例创建过（用户点过 UAC 的旧实例）会拒绝写入；
+                // 设置保存失败不应打断 UI，下次启动重试。
+            }
+            catch (IOException)
+            {
+                // 磁盘/AV 占用等瞬时失败，同样静默
+            }
         }
     }
 

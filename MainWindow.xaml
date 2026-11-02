@@ -18,45 +18,38 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- BGI 同款标题栏结构：ui:TitleBar 自带 46×32 caption 按钮、
-             深色/浅色自适应、拖拽区。图标 + 标题文本走 Header。 -->
         <ui:TitleBar Grid.Row="0" Title="OASX">
             <ui:TitleBar.Icon>
                 <ui:ImageIcon Source="pack://application:,,,/Assets/appicon.png" />
             </ui:TitleBar.Icon>
         </ui:TitleBar>
 
-        <!-- BGI 同款 NavigationView（WPF-UI 自研控件）：
-             pane 动画 / 汉堡切换 / 紧凑态全部内置且源码可改 -->
+        <!-- BGI 同款结构：NavigationView 内部自带 Frame + 页面服务导航。
+             不用 ContentOverlay 自管 Frame——那会替换掉内部内容管线，
+             条目点击的导航事件链整个断掉（实测踩坑）。 -->
         <ui:NavigationView Grid.Row="1"
                            x:Name="RootNavigation"
                            IsBackButtonVisible="Collapsed"
                            IsPaneToggleVisible="True"
                            IsTopSeparatorVisible="False"
                            IsFooterSeparatorVisible="False"
-                           OpenPaneLength="160"
-                           SelectionChanged="RootNavigation_SelectionChanged">
+                           OpenPaneLength="160">
             <ui:NavigationView.MenuItems>
-                <ui:NavigationViewItem Content="仪表盘" Tag="dashboard"
-                                       TargetPageType="{x:Type views:DashboardPage}"
+                <ui:NavigationViewItem Content="仪表盘" TargetPageType="{x:Type views:DashboardPage}"
                                        Icon="{ui:SymbolIcon Home24}" />
-                <ui:NavigationViewItem Content="工作台" Tag="workbench"
+                <ui:NavigationViewItem Content="工作台" TargetPageType="{x:Type views:StubPage}"
                                        Icon="{ui:SymbolIcon Rocket24}" />
-                <ui:NavigationViewItem Content="统计" Tag="statistics"
+                <ui:NavigationViewItem Content="统计" TargetPageType="{x:Type views:StubPage}"
                                        Icon="{ui:SymbolIcon DataHistogram24}" />
-                <ui:NavigationViewItem Content="资产" Tag="resource"
+                <ui:NavigationViewItem Content="资产" TargetPageType="{x:Type views:StubPage}"
                                        Icon="{ui:SymbolIcon Wallet24}" />
-                <ui:NavigationViewItem Content="日志" Tag="log"
+                <ui:NavigationViewItem Content="日志" TargetPageType="{x:Type views:LogPage}"
                                        Icon="{ui:SymbolIcon SlideText24}" />
             </ui:NavigationView.MenuItems>
             <ui:NavigationView.FooterMenuItems>
-                <ui:NavigationViewItem Content="设置" Tag="settings"
+                <ui:NavigationViewItem Content="设置" TargetPageType="{x:Type views:SettingsPage}"
                                        Icon="{ui:SymbolIcon Settings24}" />
             </ui:NavigationView.FooterMenuItems>
-
-            <ui:NavigationView.ContentOverlay>
-                <Frame x:Name="ContentFrame" NavigationUIVisibility="Hidden" />
-            </ui:NavigationView.ContentOverlay>
         </ui:NavigationView>
     </Grid>
 </ui:FluentWindow>

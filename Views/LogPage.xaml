@@ -12,7 +12,7 @@
             <ComboBox x:Name="ScriptSelector" MinWidth="180" MinHeight="34"
                       SelectionChanged="ScriptSelector_SelectionChanged" />
             <Button x:Name="StartButton" Click="StartButton_Click"
-                    Style="{StaticResource AccentButtonStyle}">启动</Button>
+                   >启动</Button>
             <Button x:Name="StopButton" Click="StopButton_Click">停止</Button>
             <TextBlock x:Name="StatusText" VerticalAlignment="Center" Margin="8,0,0,0"
                        Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
