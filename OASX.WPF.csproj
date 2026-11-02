@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>OASX</RootNamespace>
+    <AssemblyName>oasx</AssemblyName>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- BGI（BetterGenshinImpact）同款 UI 库：WPF-UI 4.3.0。
+         NavigationView / FluentWindow / TitleBar / Mica 全部内置，
+         且控件源码开放——出 bug 我们能自己读源码修，不必等框架作者。 -->
+    <PackageReference Include="WPF-UI" Version="4.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\appicon.png" />
+  </ItemGroup>
+
+</Project>

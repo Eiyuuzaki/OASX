@@ -1,0 +1,51 @@
+<UserControl x:Class="OASX.Views.DashboardPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+    <ScrollViewer Padding="32,20,32,28" VerticalScrollBarVisibility="Auto">
+        <StackPanel MaxWidth="980">
+
+            <ComboBox x:Name="ConfigSelector" MinWidth="200" MinHeight="34"
+                      HorizontalAlignment="Left"
+                      SelectionChanged="ConfigSelector_SelectionChanged" />
+
+            <!-- 资产卡片（对应 Flutter 仪表盘的 _AssetsCard） -->
+            <Border CornerRadius="8" Padding="20"
+                    Background="{DynamicResource ControlFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                    BorderThickness="1">
+                <StackPanel>
+                    <Grid Margin="0,0,0,12">
+                        <TextBlock Text="资产" FontSize="16" FontWeight="SemiBold" />
+                        <TextBlock x:Name="UpdatedAtText" HorizontalAlignment="Right"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </Grid>
+                    <ProgressBar x:Name="LoadingBar" IsIndeterminate="True"
+                                 IsEnabled="False" Height="4" Margin="0,0,0,12" />
+                    <TextBlock x:Name="EmptyText" Text="暂无数据" Visibility="Collapsed"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <ItemsControl x:Name="AssetList">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Columns="7" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="4,2">
+                                    <TextBlock Text="{Binding Name}" FontSize="12"
+                                               TextTrimming="CharacterEllipsis"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                    <TextBlock Text="{Binding CountText}" FontWeight="SemiBold" />
+                                    <TextBlock Text="{Binding DeltaText}" FontSize="12"
+                                               Foreground="{Binding DeltaBrush}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
