@@ -37,17 +37,18 @@
                 <TextBlock x:Name="EmptyText" Text="暂无数据" Visibility="Collapsed"
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                            Margin="0,0,0,8" />
-                <ListBox x:Name="AssetCards" SelectionMode="Single" BorderThickness="0"
-                         Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                    <ListBox.ItemsPanel>
+                <!-- 不可选网格：用 ItemsControl（WPF ListBox 没有 SelectionMode.None） -->
+                <ItemsControl x:Name="AssetCards"
+                              ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <WrapPanel />
                         </ItemsPanelTemplate>
-                    </ListBox.ItemsPanel>
-                    <ListBox.ItemTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <Border Width="225" Margin="0,0,8,8" Padding="12" CornerRadius="8"
-                                    Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                    Background="{DynamicResource LayerFillColorDefaultBrush}"
                                     BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
                                     BorderThickness="1">
                                 <StackPanel Orientation="Horizontal">
@@ -63,8 +64,8 @@
                                 </StackPanel>
                             </Border>
                         </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
             </StackPanel>
         </ScrollViewer>
     </Grid>
