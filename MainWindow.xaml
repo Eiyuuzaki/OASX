@@ -37,7 +37,7 @@
             <ui:NavigationView.MenuItems>
                 <ui:NavigationViewItem Content="仪表盘" TargetPageType="{x:Type views:DashboardPage}"
                                        Icon="{ui:SymbolIcon Home24}" />
-                <ui:NavigationViewItem Content="工作台" TargetPageType="{x:Type views:StubPage}"
+                <ui:NavigationViewItem Content="工作台" TargetPageType="{x:Type views:WorkbenchPage}"
                                        Icon="{ui:SymbolIcon Rocket24}" />
                 <ui:NavigationViewItem Content="统计" TargetPageType="{x:Type views:StubPage}"
                                        Icon="{ui:SymbolIcon DataHistogram24}" />

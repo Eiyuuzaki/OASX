@@ -57,11 +57,25 @@ public static class OasApi
 
     public record ScriptState(string State, string Time);
 
-    /// <summary>GET /{script}/state → 脚本运行状态</summary>
+    /// <summary>GET /{script}/state → 脚本运行状态。
+    /// ⚠️ 后端在特定状态下长时间不返回（实测阻塞 120s+），
+    /// 必须 5s 超时按"未知"处理，不能让调用方干等。</summary>
     public static async Task<ScriptState?> GetScriptStateAsync(string script)
     {
-        return await Http.GetFromJsonAsync<ScriptState>(
-            $"/{Uri.EscapeDataString(script)}/state", JsonOptions);
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        try
+        {
+            return await Http.GetFromJsonAsync<ScriptState>(
+                $"/{Uri.EscapeDataString(script)}/state", JsonOptions, cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
     }
 
     /// <summary>GET /{script}/start → 启动脚本。返回 (是否成功, 原始响应)。</summary>
