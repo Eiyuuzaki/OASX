@@ -2,6 +2,9 @@ using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
 using OASX.Services;
+using ContentDialog = Wpf.Ui.Controls.ContentDialog;
+using ContentDialogButton = Wpf.Ui.Controls.ContentDialogButton;
+using ContentDialogResult = Wpf.Ui.Controls.ContentDialogResult;
 
 namespace OASX.Views;
 
