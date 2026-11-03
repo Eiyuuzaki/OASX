@@ -189,7 +189,7 @@ public partial class ResourcePage : UserControl
             // 1. 图标白名单（本地 currency 图标）+ count>0
             // 2. (图标,名称) 聚合——同名视为同一种资产的多期版本，数量相加
             // 3. |delta| 降序，同名稳定
-            var visible = day.Items
+            var byIconName = day.Items
                 .Where(item => CurrencyIconRegistry.Has(item.Icon) && item.Count > 0)
                 .GroupBy(item => (CurrencyIconRegistry.BaseName(item.Icon), item.Name))
                 .Select(g =>
@@ -200,6 +200,23 @@ public partial class ResourcePage : UserControl
                     return new OasResourceApi.ResourceItem(
                         newest.Id, g.Key.Name, g.Key.Item1, count, deltaSum);
                 })
+                .ToList();
+
+            // 3. **按图标二次去重**（Flutter merged[icon] + _preferGroup）：
+            //    同一图标下的多期/多名称版本只保留一张卡——
+            //    优先常驻档（id<901000），其次数量大，最后 id 小。
+            //    没有这步时过期货币和活动代币会整屏刷出来（55 张卡 bug）。
+            var byIcon = new Dictionary<string, OasResourceApi.ResourceItem>();
+            foreach (var agg in byIconName)
+            {
+                var icon = CurrencyIconRegistry.BaseName(agg.Icon);
+                if (!byIcon.TryGetValue(icon, out var prev) || PreferGroup(agg, prev))
+                {
+                    byIcon[icon] = agg;
+                }
+            }
+
+            var visible = byIcon.Values
                 .OrderByDescending(x => Math.Abs(x.Delta ?? 0))
                 .ThenBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
                 .ToList();
@@ -235,6 +252,26 @@ public partial class ResourcePage : UserControl
         {
             return null;
         }
+    }
+
+    /// <summary>常驻档判定线：资源 ID 低于此值的是常驻资产，高于的是
+    /// 活动期次版本（Flutter _coreIdCutoff = 901000）。</summary>
+    private const int CoreIdCutoff = 901000;
+
+    /// <summary>资源 ID 通常是纯数字；非数字时退化为 0 保证比较不抛异常。</summary>
+    private static int IdOf(OasResourceApi.ResourceItem item) =>
+        int.TryParse(item.Id, out var n) ? n : 0;
+
+    /// <summary>同一图标下多个名称分组的取舍：优先常驻档，其次数量大，
+    /// 最后 id 小（Flutter _preferGroup 移植）。</summary>
+    private static bool PreferGroup(OasResourceApi.ResourceItem a,
+        OasResourceApi.ResourceItem b)
+    {
+        var aCore = IdOf(a) < CoreIdCutoff;
+        var bCore = IdOf(b) < CoreIdCutoff;
+        if (aCore != bCore) return aCore;
+        if (a.Count != b.Count) return a.Count > b.Count;
+        return IdOf(a) < IdOf(b);
     }
 
     private static string FormatCount(long n) => n switch
