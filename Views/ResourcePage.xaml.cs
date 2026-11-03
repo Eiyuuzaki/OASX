@@ -280,9 +280,14 @@ public partial class ResourcePage : UserControl
                         : Color.FromRgb(0xE5, 0x53, 0x53)),
                     IconImage = LoadIcon(item.Icon),
                     PinKey = pinKey,
-                    PinIcon = new Wpf.Ui.Controls.SymbolIcon(pinned
-                        ? Wpf.Ui.Controls.SymbolRegular.Pin24
-                        : Wpf.Ui.Controls.SymbolRegular.Pin24),
+                    PinIcon = new Wpf.Ui.Controls.SymbolIcon(
+                        Wpf.Ui.Controls.SymbolRegular.Pin24)
+                    {
+                        // 已置顶用 accent 蓝着色（WPF-UI 无实心 Pin 变体）
+                        Foreground = pinned
+                            ? FindBrush("OasAccentBrush")
+                            : FindBrush("OasTextTertiaryBrush"),
+                    },
                 };
             }).ToList();
             StatusText.Text = $"{date} · {visible.Count} 项资产";
