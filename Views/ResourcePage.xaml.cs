@@ -37,10 +37,10 @@ public sealed class AssetCardVm
 /// </summary>
 public partial class ResourcePage : UserControl
 {
-    private List<string> _configs = [];
     private List<string> _dates = [];
     private int _dateIndex = -1;
     private bool _suppressDateEvent;
+    private bool _suppressAccountEvent;
     private OasResourceApi.ResourceDay? _currentDay;
     private HashSet<string> _pinned = [];
 
@@ -80,7 +80,7 @@ public partial class ResourcePage : UserControl
         // 以它的实际宽度计算列数才能对齐顶栏铺满。
         Loaded += (_, _) => RecomputeCardWidth(AssetCards.ActualWidth);
         AssetCards.SizeChanged += (_, e) => RecomputeCardWidth(e.NewSize.Width);
-        _ = LoadAsync();
+        _ = LoadAccountsAsync();
     }
 
     /// <summary>可用宽度 → 列数（卡片最小 260px，2–4 列）→ 卡片宽度。</summary>
@@ -91,64 +91,70 @@ public partial class ResourcePage : UserControl
         CardWidth = Math.Floor((usable - 8 * (cols - 1)) / cols);
     }
 
-    private async Task LoadAsync()
+    /// <summary>从全局账号上下文加载账号列表（规范 3.1：页面不自持选择状态）。</summary>
+    private async Task LoadAccountsAsync()
     {
-        try
+        EmptyText.Visibility = Visibility.Collapsed;
+        AssetCards.ItemsSource = null;
+        var ctx = GlobalAccountContext.Instance;
+        if (ctx.Accounts.Count == 0 && !ctx.IsLoading)
         {
-            _configs = await OasApi.GetConfigListAsync();
-            ConfigSelector.ItemsSource = _configs;
-            var last = WorkbenchState.ActiveScript;
-            var idx = last is not null ? _configs.IndexOf(last) : -1;
-            ConfigSelector.SelectedIndex = idx >= 0 ? idx : (_configs.Count > 0 ? 0 : -1);
+            await ctx.LoadAccountsAsync();
         }
-        catch (Exception ex)
+        if (ctx.Error is not null)
         {
-            StatusText.Text = $"后端连接失败：{ex.Message}";
+            StatusText.Text = $"部分调度器账号读取失败：{ctx.Error}";
+        }
+
+        // 同名账号可能出现在多个调度器下（多对多）——显示名带调度器消歧
+        var dupNames = ctx.Accounts
+            .GroupBy(a => a.DisplayName)
+            .Where(g => g.Count() > 1)
+            .Select(g => g.Key)
+            .ToHashSet();
+        AccountSelector.ItemsSource = ctx.Accounts.Select(a => new
+        {
+            Entry = a,
+            Label = dupNames.Contains(a.DisplayName)
+                ? $"{a.DisplayName}（{a.Config}）"
+                : a.DisplayName,
+        }).ToList();
+        AccountSelector.DisplayMemberPath = "Label";
+        _suppressAccountEvent = true;
+        AccountSelector.SelectedIndex = ctx.Accounts.Count > 0 ? 0 : -1;
+        _suppressAccountEvent = false;
+
+        if (AccountSelector.SelectedItem is not null)
+        {
+            await AccountSelectedAsync();
+        }
+        else
+        {
+            EmptyText.Visibility = Visibility.Visible;
         }
     }
 
-    /// <summary>配置切换 → 加载角色列表（含各自可用日期）。</summary>
-    private async void ConfigSelector_SelectionChanged(object sender,
+    /// <summary>账号切换 → 设全局上下文 → 加载该账号的日期与资产。</summary>
+    private async void AccountSelector_SelectionChanged(object sender,
         SelectionChangedEventArgs e)
     {
-        if (ConfigSelector.SelectedItem is not string config) return;
+        if (_suppressAccountEvent) return;
+        await AccountSelectedAsync();
+    }
+
+    private async Task AccountSelectedAsync()
+    {
+        if ((AccountSelector.SelectedItem as dynamic)?.Entry is not AccountEntry entry)
+        {
+            return;
+        }
+        GlobalAccountContext.Instance.SetCurrent(entry);
+        LoadingBarHost(loading: true);
         EmptyText.Visibility = Visibility.Collapsed;
         AssetCards.ItemsSource = null;
         try
         {
-            var roles = await OasResourceApi.GetRolesAsync(config);
-            var vms = roles.Select(r => new RoleVm
-            {
-                RoleKey = r.RoleKey,
-                DisplayName = $"{r.Name} Lv{r.Level} · {r.ServerName}",
-                Dates = r.Dates ?? [],
-            }).ToList();
-            RoleSelector.ItemsSource = vms;
-            if (vms.Count > 0)
-            {
-                RoleSelector.SelectedIndex = 0;
-            }
-            else
-            {
-                RoleSelector.ItemsSource = null;
-                EmptyText.Visibility = Visibility.Visible;
-            }
-        }
-        catch (Exception ex)
-        {
-            StatusText.Text = $"加载角色失败：{ex.Message}";
-        }
-    }
-
-    /// <summary>角色切换 → 加载该角色的可用日期 → 加载最新一天。</summary>
-    private async void RoleSelector_SelectionChanged(object sender,
-        SelectionChangedEventArgs e)
-    {
-        if (RoleSelector.SelectedItem is not RoleVm role) return;
-        if (ConfigSelector.SelectedItem is not string config) return;
-        try
-        {
-            _dates = role.Dates;
+            _dates = entry.Dates;
             _suppressDateEvent = true;
             DateSelector.ItemsSource = _dates;
             _dateIndex = _dates.Count > 0 ? 0 : -1;
@@ -157,7 +163,7 @@ public partial class ResourcePage : UserControl
 
             if (CurrentDate is string date)
             {
-                await LoadDayAsync(config, date, role.RoleKey);
+                await LoadDayAsync(entry.Config, date, entry.RoleKey);
             }
             else
             {
@@ -168,6 +174,15 @@ public partial class ResourcePage : UserControl
         {
             StatusText.Text = $"加载日期失败：{ex.Message}";
         }
+        finally
+        {
+            LoadingBarHost(loading: false);
+        }
+    }
+
+    private void LoadingBarHost(bool loading)
+    {
+        if (loading) StatusText.Text = "加载中…";
     }
 
     private string? CurrentDate =>
@@ -209,11 +224,10 @@ public partial class ResourcePage : UserControl
 
     private async Task LoadCurrentDayAsync()
     {
-        if (ConfigSelector.SelectedItem is string config &&
-            CurrentDate is string date &&
-            RoleSelector.SelectedItem is RoleVm role)
+        if ((AccountSelector.SelectedItem as dynamic)?.Entry is AccountEntry entry &&
+            CurrentDate is string date)
         {
-            await LoadDayAsync(config, date, role.RoleKey);
+            await LoadDayAsync(entry.Config, date, entry.RoleKey);
         }
     }
 
@@ -328,10 +342,9 @@ public partial class ResourcePage : UserControl
     /// <summary>用缓存的天数据重跑筛选/置顶/排序管线（不重新请求后端）。</summary>
     private void ReRenderCards(OasResourceApi.ResourceDay day)
     {
-        if (ConfigSelector.SelectedItem is not string config) return;
-        var roleKey = RoleSelector.SelectedItem is RoleVm vm ? vm.RoleKey : null;
+        if ((AccountSelector.SelectedItem as dynamic)?.Entry is not AccountEntry entry) return;
         var date = CurrentDate ?? day.Date;
-        _ = LoadDayAsync(config, date, roleKey);
+        _ = LoadDayAsync(entry.Config, date, entry.RoleKey);
     }
 
     /// <summary>按键取主题画刷（语义色）。</summary>

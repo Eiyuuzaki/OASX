@@ -14,16 +14,11 @@
                 BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
                 BorderThickness="1" Margin="0,0,0,12">
             <StackPanel Orientation="Horizontal">
-                <ComboBox x:Name="ConfigSelector" MinWidth="150" MinHeight="40"
-                          SelectionChanged="ConfigSelector_SelectionChanged" />
-                <ComboBox x:Name="RoleSelector" MinWidth="200" MinHeight="40" Margin="12,0,0,0"
-                          SelectionChanged="RoleSelector_SelectionChanged">
-                    <ComboBox.ItemTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding DisplayName}" />
-                        </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
+                <!-- 规范 4.1：资产页只放账号选择器（全局上下文驱动），
+                     不放调度器选择器——资源数据地址由 (调度器,角色) 对决定，
+                     调度器名作为账号条目的次要信息展示 -->
+                <ComboBox x:Name="AccountSelector" MinWidth="240" MinHeight="40"
+                          SelectionChanged="AccountSelector_SelectionChanged" />
                 <ComboBox x:Name="DateSelector" MinWidth="140" MinHeight="40" Margin="12,0,0,0"
                           SelectionChanged="DateSelector_SelectionChanged" />
                 <TextBlock x:Name="StatusText" VerticalAlignment="Center" Margin="12,0,0,0"
