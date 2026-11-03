@@ -18,7 +18,21 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
-                <TextBlock Grid.Row="0" Text="配置" FontWeight="SemiBold" Margin="8,4,0,8" />
+                <DockPanel Grid.Row="0" Margin="8,4,8,8">
+                    <TextBlock Text="配置" FontWeight="SemiBold" />
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"
+                                HorizontalAlignment="Right">
+                        <Button Content="＋" MinWidth="30" Padding="0" FontSize="13"
+                                ToolTip="新建配置（以 template 为模板）"
+                                Click="ConfigAdd_Click" />
+                        <Button Content="改" MinWidth="30" Padding="0" FontSize="12" Margin="4,0,0,0"
+                                ToolTip="重命名当前配置"
+                                Click="ConfigRename_Click" />
+                        <Button Content="删" MinWidth="30" Padding="0" FontSize="12" Margin="4,0,0,0"
+                                ToolTip="删除当前配置"
+                                Click="ConfigDelete_Click" />
+                    </StackPanel>
+                </DockPanel>
                 <ListBox Grid.Row="1" x:Name="ConfigList"
                          SelectionMode="Single" BorderThickness="0" Background="Transparent"
                          SelectionChanged="ConfigList_SelectionChanged">

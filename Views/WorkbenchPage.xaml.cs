@@ -133,6 +133,150 @@ public partial class WorkbenchPage : UserControl
 
     private void BackToOverview_Click(object sender, RoutedEventArgs e) => ShowOverview();
 
+    // ==================== 配置管理（新建/改名/删除） ====================
+
+    /// <summary>模态文本输入：确定返回输入值，取消返回 null。</summary>
+    private string? PromptText(string title, string initial = "")
+    {
+        var owner = Window.GetWindow(this);
+        var win = new Window
+        {
+            Title = title,
+            Width = 400,
+            SizeToContent = SizeToContent.Height,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Owner = owner,
+            ResizeMode = ResizeMode.NoResize,
+        };
+        var tb = new System.Windows.Controls.TextBox { Text = initial, Margin = new Thickness(14, 14, 14, 8) };
+        var ok = new System.Windows.Controls.Button { Content = "确定", MinWidth = 76, IsDefault = true };
+        var cancel = new System.Windows.Controls.Button { Content = "取消", MinWidth = 76, IsCancel = true };
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 8, 14, 14) };
+        buttons.Children.Add(ok);
+        buttons.Children.Add(cancel);
+        var panel = new StackPanel();
+        panel.Children.Add(tb);
+        panel.Children.Add(buttons);
+        win.Content = panel;
+        win.Loaded += (_, _) => { tb.Focus(); tb.SelectAll(); };
+        var confirmed = false;
+        ok.Click += (_, _) => { confirmed = true; win.Close(); };
+        win.ShowDialog();
+        return confirmed ? tb.Text.Trim() : null;
+    }
+
+    /// <summary>模态确认：返回是否点了确定。</summary>
+    private bool Confirm(string message, string title = "确认")
+    {
+        var owner = Window.GetWindow(this);
+        var win = new Window
+        {
+            Title = title,
+            Width = 400,
+            SizeToContent = SizeToContent.Height,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Owner = owner,
+            ResizeMode = ResizeMode.NoResize,
+        };
+        var msg = new System.Windows.Controls.TextBlock
+        {
+            Text = message,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(14, 14, 14, 0),
+        };
+        var ok = new System.Windows.Controls.Button { Content = "确定", MinWidth = 76, IsDefault = true };
+        var cancel = new System.Windows.Controls.Button { Content = "取消", MinWidth = 76, IsCancel = true };
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 14, 14) };
+        buttons.Children.Add(ok);
+        buttons.Children.Add(cancel);
+        var panel = new StackPanel();
+        panel.Children.Add(msg);
+        panel.Children.Add(buttons);
+        win.Content = panel;
+        var confirmed = false;
+        ok.Click += (_, _) => { confirmed = true; win.Close(); };
+        win.ShowDialog();
+        return confirmed;
+    }
+
+    /// <summary>新建配置：后端生成新名 + 以 template 复制。</summary>
+    private async void ConfigAdd_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var newName = await OasConfigApi.GetNewNameAsync();
+            if (string.IsNullOrEmpty(newName))
+            {
+                StateText.Text = "后端未能生成新配置名";
+                return;
+            }
+            var list = await OasConfigApi.CopyAsync(newName);
+            _configs = list;
+            ConfigList.ItemsSource = _configs;
+            var idx = _configs.IndexOf(newName);
+            ConfigList.SelectedIndex = idx >= 0 ? idx : _configs.Count - 1;
+            StateText.Text = $"已创建 {newName}";
+        }
+        catch (Exception ex)
+        {
+            StateText.Text = $"新建失败：{ex.Message}";
+        }
+    }
+
+    /// <summary>重命名当前配置（运行中会被后端停掉，属预期行为）。</summary>
+    private async void ConfigRename_Click(object sender, RoutedEventArgs e)
+    {
+        if (ConfigList.SelectedItem is not string oldName)
+        {
+            StateText.Text = "先选中一个配置";
+            return;
+        }
+        var newName = PromptText("重命名配置", oldName);
+        if (newName is null || newName == oldName) return;
+        try
+        {
+            var ok = await OasConfigApi.RenameAsync(oldName, newName);
+            if (!ok)
+            {
+                StateText.Text = "重命名失败（名称冲突或被占用）";
+                return;
+            }
+            _configs = await OasApi.GetConfigListAsync();
+            ConfigList.ItemsSource = _configs;
+            var idx = _configs.IndexOf(newName);
+            ConfigList.SelectedIndex = idx >= 0 ? idx : -1;
+            StateText.Text = $"已重命名为 {newName}";
+        }
+        catch (Exception ex)
+        {
+            StateText.Text = $"重命名失败：{ex.Message}";
+        }
+    }
+
+    /// <summary>删除当前配置（template 受后端保护；运行中的会被先停掉）。</summary>
+    private async void ConfigDelete_Click(object sender, RoutedEventArgs e)
+    {
+        if (ConfigList.SelectedItem is not string name) return;
+        if (!Confirm($"删除配置「{name}」？此操作不可恢复。")) return;
+        try
+        {
+            var ok = await OasConfigApi.DeleteAsync(name);
+            if (!ok)
+            {
+                StateText.Text = "删除失败（template 不可删除或被占用）";
+                return;
+            }
+            _configs = await OasApi.GetConfigListAsync();
+            ConfigList.ItemsSource = _configs;
+            ConfigList.SelectedIndex = _configs.Count > 0 ? 0 : -1;
+            StateText.Text = $"已删除 {name}";
+        }
+        catch (Exception ex)
+        {
+            StateText.Text = $"删除失败：{ex.Message}";
+        }
+    }
+
     private async Task RefreshStateAsync(string script)
     {
         StateText.Text = "状态查询中…";
