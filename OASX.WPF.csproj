@@ -19,7 +19,17 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Resource Include="Assets\appicon.png" />
+    <Resource Include="Assets/appicon.png" />
   </ItemGroup>
+
+  <!-- 每次构建自动签名：未签名 exe 会触发"打开文件 - 安全警告"
+       （无法验证发布者），签名后该弹窗整条消失。
+       证书 CN=OASX Dev 为本机自签名（CurrentUser/My + TrustedPeople），
+       正式对外分发时换真证书并改用 /n 匹配的颁发者。 -->
+  <Target Name="SignOutput" AfterTargets="Build"
+          Condition="Exists('$(TargetPath)') And Exists('C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\signtool.exe')">
+    <Exec Command="&quot;C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\signtool.exe&quot; sign /fd SHA256 /n &quot;OASX Dev&quot; &quot;$(TargetDir)$(AssemblyName).exe&quot;"
+          ContinueOnError="true" />
+  </Target>
 
 </Project>
