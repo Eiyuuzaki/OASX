@@ -69,6 +69,8 @@ public partial class StatisticsPage : UserControl
             DateSelector.SelectedIndex = _dateIndex;
             _suppressDateEvent = false;
 
+            _ = LoadTrendAsync(config);
+
             if (CurrentDate is string date)
             {
                 await LoadDayAsync(config, date);
@@ -241,6 +243,61 @@ public partial class StatisticsPage : UserControl
     private void Page_Unloaded(object sender, RoutedEventArgs e)
     {
         _stream?.Stop();
+    }
+
+    // ==================== 历史趋势 ====================
+
+    private sealed record TrendVm(string DateLabel, double BarWidth, string ValueLabel);
+
+    /// <summary>趋势条形图最大像素宽（BarWidth 按占比换算）。</summary>
+    private const double TrendBarMaxWidth = 420;
+
+    /// <summary>加载全部日期的统计并渲染趋势（客户端逐日聚合，
+    /// 与 Flutter 端同构——后端无 history 端点）。</summary>
+    private async Task LoadTrendAsync(string config)
+    {
+        try
+        {
+            var rows = new List<(string Date, double Runtime, int Tasks, int Battles)>();
+            foreach (var date in _dates)
+            {
+                var day = await OasStatsApi.GetDayAsync(config, date);
+                if (day is null) continue;
+                rows.Add((date, day.TotalRuntimeSeconds, day.TotalTaskRunCount, day.TotalBattleCount));
+            }
+            RenderTrend(rows);
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"趋势加载失败：{ex.Message}";
+        }
+    }
+
+    private void RenderTrend(List<(string Date, double Runtime, int Tasks, int Battles)> rows)
+    {
+        var metric = (MetricSelector.SelectedItem as ComboBoxItem)?.Content as string ?? "运行时长";
+        double max;
+        Func<(string Date, double Runtime, int Tasks, int Battles), (double v, string label)> pick = metric switch
+        {
+            "任务次数" => (r => ((double)r.Tasks, $"{r.Tasks} 次")),
+            "战斗场次" => (r => ((double)r.Battles, $"{r.Battles} 场")),
+            _ => (r => (r.Runtime, FormatDuration(r.Runtime))),
+        };
+        var values = rows.Select(pick).ToList();
+        max = values.Count == 0 ? 0 : values.Max(x => x.v);
+
+        TrendList.ItemsSource = rows.Zip(values, (r, v) => new TrendVm(
+            DateLabel: r.Date,
+            BarWidth: max > 0 ? v.v / max * TrendBarMaxWidth : 0,
+            ValueLabel: v.label)).ToList();
+    }
+
+    private async void MetricSelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (ConfigSelector.SelectedItem is string config && _dates.Count > 0)
+        {
+            await LoadTrendAsync(config);
+        }
     }
 
     private void ClearTiles()
