@@ -56,21 +56,28 @@
                                     Background="{DynamicResource OasSurfaceBrush}"
                                     BorderBrush="{DynamicResource OasBorderBrush}"
                                     BorderThickness="1">
-                                <StackPanel Orientation="Horizontal">
-                                    <Border Width="56" VerticalAlignment="Center">
-                                        <Image Width="36" Height="36" HorizontalAlignment="Left"
-                                               Stretch="Uniform"
-                                               Source="{Binding IconImage}" />
-                                    </Border>
-                                    <StackPanel VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="SemiBold"
-                                                   TextTrimming="CharacterEllipsis" />
-                                        <TextBlock Text="{Binding CountText}" FontSize="25" FontWeight="SemiBold"
-                                                   FontFamily="{StaticResource AppFontFamily}" />
-                                        <TextBlock Text="{Binding DeltaText}" FontSize="14"
-                                                   Foreground="{Binding DeltaBrush}" />
+                                <Grid>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Width="56" VerticalAlignment="Center">
+                                            <Image Width="36" Height="36" HorizontalAlignment="Left"
+                                                   Stretch="Uniform"
+                                                   Source="{Binding IconImage}" />
+                                        </Border>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="SemiBold"
+                                                       TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding CountText}" FontSize="25" FontWeight="SemiBold"
+                                                       FontFamily="{StaticResource AppFontFamily}" />
+                                            <TextBlock Text="{Binding DeltaText}" FontSize="14"
+                                                       Foreground="{Binding DeltaBrush}" />
+                                        </StackPanel>
                                     </StackPanel>
-                                </StackPanel>
+                                    <ui:Button HorizontalAlignment="Right" VerticalAlignment="Top"
+                                               Icon="{Binding PinIcon}" Padding="2"
+                                               Background="Transparent" BorderThickness="0"
+                                               ToolTip="置顶 / 取消置顶"
+                                               Click="PinButton_Click" Tag="{Binding PinKey}" />
+                                </Grid>
                             </Border>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>

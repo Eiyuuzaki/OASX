@@ -23,6 +23,9 @@ public sealed class AssetCardVm
     public string DeltaText { get; init; } = "";
     public Brush DeltaBrush { get; init; } = Brushes.Transparent;
     public ImageSource? IconImage { get; init; }
+    public string PinKey { get; init; } = "";
+    public System.Windows.FrameworkElement PinIcon { get; init; } =
+        new Wpf.Ui.Controls.SymbolIcon(Wpf.Ui.Controls.SymbolRegular.Pin24);
 }
 
 /// <summary>
@@ -37,6 +40,24 @@ public partial class ResourcePage : UserControl
     private List<string> _dates = [];
     private int _dateIndex = -1;
     private bool _suppressDateEvent;
+    private OasResourceApi.ResourceDay? _currentDay;
+    private HashSet<string> _pinned = [];
+
+    private const string PinnedKey = "pinnedResources";
+
+    private void LoadPinned()
+    {
+        var raw = OasSettings.Get(PinnedKey, "");
+        _pinned = raw.Length == 0
+            ? new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            : new HashSet<string>(raw.Split(';', StringSplitOptions.RemoveEmptyEntries),
+                StringComparer.OrdinalIgnoreCase);
+    }
+
+    private void SavePinned() =>
+        OasSettings.Set(PinnedKey, string.Join(';', _pinned));
+
+    private bool IsPinned(string iconBase) => _pinned.Contains(iconBase);
 
     /// <summary>响应式卡片宽度：SizeChanged 按 2/3/4 列重算（规范 6.3）。</summary>
     public static readonly DependencyProperty CardWidthProperty =
@@ -52,6 +73,7 @@ public partial class ResourcePage : UserControl
     public ResourcePage()
     {
         InitializeComponent();
+        LoadPinned();
         SizeChanged += (_, e) => RecomputeCardWidth(e.NewSize.Width);
         _ = LoadAsync();
     }
@@ -60,7 +82,7 @@ public partial class ResourcePage : UserControl
     private void RecomputeCardWidth(double available)
     {
         var usable = available - 20;                 // 页边距/滚动条余量
-        var cols = Math.Clamp((int)(usable / 260), 2, 4);
+        var cols = Math.Clamp((int)(usable / 230), 2, 4);
         CardWidth = Math.Floor((usable - 8 * (cols - 1)) / cols);
     }
 
@@ -197,6 +219,7 @@ public partial class ResourcePage : UserControl
         try
         {
             var day = await OasResourceApi.GetResourceDayAsync(config, date, roleKey);
+            _currentDay = day;
             if (day is null || day.Items.Count == 0)
             {
                 AssetCards.ItemsSource = null;
@@ -236,20 +259,31 @@ public partial class ResourcePage : UserControl
                 }
             }
 
+            // 排序（Flutter 版）：置顶优先 → |delta| 降序 → 名称
             var visible = byIcon.Values
-                .OrderByDescending(x => Math.Abs(x.Delta ?? 0))
+                .OrderByDescending(x => IsPinned(CurrencyIconRegistry.BaseName(x.Icon)))
+                .ThenByDescending(x => Math.Abs(x.Delta ?? 0))
                 .ThenBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            AssetCards.ItemsSource = visible.Select(item => new AssetCardVm
+            AssetCards.ItemsSource = visible.Select(item =>
             {
-                Name = item.Name,
-                CountText = FormatCount(item.Count),
-                DeltaText = item.Delta is { } d && d != 0 ? FormatDelta(d) : "",
-                DeltaBrush = new SolidColorBrush((item.Delta ?? 0) >= 0
-                    ? Color.FromRgb(0x4C, 0xAF, 0x50)
-                    : Color.FromRgb(0xE5, 0x53, 0x53)),
-                IconImage = LoadIcon(item.Icon),
+                var pinKey = CurrencyIconRegistry.BaseName(item.Icon);
+                var pinned = IsPinned(pinKey);
+                return new AssetCardVm
+                {
+                    Name = item.Name,
+                    CountText = FormatCount(item.Count),
+                    DeltaText = item.Delta is { } d && d != 0 ? FormatDelta(d) : "",
+                    DeltaBrush = new SolidColorBrush((item.Delta ?? 0) >= 0
+                        ? Color.FromRgb(0x4C, 0xAF, 0x50)
+                        : Color.FromRgb(0xE5, 0x53, 0x53)),
+                    IconImage = LoadIcon(item.Icon),
+                    PinKey = pinKey,
+                    PinIcon = new Wpf.Ui.Controls.SymbolIcon(pinned
+                        ? Wpf.Ui.Controls.SymbolRegular.Pin24
+                        : Wpf.Ui.Controls.SymbolRegular.Pin24),
+                };
             }).ToList();
             StatusText.Text = $"{date} · {visible.Count} 项资产";
         }
@@ -257,6 +291,36 @@ public partial class ResourcePage : UserControl
         {
             StatusText.Text = $"加载失败：{ex.Message}";
         }
+    }
+
+    /// <summary>图钉切换：更新置顶集合并重排。</summary>
+    private void PinButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.Button { Tag: string pinKey })
+        {
+            if (_pinned.Contains(pinKey))
+            {
+                _pinned.Remove(pinKey);
+            }
+            else
+            {
+                _pinned.Add(pinKey);
+            }
+            SavePinned();
+            if (_currentDay is not null && _currentDay.Items.Count > 0)
+            {
+                ReRenderCards(_currentDay);
+            }
+        }
+    }
+
+    /// <summary>用缓存的天数据重跑筛选/置顶/排序管线（不重新请求后端）。</summary>
+    private void ReRenderCards(OasResourceApi.ResourceDay day)
+    {
+        if (ConfigSelector.SelectedItem is not string config) return;
+        var roleKey = RoleSelector.SelectedItem is RoleVm vm ? vm.RoleKey : null;
+        var date = CurrentDate ?? day.Date;
+        _ = LoadDayAsync(config, date, roleKey);
     }
 
     private static ImageSource? LoadIcon(string icon)
