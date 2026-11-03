@@ -147,7 +147,8 @@ public partial class WorkbenchPage : UserControl
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             Owner = Window.GetWindow(this),
             ResizeMode = ResizeMode.NoResize,
-            WindowBackdropType = Wpf.Ui.Controls.WindowBackdropType.Mica,
+            ExtendsContentIntoTitleBar = false,   // 普通标题栏（可拖拽，和其他软件一致）
+            Height = 190,                          // FluentWindow 模板下 SizeToContent 失效，显式定高
         };
         var tb = new System.Windows.Controls.TextBox { Text = initial, MinWidth = 300, Margin = new Thickness(16, 12, 16, 0) };
         var ok = new Wpf.Ui.Controls.Button
@@ -187,7 +188,8 @@ public partial class WorkbenchPage : UserControl
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             Owner = Window.GetWindow(this),
             ResizeMode = ResizeMode.NoResize,
-            WindowBackdropType = Wpf.Ui.Controls.WindowBackdropType.Mica,
+            ExtendsContentIntoTitleBar = false,   // 普通标题栏（可拖拽，和其他软件一致）
+            Height = 190,                          // FluentWindow 模板下 SizeToContent 失效，显式定高
         };
         var msg = new System.Windows.Controls.TextBlock
         {
