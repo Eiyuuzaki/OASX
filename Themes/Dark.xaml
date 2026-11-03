@@ -1,0 +1,18 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- OASX 语义色 — 深色主题（独立调校，非简单反转；参考 Fluent 2 Dark） -->
+
+    <SolidColorBrush x:Key="OasSurfaceBrush" Color="#292929" />
+    <SolidColorBrush x:Key="OasSurfaceSecondaryBrush" Color="#303030" />
+    <SolidColorBrush x:Key="OasSurfaceTertiaryBrush" Color="#383838" />
+    <SolidColorBrush x:Key="OasBorderBrush" Color="#414141" />
+    <SolidColorBrush x:Key="OasBorderStrongBrush" Color="#505050" />
+    <SolidColorBrush x:Key="OasTextPrimaryBrush" Color="#F5F5F5" />
+    <SolidColorBrush x:Key="OasTextSecondaryBrush" Color="#B8B8B8" />
+    <SolidColorBrush x:Key="OasTextTertiaryBrush" Color="#929292" />
+    <SolidColorBrush x:Key="OasAccentBrush" Color="#6EA8FE" />
+    <SolidColorBrush x:Key="OasSuccessBrush" Color="#4CC38A" />
+    <SolidColorBrush x:Key="OasWarningBrush" Color="#E5A84B" />
+    <SolidColorBrush x:Key="OasDangerBrush" Color="#F07178" />
+</ResourceDictionary>

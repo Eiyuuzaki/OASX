@@ -10,7 +10,10 @@
                  Width="1050" Height="700"
                  ExtendsContentIntoTitleBar="True"
                  WindowBackdropType="Mica"
-                 WindowStartupLocation="CenterScreen">
+                 WindowStartupLocation="CenterScreen"
+                 UseLayoutRounding="True"
+                 SnapsToDevicePixels="True"
+                 FontFamily="{StaticResource AppFontFamily}">
 
     <Grid>
         <Grid.RowDefinitions>

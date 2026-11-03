@@ -1,6 +1,6 @@
 using System.IO;
+using OASX.Services;
 using System.Windows;
-using Wpf.Ui.Appearance;
 
 namespace OASX;
 
@@ -31,33 +31,10 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
-        ApplySavedTheme();
+        ThemeService.WatchSystem();
+        ThemeService.Apply();
     }
 
     /// <summary>把持久化的主题应用到全局（设置页切换时也会调用）。</summary>
-    public static void ApplySavedTheme()
-    {
-        var backdrop = Services.OasSettings.BackdropMode switch
-        {
-            "acrylic" => Wpf.Ui.Controls.WindowBackdropType.Acrylic,
-            "none" => Wpf.Ui.Controls.WindowBackdropType.None,
-            _ => Wpf.Ui.Controls.WindowBackdropType.Mica,
-        };
-        switch (Services.OasSettings.ThemeMode)
-        {
-            case "light":
-                ApplicationThemeManager.Apply(ApplicationTheme.Light, backdrop);
-                break;
-            case "dark":
-                ApplicationThemeManager.Apply(ApplicationTheme.Dark, backdrop);
-                break;
-            default:
-                // 跟随系统：读 Windows 个性化设置
-                var system = ApplicationThemeManager.GetSystemTheme();
-                ApplicationThemeManager.Apply(
-                    system == SystemTheme.Light ? ApplicationTheme.Light
-                        : ApplicationTheme.Dark, backdrop);
-                break;
-        }
-    }
+    public static void ApplySavedTheme() => ThemeService.Apply();
 }
