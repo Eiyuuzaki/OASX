@@ -122,6 +122,20 @@ public partial class WorkbenchPage : UserControl
         }
     }
 
+    /// <summary>任务行 ▶：调度此任务立即执行（仅脚本运行中有效）。</summary>
+    private async void TaskRunNow_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.Button { Tag: string task } &&
+            WorkbenchState.ActiveScript is string script)
+        {
+            // 阻止行级 MouseLeftButtonDown 触发参数页导航
+            var ok = await OasWorkbenchApi.SyncNextRunAsync(script, task);
+            StateText.Text = ok
+                ? $"{I18nMenu.Tr(task)} 已调度立即执行"
+                : $"{I18nMenu.Tr(task)} 调度失败（脚本未运行？）";
+        }
+    }
+
     private void ShowArgsView()
     {
         OverviewPanel.Visibility = Visibility.Collapsed;

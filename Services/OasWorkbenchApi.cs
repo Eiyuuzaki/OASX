@@ -1,3 +1,4 @@
+using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -19,5 +20,18 @@ public static class OasWorkbenchApi
         var d = await OasApi.Http.GetFromJsonAsync<Dictionary<string, List<string>>>(
             "/script_menu", JsonOptions);
         return d ?? [];
+    }
+
+    /// <summary>PUT /{script}/{task}/sync_next_run → 把任务调度提前到 target_dt
+    /// （传当前时刻 = 立即执行）。仅脚本运行中有效（后端校验）。</summary>
+    public static async Task<bool> SyncNextRunAsync(string script, string task)
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var target = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        var url = $"/{Uri.EscapeDataString(script)}/{Uri.EscapeDataString(task)}/sync_next_run" +
+                  $"?target_dt={Uri.EscapeDataString(target)}";
+        using var req = new HttpRequestMessage(HttpMethod.Put, url);
+        var res = await OasApi.Http.SendAsync(req, cts.Token);
+        return res.IsSuccessStatusCode;
     }
 }
