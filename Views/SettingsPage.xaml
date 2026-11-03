@@ -2,56 +2,63 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
-    <Grid Margin="32,20,32,24">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
+    <!-- Windows 11 设置风：页头大标题 + 分组卡片 + 图标行（左标题描述/右控件） -->
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="32,20,32,24">
+        <StackPanel MaxWidth="860" HorizontalAlignment="Stretch">
 
-        <TextBlock Grid.Row="0" Text="设置" FontSize="20" FontWeight="SemiBold" />
+            <TextBlock Text="设置" FontSize="28" FontWeight="SemiBold" Margin="0,0,0,16" />
 
-        <StackPanel Grid.Row="1" MaxWidth="720" HorizontalAlignment="Left">
-
-            <Border CornerRadius="8" Padding="16"
-                    Background="{DynamicResource ControlFillColorDefaultBrush}"
-                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+            <!-- ============ OAS 后端 ============ -->
+            <TextBlock Text="OAS 后端" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,6" />
+            <Border CornerRadius="6" Padding="16" Margin="0,0,0,20"
+                    Background="{DynamicResource LayerFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                     BorderThickness="1">
-                <StackPanel>
-                    <TextBlock Text="OAS 后端地址" FontSize="14" FontWeight="SemiBold" />
-                    <TextBlock Text="OASX 通过 HTTP/SSE 连接该地址（默认 http://127.0.0.1:22288）"
-                               FontSize="12"
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <ui:TextBox x:Name="BackendBox" MinHeight="34"
-                                    PlaceholderText="http://127.0.0.1:22288" />
-                        <Button Grid.Column="1" Click="SaveBackend_Click"
-                               
-                                Margin="8,0,0,0">保存</Button>
-                    </Grid>
-                </StackPanel>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:SymbolIcon Grid.Column="0" Symbol="Server24" FontSize="20"
+                                   VerticalAlignment="Center" Margin="0,0,14,0" />
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Text="后端地址" FontSize="14" />
+                        <TextBlock Text="OASX 通过 HTTP/SSE 连接该地址" FontSize="12"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <ui:TextBox x:Name="BackendBox" MinWidth="220" MinHeight="32" Margin="0,0,8,0" />
+                        <ui:Button Content="保存" MinWidth="72" MinHeight="32"
+                                   Appearance="{x:Static ui:ControlAppearance.Primary}"
+                                   Click="SaveBackend_Click" />
+                    </StackPanel>
+                </Grid>
             </Border>
 
-            <Border CornerRadius="8" Padding="16"
-                    Background="{DynamicResource ControlFillColorDefaultBrush}"
-                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+            <!-- ============ 个性化 ============ -->
+            <TextBlock Text="个性化" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,6" />
+            <Border CornerRadius="6" Padding="16" Margin="0,0,0,20"
+                    Background="{DynamicResource LayerFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                     BorderThickness="1">
                 <StackPanel>
-                    <Grid Margin="0,0,0,14">
+                    <Grid Margin="0,0,0,16">
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <StackPanel>
-                            <TextBlock Text="主题" FontSize="14" FontWeight="SemiBold" />
+                        <ui:SymbolIcon Grid.Column="0" Symbol="Color24" FontSize="20"
+                                       VerticalAlignment="Center" Margin="0,0,14,0" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="应用主题" FontSize="14" />
                             <TextBlock Text="浅色 / 深色 / 跟随系统" FontSize="12"
                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                         </StackPanel>
-                        <ComboBox Grid.Column="1" x:Name="ThemeSelector" MinWidth="140"
-                                  MinHeight="34" SelectionChanged="ThemeSelector_SelectionChanged">
+                        <ComboBox Grid.Column="2" x:Name="ThemeSelector" MinWidth="150" MinHeight="32"
+                                  VerticalAlignment="Center"
+                                  SelectionChanged="ThemeSelector_SelectionChanged">
                             <ComboBoxItem Tag="system">跟随系统</ComboBoxItem>
                             <ComboBoxItem Tag="light">浅色</ComboBoxItem>
                             <ComboBoxItem Tag="dark">深色</ComboBoxItem>
@@ -59,16 +66,20 @@
                     </Grid>
                     <Grid>
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <StackPanel>
-                            <TextBlock Text="背景材质" FontSize="14" FontWeight="SemiBold" />
-                            <TextBlock Text="Mica / Acrylic / 无（BGI 同款）" FontSize="12"
+                        <ui:SymbolIcon Grid.Column="0" Symbol="PaintBrush24" FontSize="20"
+                                       VerticalAlignment="Center" Margin="0,0,14,0" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="背景材质" FontSize="14" />
+                            <TextBlock Text="Mica / Acrylic / 无" FontSize="12"
                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                         </StackPanel>
-                        <ComboBox Grid.Column="1" x:Name="BackdropSelector" MinWidth="140"
-                                  MinHeight="34" SelectionChanged="BackdropSelector_SelectionChanged">
+                        <ComboBox Grid.Column="2" x:Name="BackdropSelector" MinWidth="150" MinHeight="32"
+                                  VerticalAlignment="Center"
+                                  SelectionChanged="BackdropSelector_SelectionChanged">
                             <ComboBoxItem Tag="mica">Mica</ComboBoxItem>
                             <ComboBoxItem Tag="acrylic">Acrylic</ComboBoxItem>
                             <ComboBoxItem Tag="none">无</ComboBoxItem>
@@ -77,6 +88,106 @@
                 </StackPanel>
             </Border>
 
+            <!-- ============ 窗口 ============ -->
+            <TextBlock Text="窗口" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,6" />
+            <Border CornerRadius="6" Padding="16" Margin="0,0,0,20"
+                    Background="{DynamicResource LayerFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1">
+                <StackPanel>
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:SymbolIcon Grid.Column="0" Symbol="WindowNew24" FontSize="20"
+                                       VerticalAlignment="Center" Margin="0,0,14,0" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="记住窗口位置和大小" FontSize="14" />
+                            <TextBlock Text="下次启动恢复上次的窗口状态" FontSize="12"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                        <ui:ToggleSwitch Grid.Column="2" x:Name="RememberBoundsToggle"
+                                         VerticalAlignment="Center" Checked="RememberBounds_Toggled" Unchecked="RememberBounds_Toggled" />
+                    </Grid>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:SymbolIcon Grid.Column="0" Symbol="ArrowMinimize24" FontSize="20"
+                                       VerticalAlignment="Center" Margin="0,0,14,0" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="最小化到系统托盘" FontSize="14" />
+                            <TextBlock Text="最小化时隐藏到托盘，托盘图标可打开或退出" FontSize="12"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                        <ui:ToggleSwitch Grid.Column="2" x:Name="MinimizeToTrayToggle"
+                                         VerticalAlignment="Center" Checked="MinimizeToTray_Toggled" Unchecked="MinimizeToTray_Toggled" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- ============ 系统 ============ -->
+            <TextBlock Text="系统" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,6" />
+            <Border CornerRadius="6" Padding="16" Margin="0,0,0,20"
+                    Background="{DynamicResource LayerFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1">
+                <StackPanel>
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:SymbolIcon Grid.Column="0" Symbol="Power24" FontSize="20"
+                                       VerticalAlignment="Center" Margin="0,0,14,0" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="退出时停止后端" FontSize="14" />
+                            <TextBlock Text="关闭 OASX 时向后端发送停止指令" FontSize="12"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                        <ui:ToggleSwitch Grid.Column="2" x:Name="StopBackendToggle"
+                                         VerticalAlignment="Center" Checked="StopBackend_Toggled" Unchecked="StopBackend_Toggled" />
+                    </Grid>
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:SymbolIcon Grid.Column="0" Symbol="Rocket24" FontSize="20"
+                                       VerticalAlignment="Center" Margin="0,0,14,0" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="开机自启" FontSize="14" />
+                            <TextBlock Text="登录 Windows 后自动运行 OASX" FontSize="12"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                        <ui:ToggleSwitch Grid.Column="2" x:Name="LaunchAtStartupToggle"
+                                         VerticalAlignment="Center" Checked="LaunchAtStartup_Toggled" Unchecked="LaunchAtStartup_Toggled" />
+                    </Grid>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:SymbolIcon Grid.Column="0" Symbol="Info24" FontSize="20"
+                                       VerticalAlignment="Center" Margin="0,0,14,0" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="当前版本" FontSize="14" />
+                            <TextBlock x:Name="VersionText" Text="—" FontSize="12"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Text="语言切换、更新器暂未实现（与 Flutter 版对齐为后续增量）" FontSize="12"
+                       Foreground="{DynamicResource TextFillColorTertiaryBrush}" Margin="0,0,0,8" />
         </StackPanel>
-    </Grid>
+    </ScrollViewer>
 </UserControl>

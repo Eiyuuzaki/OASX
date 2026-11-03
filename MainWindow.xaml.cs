@@ -1,3 +1,5 @@
+using System.ComponentModel;
+using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Windows;
@@ -11,6 +13,9 @@ public partial class MainWindow : FluentWindow
 {
     /// <summary>ContentDialog 浮层宿主。</summary>
     public System.Windows.Controls.ContentPresenter DialogHost => RootDialogHost;
+
+    private Wpf.Ui.Tray.Controls.NotifyIcon? _trayIcon;
+    private bool _forceExit;
 
     public MainWindow()
     {
@@ -27,7 +32,142 @@ public partial class MainWindow : FluentWindow
             WireNavigationParent();
             RootNavigation.Navigate(typeof(DashboardPage));
         };
+
+        RestoreWindowBounds();
+        StateChanged += (_, _) => HandleMinimizeToTray();
+        Closing += MainWindow_Closing;
     }
+
+    // ==================== 窗口位置记忆 ====================
+
+    private bool RememberBounds =>
+        OasSettings.Get("rememberWindowBounds", "false") == "true";
+
+    private void RestoreWindowBounds()
+    {
+        if (!RememberBounds) return;
+        var raw = OasSettings.Get("windowBounds", "");
+        if (string.IsNullOrEmpty(raw)) return;
+        var parts = raw.Split(',');
+        if (parts.Length != 4) return;
+        try
+        {
+            var left = double.Parse(parts[0], CultureInfo.InvariantCulture);
+            var top = double.Parse(parts[1], CultureInfo.InvariantCulture);
+            Width = double.Parse(parts[2], CultureInfo.InvariantCulture);
+            Height = double.Parse(parts[3], CultureInfo.InvariantCulture);
+            // 多显示器拔掉后旧坐标可能落在屏幕外——超界则交还系统居中
+            var vs = SystemParameters.VirtualScreen;
+            if (left >= vs.Left - 50 && left < vs.Right && top >= vs.Top - 50 && top < vs.Bottom)
+            {
+                WindowStartupLocation = WindowStartupLocation.Manual;
+                Left = left;
+                Top = top;
+            }
+        }
+        catch (FormatException)
+        {
+            // 坏数据忽略，用默认位置
+        }
+    }
+
+    private void SaveWindowBounds()
+    {
+        if (!RememberBounds) return;
+        if (WindowState != WindowState.Normal) return;
+        OasSettings.Set("windowBounds", string.Format(CultureInfo.InvariantCulture,
+            "{0:0},{1:0},{2:0},{3:0}", Left, Top, Width, Height));
+    }
+
+    // ==================== 最小化到托盘 ====================
+
+    private bool MinimizeToTray =>
+        OasSettings.Get("minimizeToTray", "false") == "true";
+
+    private void HandleMinimizeToTray()
+    {
+        if (!_forceExit && MinimizeToTray && WindowState == WindowState.Minimized)
+        {
+            EnsureTrayIcon();
+            Hide();
+        }
+    }
+
+    private void EnsureTrayIcon()
+    {
+        if (_trayIcon is not null) return;
+        _trayIcon = new Wpf.Ui.Tray.Controls.NotifyIcon
+        {
+            Tooltip = "OASX",
+            Icon = new System.Windows.Media.Imaging.BitmapImage(
+                new Uri("pack://application:,,,/Assets/appicon.png")),
+            ForceLeftClickTrayIcon = true,
+        };
+        _trayIcon.LeftClick += (_, _) => RestoreFromTray();
+
+        var menu = new System.Windows.Controls.ContextMenu();
+        var open = new System.Windows.Controls.MenuItem { Header = "打开" };
+        open.Click += (_, _) => RestoreFromTray();
+        var exit = new System.Windows.Controls.MenuItem { Header = "退出" };
+        exit.Click += (_, _) => ExitApplication();
+        menu.Items.Add(open);
+        menu.Items.Add(new System.Windows.Controls.Separator());
+        menu.Items.Add(exit);
+        _trayIcon.ContextMenu = menu;
+    }
+
+    private void RestoreFromTray()
+    {
+        Show();
+        WindowState = WindowState.Normal;
+        Activate();
+    }
+
+    private void ExitApplication()
+    {
+        _forceExit = true;
+        _trayIcon?.Dispose();
+        Application.Current.Shutdown();
+    }
+
+    // ==================== 退出流程 ====================
+
+    private void MainWindow_Closing(object? sender, CancelEventArgs e)
+    {
+        if (!_forceExit && MinimizeToTray && WindowState != WindowState.Minimized)
+        {
+            // 用户点 X：有托盘设置时缩到托盘而不是退出（托盘菜单可真退出）
+            e.Cancel = true;
+            EnsureTrayIcon();
+            WindowState = WindowState.Minimized;   // 触发 StateChanged → Hide
+            return;
+        }
+
+        SaveWindowBounds();
+
+        if (OasSettings.Get("stopBackendOnExit", "false") == "true")
+        {
+            // 发后即忘：退出不等后端响应
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    using var http = new System.Net.Http.HttpClient
+                    {
+                        BaseAddress = new Uri(OasSettings.BackendAddress),
+                        Timeout = TimeSpan.FromSeconds(3),
+                    };
+                    await http.GetAsync("/home/kill_server");
+                }
+                catch
+                {
+                    // 后端不在/已停，忽略
+                }
+            });
+        }
+    }
+
+    // ==================== 导航 ====================
 
     /// <summary>
     /// ⚠️ WPF-UI 4.3.0 的致命缺陷 workaround：NavigationViewItem.OnClick
