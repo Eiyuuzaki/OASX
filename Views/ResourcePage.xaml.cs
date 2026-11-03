@@ -38,10 +38,30 @@ public partial class ResourcePage : UserControl
     private int _dateIndex = -1;
     private bool _suppressDateEvent;
 
+    /// <summary>响应式卡片宽度：SizeChanged 按 2/3/4 列重算（规范 6.3）。</summary>
+    public static readonly DependencyProperty CardWidthProperty =
+        DependencyProperty.Register(nameof(CardWidth), typeof(double),
+            typeof(ResourcePage), new PropertyMetadata(225.0));
+
+    public double CardWidth
+    {
+        get => (double)GetValue(CardWidthProperty);
+        set => SetValue(CardWidthProperty, value);
+    }
+
     public ResourcePage()
     {
         InitializeComponent();
+        SizeChanged += (_, e) => RecomputeCardWidth(e.NewSize.Width);
         _ = LoadAsync();
+    }
+
+    /// <summary>可用宽度 → 列数（卡片最小 260px，2–4 列）→ 卡片宽度。</summary>
+    private void RecomputeCardWidth(double available)
+    {
+        var usable = available - 20;                 // 页边距/滚动条余量
+        var cols = Math.Clamp((int)(usable / 260), 2, 4);
+        CardWidth = Math.Floor((usable - 8 * (cols - 1)) / cols);
     }
 
     private async Task LoadAsync()
