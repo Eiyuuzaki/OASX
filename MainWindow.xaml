@@ -39,7 +39,7 @@
                                        Icon="{ui:SymbolIcon Home24}" />
                 <ui:NavigationViewItem Content="工作台" TargetPageType="{x:Type views:WorkbenchPage}"
                                        Icon="{ui:SymbolIcon Rocket24}" />
-                <ui:NavigationViewItem Content="统计" TargetPageType="{x:Type views:StubPage}"
+                <ui:NavigationViewItem Content="统计" TargetPageType="{x:Type views:StatisticsPage}"
                                        Icon="{ui:SymbolIcon DataHistogram24}" />
                 <ui:NavigationViewItem Content="资产" TargetPageType="{x:Type views:ResourcePage}"
                                        Icon="{ui:SymbolIcon Wallet24}" />
