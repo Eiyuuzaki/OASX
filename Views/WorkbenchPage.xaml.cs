@@ -14,8 +14,8 @@ public sealed class TaskGroupVm
 }
 
 /// <summary>
-/// 工作台 v1：配置列表 + 脚本状态/启停 + 任务分组列表。
-/// 参数编辑（/{script}/{task}/args）与快速调度为下一增量。
+/// 工作台 v2：配置列表 + 脚本状态/启停 + 任务分组列表，
+/// 任务点击进入参数编辑（ArgsHost 内切换，返回按钮回概览）。
 /// </summary>
 public partial class WorkbenchPage : UserControl
 {
@@ -34,7 +34,6 @@ public partial class WorkbenchPage : UserControl
         {
             _configs = await OasApi.GetConfigListAsync();
             ConfigList.ItemsSource = _configs;
-            // 恢复上次选中（页面每次导航重建，记在内存即可）
             var last = WorkbenchState.ActiveScript;
             var idx = last is not null ? _configs.IndexOf(last) : -1;
             ConfigList.SelectedIndex = idx >= 0 ? idx : (_configs.Count > 0 ? 0 : -1);
@@ -80,14 +79,42 @@ public partial class WorkbenchPage : UserControl
         if (ConfigList.SelectedItem is not string script) return;
         WorkbenchState.ActiveScript = script;
         ScriptNameText.Text = script;
+        ShowOverview();
         await RefreshStateAsync(script);
     }
+
+    /// <summary>任务条目点击 → 参数编辑页。</summary>
+    private void TaskItem_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (sender is Border { Tag: string task } &&
+            WorkbenchState.ActiveScript is string script)
+        {
+            var args = new ArgsPage(script, task);
+            args.BackRequested += ShowOverview;
+            ArgsHost.Content = args;
+            ShowArgsView();
+        }
+    }
+
+    private void ShowArgsView()
+    {
+        OverviewPanel.Visibility = Visibility.Collapsed;
+        ArgsHostPanel.Visibility = Visibility.Visible;
+    }
+
+    private void ShowOverview()
+    {
+        ArgsHostPanel.Visibility = Visibility.Collapsed;
+        ArgsHost.Content = null;
+        OverviewPanel.Visibility = Visibility.Visible;
+    }
+
+    private void BackToOverview_Click(object sender, RoutedEventArgs e) => ShowOverview();
 
     private async Task RefreshStateAsync(string script)
     {
         StateText.Text = "状态查询中…";
         var state = await OasApi.GetScriptStateAsync(script);
-        // null = 后端阻塞超时/查询失败，按未知显示但不阻塞页面
         StateText.Text = state is null ? "状态：未知" : $"状态：{state.State}";
         StartButton.IsEnabled = state?.State != "running";
         StopButton.IsEnabled = state?.State == "running";

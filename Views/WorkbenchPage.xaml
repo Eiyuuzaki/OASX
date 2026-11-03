@@ -31,14 +31,14 @@
             </Grid>
         </Border>
 
-        <!-- 右栏：当前配置详情（对应 ActiveConfigPanel v1） -->
+        <!-- 右栏：概览（状态卡+任务分组） ↔ 参数编辑页 -->
         <Grid Grid.Column="1" Margin="16,0,0,0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
-            <!-- 脚本状态卡 -->
+            <!-- 脚本状态卡（两种视图下都显示） -->
             <Border Grid.Row="0" CornerRadius="8" Padding="16"
                     Background="{DynamicResource ControlFillColorDefaultBrush}"
                     BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
@@ -62,8 +62,8 @@
                 </Grid>
             </Border>
 
-            <!-- 任务分组列表（/script_menu） -->
-            <Border Grid.Row="1" Margin="0,12,0,0" CornerRadius="8" Padding="8"
+            <!-- 概览：任务分组列表 -->
+            <Border Grid.Row="1" x:Name="OverviewPanel" Margin="0,12,0,0" CornerRadius="8" Padding="8"
                     Background="{DynamicResource ControlFillColorDefaultBrush}"
                     BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
                     BorderThickness="1">
@@ -72,7 +72,7 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
-                    <TextBlock Grid.Row="0" Text="任务" FontWeight="SemiBold" Margin="8,4,0,8" />
+                    <TextBlock Grid.Row="0" Text="任务（点击进入参数编辑）" FontWeight="SemiBold" Margin="8,4,0,8" />
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                         <ItemsControl x:Name="TaskGroups">
                             <ItemsControl.ItemTemplate>
@@ -90,7 +90,10 @@
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
                                                     <Border Padding="14,6" Margin="0,1" CornerRadius="4"
-                                                            Background="{DynamicResource ControlFillColorSecondaryBrush}">
+                                                            Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                                            Cursor="Hand"
+                                                            MouseLeftButtonUp="TaskItem_Click"
+                                                            Tag="{Binding}">
                                                         <TextBlock Text="{Binding}" FontSize="13" />
                                                     </Border>
                                                 </DataTemplate>
@@ -101,6 +104,23 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </ScrollViewer>
+                </Grid>
+            </Border>
+
+            <!-- 参数编辑页宿主（点击任务时显示） -->
+            <Border Grid.Row="1" x:Name="ArgsHostPanel" Margin="0,12,0,0" Visibility="Collapsed"
+                    CornerRadius="8" Padding="8"
+                    Background="{DynamicResource ControlFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                    BorderThickness="1">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Button Grid.Row="0" Content="← 返回任务列表" HorizontalAlignment="Left" Margin="0,0,0,8"
+                            Click="BackToOverview_Click" />
+                    <ContentControl Grid.Row="1" x:Name="ArgsHost" />
                 </Grid>
             </Border>
         </Grid>

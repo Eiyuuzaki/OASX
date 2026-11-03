@@ -8,7 +8,7 @@ namespace OASX.Services;
 /// <summary>OAS 后端 API 客户端（对应 Flutter 的 api_client_*.dart）。</summary>
 public static class OasApi
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
+    public static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
