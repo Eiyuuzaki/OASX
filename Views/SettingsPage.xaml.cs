@@ -16,6 +16,12 @@ public partial class SettingsPage : UserControl
             "dark" => 2,
             _ => 0,
         };
+        BackdropSelector.SelectedIndex = OasSettings.BackdropMode switch
+        {
+            "acrylic" => 1,
+            "none" => 2,
+            _ => 0,
+        };
     }
 
     private void SaveBackend_Click(object sender, RoutedEventArgs e)
@@ -38,6 +44,16 @@ public partial class SettingsPage : UserControl
         if (ThemeSelector.SelectedItem is ComboBoxItem { Tag: string mode })
         {
             OasSettings.ThemeMode = mode;
+            App.ApplySavedTheme();
+        }
+    }
+
+    private void BackdropSelector_SelectionChanged(object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (BackdropSelector.SelectedItem is ComboBoxItem { Tag: string mode })
+        {
+            OasSettings.BackdropMode = mode;
             App.ApplySavedTheme();
         }
     }

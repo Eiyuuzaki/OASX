@@ -90,4 +90,11 @@ public static class OasSettings
         get => Get("themeMode", "system");
         set => Set("themeMode", value);
     }
+
+    /// <summary>背景材质：mica / acrylic / none（BGI 同款选项）。</summary>
+    public static string BackdropMode
+    {
+        get => Get("backdropMode", "mica");
+        set => Set("backdropMode", value);
+    }
 }

@@ -37,7 +37,12 @@ public partial class App : Application
     /// <summary>把持久化的主题应用到全局（设置页切换时也会调用）。</summary>
     public static void ApplySavedTheme()
     {
-        var backdrop = Wpf.Ui.Controls.WindowBackdropType.Mica;
+        var backdrop = Services.OasSettings.BackdropMode switch
+        {
+            "acrylic" => Wpf.Ui.Controls.WindowBackdropType.Acrylic,
+            "none" => Wpf.Ui.Controls.WindowBackdropType.None,
+            _ => Wpf.Ui.Controls.WindowBackdropType.Mica,
+        };
         switch (Services.OasSettings.ThemeMode)
         {
             case "light":

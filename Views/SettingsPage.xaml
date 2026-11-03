@@ -39,23 +39,42 @@
                     Background="{DynamicResource ControlFillColorDefaultBrush}"
                     BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
                     BorderThickness="1">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <StackPanel>
-                        <TextBlock Text="主题" FontSize="14" FontWeight="SemiBold" />
-                        <TextBlock Text="浅色 / 深色 / 跟随系统" FontSize="12"
-                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                    </StackPanel>
-                    <ComboBox Grid.Column="1" x:Name="ThemeSelector" MinWidth="140"
-                              MinHeight="34" SelectionChanged="ThemeSelector_SelectionChanged">
-                        <ComboBoxItem Tag="system">跟随系统</ComboBoxItem>
-                        <ComboBoxItem Tag="light">浅色</ComboBoxItem>
-                        <ComboBoxItem Tag="dark">深色</ComboBoxItem>
-                    </ComboBox>
-                </Grid>
+                <StackPanel>
+                    <Grid Margin="0,0,0,14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="主题" FontSize="14" FontWeight="SemiBold" />
+                            <TextBlock Text="浅色 / 深色 / 跟随系统" FontSize="12"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                        <ComboBox Grid.Column="1" x:Name="ThemeSelector" MinWidth="140"
+                                  MinHeight="34" SelectionChanged="ThemeSelector_SelectionChanged">
+                            <ComboBoxItem Tag="system">跟随系统</ComboBoxItem>
+                            <ComboBoxItem Tag="light">浅色</ComboBoxItem>
+                            <ComboBoxItem Tag="dark">深色</ComboBoxItem>
+                        </ComboBox>
+                    </Grid>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="背景材质" FontSize="14" FontWeight="SemiBold" />
+                            <TextBlock Text="Mica / Acrylic / 无（BGI 同款）" FontSize="12"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                        <ComboBox Grid.Column="1" x:Name="BackdropSelector" MinWidth="140"
+                                  MinHeight="34" SelectionChanged="BackdropSelector_SelectionChanged">
+                            <ComboBoxItem Tag="mica">Mica</ComboBoxItem>
+                            <ComboBoxItem Tag="acrylic">Acrylic</ComboBoxItem>
+                            <ComboBoxItem Tag="none">无</ComboBoxItem>
+                        </ComboBox>
+                    </Grid>
+                </StackPanel>
             </Border>
 
         </StackPanel>
