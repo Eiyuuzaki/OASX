@@ -93,8 +93,8 @@
                                                             Background="{DynamicResource ControlFillColorSecondaryBrush}"
                                                             Cursor="Hand"
                                                             MouseLeftButtonDown="TaskItem_Click"
-                                                            Tag="{Binding}">
-                                                        <TextBlock Text="{Binding}" FontSize="13" />
+                                                            Tag="{Binding Name}">
+                                                        <TextBlock Text="{Binding Display}" FontSize="13" />
                                                     </Border>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>

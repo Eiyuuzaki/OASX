@@ -6,11 +6,18 @@ using OASX.Services;
 namespace OASX.Views;
 
 /// <summary>任务分组展示模型。</summary>
+public sealed class TaskItemVm
+{
+    public string Name { get; init; } = "";
+    public string Display { get; init; } = "";
+}
+
+/// <summary>任务分组展示模型。</summary>
 public sealed class TaskGroupVm
 {
     public string Group { get; init; } = "";
     public string Count { get; init; } = "";
-    public List<string> Tasks { get; init; } = [];
+    public List<TaskItemVm> Tasks { get; init; } = [];
 }
 
 /// <summary>
@@ -71,9 +78,13 @@ public partial class WorkbenchPage : UserControl
             var menu = await OasWorkbenchApi.GetScriptMenuAsync();
             TaskGroups.ItemsSource = menu.Where(kv => kv.Value.Count > 0).Select(kv => new TaskGroupVm
             {
-                Group = kv.Key,
+                Group = I18nMenu.Tr(kv.Key),
                 Count = $"{kv.Value.Count} 项",
-                Tasks = kv.Value,
+                Tasks = kv.Value.Select(t => new TaskItemVm
+                {
+                    Name = t,
+                    Display = I18nMenu.Tr(t),
+                }).ToList(),
             }).ToList();
         }
         catch (Exception ex)
@@ -82,7 +93,7 @@ public partial class WorkbenchPage : UserControl
             {
                 Group = "任务加载失败",
                 Count = "",
-                Tasks = [ex.Message],
+                Tasks = [new TaskItemVm { Name = ex.Message, Display = ex.Message }],
             } };
         }
     }
