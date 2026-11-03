@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -121,6 +122,9 @@ public partial class ArgsPage : Page
             "boolean" => BuildBooleanEditor(value == "true"),
             "enum" when enumOptions is { Count: > 0 } => BuildEnumEditor(value, enumOptions),
             "multi_line" => BuildTextEditor(value, multiline: true),
+            "time" => BuildTextEditor(value, multiline: false, hint: "格式 HH:mm:ss"),
+            "time_delta" => BuildTextEditor(value, multiline: false, hint: "格式 dd HH:mm:ss"),
+            "date_time" => BuildTextEditor(value, multiline: false, hint: "格式 yyyy-MM-dd HH:mm:ss"),
             _ => BuildTextEditor(value, multiline: false),
         };
         editor.Margin = new Thickness(0, 2, 0, 2);
@@ -138,7 +142,7 @@ public partial class ArgsPage : Page
         return grid;
     }
 
-    private Control BuildTextEditor(string value, bool multiline)
+    private Control BuildTextEditor(string value, bool multiline, string? hint = null)
     {
         var box = new System.Windows.Controls.TextBox
         {
@@ -148,6 +152,7 @@ public partial class ArgsPage : Page
             MinWidth = 260,
             MaxWidth = 420,
         };
+        if (hint is not null) box.ToolTip = hint;
         if (multiline) box.MinHeight = 60;
         // 失焦即保存（TextChanged 每键都 PUT 太吵）
         box.LostFocus += async (_, _) =>
@@ -193,6 +198,12 @@ public partial class ArgsPage : Page
 
     private async Task SaveArgAsync(string group, string name, string type, string value)
     {
+        if (type == "date_time" && !DateTime.TryParseExact(value, "yyyy-MM-dd HH:mm:ss",
+                CultureInfo.InvariantCulture, DateTimeStyles.None, out _))
+        {
+            StatusText.Text = $"{name} 格式应为 yyyy-MM-dd HH:mm:ss，未保存";
+            return;
+        }
         var ok = await OasArgsApi.PutArgValueAsync(_script, _task, group, name, type, value);
         StatusText.Text = ok
             ? $"{name} 已保存 ✓"
