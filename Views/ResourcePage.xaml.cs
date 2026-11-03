@@ -328,6 +328,10 @@ public partial class ResourcePage : UserControl
         _ = LoadDayAsync(config, date, roleKey);
     }
 
+    /// <summary>按键取主题画刷（语义色）。</summary>
+    private static Brush FindBrush(string key) =>
+        Application.Current.TryFindResource(key) as Brush ?? Brushes.Transparent;
+
     private static ImageSource? LoadIcon(string icon)
     {
         var baseName = CurrencyIconRegistry.BaseName(icon);
