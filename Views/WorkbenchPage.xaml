@@ -92,7 +92,7 @@
                                                     <Border Padding="14,6" Margin="0,1" CornerRadius="4"
                                                             Background="{DynamicResource ControlFillColorSecondaryBrush}"
                                                             Cursor="Hand"
-                                                            MouseLeftButtonUp="TaskItem_Click"
+                                                            MouseLeftButtonDown="TaskItem_Click"
                                                             Tag="{Binding}">
                                                         <TextBlock Text="{Binding}" FontSize="13" />
                                                     </Border>

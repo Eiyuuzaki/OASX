@@ -69,7 +69,7 @@ public partial class WorkbenchPage : UserControl
         try
         {
             var menu = await OasWorkbenchApi.GetScriptMenuAsync();
-            TaskGroups.ItemsSource = menu.Select(kv => new TaskGroupVm
+            TaskGroups.ItemsSource = menu.Where(kv => kv.Value.Count > 0).Select(kv => new TaskGroupVm
             {
                 Group = kv.Key,
                 Count = $"{kv.Value.Count} 项",
