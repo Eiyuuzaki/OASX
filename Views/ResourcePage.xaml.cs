@@ -74,7 +74,11 @@ public partial class ResourcePage : UserControl
     {
         InitializeComponent();
         LoadPinned();
-        SizeChanged += (_, e) => RecomputeCardWidth(e.NewSize.Width);
+        // ⚠️ 挂在 AssetCards 自身：页面宽度 ≠ 网格可用宽度（导航栏展开/收起
+        // 会吃掉宽度，导致列数滞后、右侧留白）。AssetCards 与工具栏同宽，
+        // 以它的实际宽度计算列数才能对齐顶栏铺满。
+        Loaded += (_, _) => RecomputeCardWidth(AssetCards.ActualWidth);
+        AssetCards.SizeChanged += (_, e) => RecomputeCardWidth(e.NewSize.Width);
         _ = LoadAsync();
     }
 
