@@ -51,5 +51,8 @@
                                        Icon="{ui:SymbolIcon Settings24}" />
             </ui:NavigationView.FooterMenuItems>
         </ui:NavigationView>
+
+        <!-- ContentDialog 浮层宿主 -->
+        <ContentPresenter x:Name="RootDialogHost" />
     </Grid>
 </ui:FluentWindow>

@@ -2,7 +2,9 @@ using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
 using OASX.Services;
-using FluentWindow = Wpf.Ui.Controls.FluentWindow;
+using ContentDialog = Wpf.Ui.Controls.ContentDialog;
+using ContentDialogButton = Wpf.Ui.Controls.ContentDialogButton;
+using ContentDialogResult = Wpf.Ui.Controls.ContentDialogResult;
 
 namespace OASX.Views;
 
@@ -136,90 +138,47 @@ public partial class WorkbenchPage : UserControl
 
     // ==================== 配置管理（新建/改名/删除） ====================
 
-    /// <summary>模态输入窗：FluentWindow 居中带阴影，确定返回输入值。</summary>
-    private Task<string?> PromptTextAsync(string title, string initial = "")
+    /// <summary>Fluent 输入对话框（浮层卡片，居中，宽 420）：确定返回输入值。</summary>
+    private async Task<string?> PromptTextAsync(string title, string initial = "")
     {
-        var win = new FluentWindow
+        var host = (Window.GetWindow(this) as MainWindow)?.DialogHost;
+        if (host is null) return null;
+        var tb = new System.Windows.Controls.TextBox { Text = initial, MinWidth = 300 };
+        var panel = new StackPanel { Margin = new Thickness(0, 12, 0, 8) };
+        panel.Children.Add(tb);
+        var dialog = new ContentDialog(host)
         {
             Title = title,
-            Width = 420,
-            SizeToContent = SizeToContent.Height,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Owner = Window.GetWindow(this),
-            ResizeMode = ResizeMode.NoResize,
-            ExtendsContentIntoTitleBar = false,   // 普通标题栏（可拖拽，和其他软件一致）
-            Height = 190,                          // FluentWindow 模板下 SizeToContent 失效，显式定高
+            Content = panel,
+            PrimaryButtonText = "确定",
+            CloseButtonText = "取消",
+            DefaultButton = ContentDialogButton.Primary,
+            DialogWidth = 420,
         };
-        var tb = new System.Windows.Controls.TextBox { Text = initial, MinWidth = 300, Margin = new Thickness(16, 12, 16, 0) };
-        var ok = new Wpf.Ui.Controls.Button
-        {
-            Content = "确定", MinWidth = 88, Margin = new Thickness(8, 0, 0, 0),
-            Appearance = Wpf.Ui.Controls.ControlAppearance.Primary,
-            IsDefault = true,
-        };
-        var cancel = new Wpf.Ui.Controls.Button { Content = "取消", MinWidth = 88, IsCancel = true };
-        var buttons = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            HorizontalAlignment = HorizontalAlignment.Right,
-            Margin = new Thickness(0, 14, 16, 16),
-        };
-        buttons.Children.Add(cancel);
-        buttons.Children.Add(ok);
-        var panel = new StackPanel();
-        panel.Children.Add(tb);
-        panel.Children.Add(buttons);
-        win.Content = panel;
-        win.Loaded += (_, _) => { tb.Focus(); tb.SelectAll(); };
-        var confirmed = false;
-        ok.Click += (_, _) => { confirmed = true; win.Close(); };
-        win.ShowDialog();
-        return Task.FromResult(confirmed ? tb.Text.Trim() : (string?)null);
+        var result = await dialog.ShowAsync();
+        return result == ContentDialogResult.Primary ? tb.Text.Trim() : null;
     }
 
-    /// <summary>模态确认窗：返回是否点了确定。</summary>
-    private Task<bool> ConfirmAsync(string message, string title = "确认")
+    /// <summary>Fluent 确认对话框：返回是否点了确定。</summary>
+    private async Task<bool> ConfirmAsync(string message, string title = "确认")
     {
-        var win = new FluentWindow
+        var host = (Window.GetWindow(this) as MainWindow)?.DialogHost;
+        if (host is null) return false;
+        var dialog = new ContentDialog(host)
         {
             Title = title,
-            Width = 420,
-            SizeToContent = SizeToContent.Height,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Owner = Window.GetWindow(this),
-            ResizeMode = ResizeMode.NoResize,
-            ExtendsContentIntoTitleBar = false,   // 普通标题栏（可拖拽，和其他软件一致）
-            Height = 190,                          // FluentWindow 模板下 SizeToContent 失效，显式定高
+            Content = new System.Windows.Controls.TextBlock
+            {
+                Text = message,
+                TextWrapping = TextWrapping.Wrap,
+            },
+            PrimaryButtonText = "确定",
+            CloseButtonText = "取消",
+            DefaultButton = ContentDialogButton.Primary,
+            DialogWidth = 420,
         };
-        var msg = new System.Windows.Controls.TextBlock
-        {
-            Text = message,
-            TextWrapping = TextWrapping.Wrap,
-            Margin = new Thickness(16, 12, 16, 0),
-        };
-        var ok = new Wpf.Ui.Controls.Button
-        {
-            Content = "确定", MinWidth = 88, Margin = new Thickness(8, 0, 0, 0),
-            Appearance = Wpf.Ui.Controls.ControlAppearance.Primary,
-            IsDefault = true,
-        };
-        var cancel = new Wpf.Ui.Controls.Button { Content = "取消", MinWidth = 88, IsCancel = true };
-        var buttons = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            HorizontalAlignment = HorizontalAlignment.Right,
-            Margin = new Thickness(0, 14, 16, 16),
-        };
-        buttons.Children.Add(cancel);
-        buttons.Children.Add(ok);
-        var panel = new StackPanel();
-        panel.Children.Add(msg);
-        panel.Children.Add(buttons);
-        win.Content = panel;
-        var confirmed = false;
-        ok.Click += (_, _) => { confirmed = true; win.Close(); };
-        win.ShowDialog();
-        return Task.FromResult(confirmed);
+        var result = await dialog.ShowAsync();
+        return result == ContentDialogResult.Primary;
     }
 
     /// <summary>新建配置：后端生成新名 + 以 template 复制。</summary>
