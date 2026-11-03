@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <Resource Include="Assets/appicon.png" />
+    <Resource Include="Assets/currency/*.png" />
   </ItemGroup>
 
   <!-- 每次构建自动签名：未签名 exe 会触发"打开文件 - 安全警告"

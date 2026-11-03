@@ -41,7 +41,7 @@
                                        Icon="{ui:SymbolIcon Rocket24}" />
                 <ui:NavigationViewItem Content="统计" TargetPageType="{x:Type views:StubPage}"
                                        Icon="{ui:SymbolIcon DataHistogram24}" />
-                <ui:NavigationViewItem Content="资产" TargetPageType="{x:Type views:StubPage}"
+                <ui:NavigationViewItem Content="资产" TargetPageType="{x:Type views:ResourcePage}"
                                        Icon="{ui:SymbolIcon Wallet24}" />
                 <ui:NavigationViewItem Content="日志" TargetPageType="{x:Type views:LogPage}"
                                        Icon="{ui:SymbolIcon SlideText24}" />
