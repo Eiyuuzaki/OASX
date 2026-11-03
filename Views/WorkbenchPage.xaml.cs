@@ -135,68 +135,46 @@ public partial class WorkbenchPage : UserControl
 
     // ==================== 配置管理（新建/改名/删除） ====================
 
-    /// <summary>模态文本输入：确定返回输入值，取消返回 null。</summary>
-    private string? PromptText(string title, string initial = "")
+    /// <summary>Fluent 输入对话框：确定返回输入值，取消返回 null。</summary>
+    private async Task<string?> PromptTextAsync(string title, string initial = "")
     {
-        var owner = Window.GetWindow(this);
-        var win = new Window
+        var host = (Window.GetWindow(this) as MainWindow)?.DialogHost;
+        if (host is null) return null;
+        var tb = new System.Windows.Controls.TextBox { Text = initial, MinWidth = 280 };
+        var panel = new StackPanel { Margin = new Thickness(0, 8, 0, 4) };
+        panel.Children.Add(tb);
+        var dialog = new ContentDialog(host)
         {
             Title = title,
-            Width = 400,
-            SizeToContent = SizeToContent.Height,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Owner = owner,
-            ResizeMode = ResizeMode.NoResize,
+            Content = panel,
+            PrimaryButtonText = "确定",
+            CloseButtonText = "取消",
+            DefaultButton = ContentDialogButton.Primary,
         };
-        var tb = new System.Windows.Controls.TextBox { Text = initial, Margin = new Thickness(14, 14, 14, 8) };
-        var ok = new System.Windows.Controls.Button { Content = "确定", MinWidth = 76, IsDefault = true };
-        var cancel = new System.Windows.Controls.Button { Content = "取消", MinWidth = 76, IsCancel = true };
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 8, 14, 14) };
-        buttons.Children.Add(ok);
-        buttons.Children.Add(cancel);
-        var panel = new StackPanel();
-        panel.Children.Add(tb);
-        panel.Children.Add(buttons);
-        win.Content = panel;
-        win.Loaded += (_, _) => { tb.Focus(); tb.SelectAll(); };
-        var confirmed = false;
-        ok.Click += (_, _) => { confirmed = true; win.Close(); };
-        win.ShowDialog();
-        return confirmed ? tb.Text.Trim() : null;
+        var result = await dialog.ShowAsync();
+        return result == ContentDialogResult.Primary ? tb.Text.Trim() : null;
     }
 
-    /// <summary>模态确认：返回是否点了确定。</summary>
-    private bool Confirm(string message, string title = "确认")
+    /// <summary>Fluent 确认对话框：返回是否点了确定。</summary>
+    private async Task<bool> ConfirmAsync(string message, string title = "确认")
     {
-        var owner = Window.GetWindow(this);
-        var win = new Window
+        var host = (Window.GetWindow(this) as MainWindow)?.DialogHost;
+        if (host is null) return false;
+        var dialog = new ContentDialog(host)
         {
             Title = title,
-            Width = 400,
-            SizeToContent = SizeToContent.Height,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Owner = owner,
-            ResizeMode = ResizeMode.NoResize,
+            Content = new System.Windows.Controls.TextBlock
+            {
+                Text = message,
+                TextWrapping = TextWrapping.Wrap,
+                MaxWidth = 340,
+            },
+            PrimaryButtonText = "确定",
+            CloseButtonText = "取消",
+            DefaultButton = ContentDialogButton.Primary,
         };
-        var msg = new System.Windows.Controls.TextBlock
-        {
-            Text = message,
-            TextWrapping = TextWrapping.Wrap,
-            Margin = new Thickness(14, 14, 14, 0),
-        };
-        var ok = new System.Windows.Controls.Button { Content = "确定", MinWidth = 76, IsDefault = true };
-        var cancel = new System.Windows.Controls.Button { Content = "取消", MinWidth = 76, IsCancel = true };
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 14, 14) };
-        buttons.Children.Add(ok);
-        buttons.Children.Add(cancel);
-        var panel = new StackPanel();
-        panel.Children.Add(msg);
-        panel.Children.Add(buttons);
-        win.Content = panel;
-        var confirmed = false;
-        ok.Click += (_, _) => { confirmed = true; win.Close(); };
-        win.ShowDialog();
-        return confirmed;
+        var result = await dialog.ShowAsync();
+        return result == ContentDialogResult.Primary;
     }
 
     /// <summary>新建配置：后端生成新名 + 以 template 复制。</summary>
@@ -231,7 +209,7 @@ public partial class WorkbenchPage : UserControl
             StateText.Text = "先选中一个配置";
             return;
         }
-        var newName = PromptText("重命名配置", oldName);
+        var newName = await PromptTextAsync("重命名配置", oldName);
         if (newName is null || newName == oldName) return;
         try
         {
@@ -257,7 +235,7 @@ public partial class WorkbenchPage : UserControl
     private async void ConfigDelete_Click(object sender, RoutedEventArgs e)
     {
         if (ConfigList.SelectedItem is not string name) return;
-        if (!Confirm($"删除配置「{name}」？此操作不可恢复。")) return;
+        if (!await ConfirmAsync($"删除配置「{name}」？此操作不可恢复。")) return;
         try
         {
             var ok = await OasConfigApi.DeleteAsync(name);

@@ -51,5 +51,8 @@
                                        Icon="{ui:SymbolIcon Settings24}" />
             </ui:NavigationView.FooterMenuItems>
         </ui:NavigationView>
+
+        <!-- ContentDialog 浮层宿主（WPF-UI 对话框渲染在这里） -->
+        <ContentPresenter x:Name="RootDialogHost" />
     </Grid>
 </ui:FluentWindow>

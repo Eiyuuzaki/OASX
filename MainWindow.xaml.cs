@@ -3,12 +3,16 @@ using System.Reflection;
 using System.Windows;
 using OASX.Services;
 using OASX.Views;
+using System.Windows.Controls;
 using Wpf.Ui.Controls;
 
 namespace OASX;
 
 public partial class MainWindow : FluentWindow
 {
+    /// <summary>ContentDialog 浮层宿主（WPF-UI 对话框渲染点）。</summary>
+    public ContentPresenter DialogHost => RootDialogHost;
+
     public MainWindow()
     {
         InitializeComponent();
