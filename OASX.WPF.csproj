@@ -21,6 +21,8 @@
   <ItemGroup>
     <Resource Include="Assets/appicon.png" />
     <Resource Include="Assets/currency/*.png" />
+    <!-- Content 复制到输出目录：CurrencyIconRegistry 运行时枚举磁盘白名单用 -->
+    <Content Include="Assets/currency/*.png" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <!-- 每次构建自动签名：未签名 exe 会触发"打开文件 - 安全警告"

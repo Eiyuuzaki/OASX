@@ -7,48 +7,38 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- 工具条：配置选择 + 角色信息 + 日期导航 -->
-        <Border Grid.Row="0" CornerRadius="8" Padding="16" Margin="0,0,0,12"
+        <!-- 工具条：配置选择 + 角色下拉 + 日期下拉（对应 Flutter _Toolbar） -->
+        <Border Grid.Row="0" CornerRadius="8" Padding="12"
                 Background="{DynamicResource ControlFillColorDefaultBrush}"
                 BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
-                BorderThickness="1">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <ComboBox Grid.Column="0" x:Name="ConfigSelector" MinWidth="160" MinHeight="34"
+                BorderThickness="1" Margin="0,0,0,12">
+            <StackPanel Orientation="Horizontal">
+                <ComboBox x:Name="ConfigSelector" MinWidth="150" MinHeight="34"
                           SelectionChanged="ConfigSelector_SelectionChanged" />
-                <TextBlock Grid.Column="1" x:Name="RoleText" VerticalAlignment="Center"
-                           FontSize="13"
+                <ComboBox x:Name="RoleSelector" MinWidth="200" MinHeight="34" Margin="12,0,0,0"
+                          SelectionChanged="RoleSelector_SelectionChanged">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding DisplayName}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <ComboBox x:Name="DateSelector" MinWidth="140" MinHeight="34" Margin="12,0,0,0"
+                          SelectionChanged="DateSelector_SelectionChanged" />
+                <TextBlock x:Name="StatusText" VerticalAlignment="Center" Margin="12,0,0,0"
+                           FontSize="12"
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                <StackPanel Grid.Column="3" Orientation="Horizontal">
-                    <Button x:Name="PrevDateButton" Content="←" MinWidth="40" Margin="0,0,8,0"
-                            Click="PrevDate_Click" />
-                    <ComboBox x:Name="DateSelector" MinWidth="150" MinHeight="34" Margin="0,0,8,0"
-                              SelectionChanged="DateSelector_SelectionChanged" />
-                    <Button x:Name="NextDateButton" Content="→" MinWidth="40"
-                            Click="NextDate_Click" />
-                </StackPanel>
-                <Button Grid.Column="4" x:Name="RefreshButton" MinWidth="40" Content="↻"
-                        Click="Refresh_Click" />
-            </Grid>
+            </StackPanel>
         </Border>
 
-        <!-- 资产卡片网格 -->
+        <!-- 资产卡片网格（自适应列数，对应 Flutter _Grid） -->
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
             <StackPanel>
-                <TextBlock x:Name="StatusText" Margin="0,0,0,8"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                <ProgressBar x:Name="LoadingBar" IsIndeterminate="True" IsEnabled="False"
-                             Height="4" Margin="0,0,0,12" />
                 <TextBlock x:Name="EmptyText" Text="暂无数据" Visibility="Collapsed"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           Margin="0,0,0,8" />
                 <ListBox x:Name="AssetCards" SelectionMode="Single" BorderThickness="0"
-                         Background="Transparent">
+                         Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                     <ListBox.ItemsPanel>
                         <ItemsPanelTemplate>
                             <WrapPanel />
@@ -56,7 +46,7 @@
                     </ListBox.ItemsPanel>
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <Border Width="180" Margin="0,0,12,12" Padding="12" CornerRadius="8"
+                            <Border Width="225" Margin="0,0,8,8" Padding="12" CornerRadius="8"
                                     Background="{DynamicResource ControlFillColorDefaultBrush}"
                                     BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
                                     BorderThickness="1">
@@ -66,8 +56,7 @@
                                     <StackPanel VerticalAlignment="Center">
                                         <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold"
                                                    TextTrimming="CharacterEllipsis" />
-                                        <TextBlock Text="{Binding CountText}" FontSize="15"
-                                                   FontWeight="Bold" />
+                                        <TextBlock Text="{Binding CountText}" FontSize="15" FontWeight="Bold" />
                                         <TextBlock Text="{Binding DeltaText}" FontSize="12"
                                                    Foreground="{Binding DeltaBrush}" />
                                     </StackPanel>
