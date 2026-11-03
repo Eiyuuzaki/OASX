@@ -53,9 +53,19 @@
                             <Border Width="{Binding CardWidth, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     Height="{StaticResource CardHeight}" Margin="0,0,8,8" Padding="12"
                                     CornerRadius="{StaticResource RadiusCard}"
-                                    Background="{DynamicResource OasSurfaceBrush}"
-                                    BorderBrush="{DynamicResource OasBorderBrush}"
-                                    BorderThickness="1">
+                                    Background="{DynamicResource OasSurfaceBrush}">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="BorderBrush" Value="{DynamicResource OasBorderBrush}" />
+                                        <Setter Property="BorderThickness" Value="1" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsPinned}" Value="True">
+                                                <Setter Property="BorderBrush" Value="{DynamicResource OasAccentBrush}" />
+                                                <Setter Property="BorderThickness" Value="1.5" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
                                 <Grid>
                                     <StackPanel Orientation="Horizontal">
                                         <Border Width="56" VerticalAlignment="Center">

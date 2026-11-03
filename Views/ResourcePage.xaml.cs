@@ -24,6 +24,7 @@ public sealed class AssetCardVm
     public Brush DeltaBrush { get; init; } = Brushes.Transparent;
     public ImageSource? IconImage { get; init; }
     public string PinKey { get; init; } = "";
+    public bool IsPinned { get; init; }
     public System.Windows.FrameworkElement PinIcon { get; init; } =
         new Wpf.Ui.Controls.SymbolIcon(Wpf.Ui.Controls.SymbolRegular.Pin24);
 }
@@ -284,14 +285,7 @@ public partial class ResourcePage : UserControl
                         : Color.FromRgb(0xE5, 0x53, 0x53)),
                     IconImage = LoadIcon(item.Icon),
                     PinKey = pinKey,
-                    PinIcon = new Wpf.Ui.Controls.SymbolIcon(
-                        Wpf.Ui.Controls.SymbolRegular.Pin24)
-                    {
-                        // 已置顶用 accent 蓝着色（WPF-UI 无实心 Pin 变体）
-                        Foreground = pinned
-                            ? FindBrush("OasAccentBrush")
-                            : FindBrush("OasTextTertiaryBrush"),
-                    },
+                    IsPinned = pinned,
                 };
             }).ToList();
             StatusText.Text = $"{date} · {visible.Count} 项资产";
