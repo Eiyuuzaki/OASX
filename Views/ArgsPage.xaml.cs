@@ -27,7 +27,7 @@ public partial class ArgsPage : Page
         InitializeComponent();
         _script = script;
         _task = task;
-        TitleText.Text = $"{_script} / {_task} 参数";
+        TitleText.Text = $"{_script} / {I18nMenu.Tr(_task)} 参数";
         _ = LoadArgsAsync();
     }
 
@@ -57,11 +57,15 @@ public partial class ArgsPage : Page
         foreach (var arg in args)
         {
             var name = arg.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
-            var title = arg.TryGetProperty("title", out var t) && !string.IsNullOrEmpty(t.GetString())
-                ? t.GetString()! : name;
+            // ⚠️ i18n 键是 API 的 name（serial='serial'），不是 title（"Serial"）：
+            // Tr(name) → 模拟器 Serial；title 仅作回退
+            var title = I18nMenu.Tr(name) != name ? I18nMenu.Tr(name)
+                : (arg.TryGetProperty("title", out var t) && !string.IsNullOrEmpty(t.GetString())
+                    ? t.GetString()! : name);
             var type = arg.TryGetProperty("type", out var ty) ? ty.GetString() ?? "string" : "string";
             var value = arg.TryGetProperty("value", out var v) ? JsonToString(v) : "";
             var desc = arg.TryGetProperty("description", out var de) ? de.GetString() ?? "" : "";
+            desc = I18nMenu.Tr(desc);
             var enumOptions = arg.TryGetProperty("enumEnum", out var ee) && ee.ValueKind == JsonValueKind.Array
                 ? ee.EnumerateArray().Select(x => x.GetString() ?? "").ToList()
                 : null;
@@ -83,7 +87,8 @@ public partial class ArgsPage : Page
                 {
                     new TextBlock
                     {
-                        Text = group, FontSize = 14, FontWeight = FontWeights.SemiBold,
+                        // 参数组名也是 i18n 键（device→模拟器设置）
+                        Text = I18nMenu.Tr(group), FontSize = 14, FontWeight = FontWeights.SemiBold,
                         Margin = new Thickness(0, 0, 0, 10),
                     },
                     stack,
