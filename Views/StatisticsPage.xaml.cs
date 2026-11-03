@@ -29,6 +29,9 @@ public partial class StatisticsPage : UserControl
     private List<string> _dates = [];
     private int _dateIndex = -1;
     private bool _suppressDateEvent;
+    private OasStatsStream? _stream;
+
+    private static string TodayKey => DateTime.Today.ToString("yyyy-MM-dd");
 
     public StatisticsPage()
     {
@@ -139,10 +142,24 @@ public partial class StatisticsPage : UserControl
         }
     }
 
-    /// <summary>加载某天的运行统计并渲染。</summary>
+    /// <summary>加载某天的运行统计并渲染。当日自动订阅 SSE 实时流。</summary>
     private async Task LoadDayAsync(string config, string date)
     {
         EmptyText.Visibility = Visibility.Collapsed;
+
+        // 流切换：先停旧流
+        _stream?.Stop();
+
+        if (date == TodayKey)
+        {
+            _stream = new OasStatsStream();
+            _stream.SnapshotReceived += ApplyDay;
+            _stream.UpdateReceived += ApplyUpdate;
+            _stream.StatusChanged += msg => Dispatcher.Invoke(() => StatusText.Text = msg);
+            _stream.Start(config, date);
+            return;
+        }
+
         try
         {
             var day = await OasStatsApi.GetDayAsync(config, date);
@@ -154,30 +171,76 @@ public partial class StatisticsPage : UserControl
                 StatusText.Text = $"{date} 无统计";
                 return;
             }
-
-            RuntimeTile.Text = FormatDuration(day.TotalRuntimeSeconds);
-            TaskCountTile.Text = day.TotalTaskRunCount.ToString("N0");
-            BattleCountTile.Text = day.TotalBattleCount.ToString("N0");
+            ApplyDay(day);
             StatusText.Text = $"{date} · {day.Tasks.Count} 个任务";
-
-            TaskList.ItemsSource = day.Tasks.Select(kv =>
-            {
-                var (taskName, stat) = (kv.Key, kv.Value);
-                return new TaskStatVm
-                {
-                    DisplayName = I18nMenu.Tr(taskName),
-                    Summary = $"{stat.RunCount} 次 · {FormatDuration(stat.TotalDurationSeconds)}",
-                    Runs = stat.Runs.Select(r => new RunVm
-                    {
-                        Text = $"{ShortTime(r.StartTime)} → {ShortTime(r.EndTime)}　{FormatDuration(r.DurationSeconds)}",
-                    }).ToList(),
-                };
-            }).ToList();
         }
         catch (Exception ex)
         {
             StatusText.Text = $"加载失败：{ex.Message}";
         }
+    }
+
+    /// <summary>渲染全天统计（SSE snapshot 与历史 GET 共用）。</summary>
+    private void ApplyDay(OasStatsApi.StatsDay day)
+    {
+        EmptyText.Visibility = Visibility.Collapsed;
+
+        RuntimeTile.Text = FormatDuration(day.TotalRuntimeSeconds);
+        TaskCountTile.Text = day.TotalTaskRunCount.ToString("N0");
+        BattleCountTile.Text = day.TotalBattleCount.ToString("N0");
+
+        TaskList.ItemsSource = day.Tasks.Select(kv =>
+        {
+            var (taskName, stat) = (kv.Key, kv.Value);
+            return new TaskStatVm
+            {
+                DisplayName = I18nMenu.Tr(taskName),
+                Summary = $"{stat.RunCount} 次 · {FormatDuration(stat.TotalDurationSeconds)}",
+                Runs = stat.Runs.Select(r => new RunVm
+                {
+                    Text = $"{ShortTime(r.StartTime)} → {ShortTime(r.EndTime)}　{FormatDuration(r.DurationSeconds)}",
+                }).ToList(),
+            };
+        }).ToList();
+    }
+
+    /// <summary>应用实时增量：totals 全量 + changed_tasks 合并 + removed 移除。</summary>
+    private void ApplyUpdate(StatsUpdate upd)
+    {
+        RuntimeTile.Text = FormatDuration(upd.TotalRuntimeSeconds);
+        TaskCountTile.Text = upd.TotalTaskRunCount.ToString("N0");
+        BattleCountTile.Text = upd.TotalBattleCount.ToString("N0");
+
+        if (TaskList.ItemsSource is not IEnumerable<TaskStatVm> current)
+        {
+            return;
+        }
+        var byName = current.ToDictionary(vm => vm.DisplayName, vm => vm);
+        foreach (var (name, stat) in upd.ChangedTasks)
+        {
+            byName[I18nMenu.Tr(name)] = new TaskStatVm
+            {
+                DisplayName = I18nMenu.Tr(name),
+                Summary = $"{stat.RunCount} 次 · {FormatDuration(stat.TotalDurationSeconds)}",
+                Runs = stat.Runs.Select(r => new RunVm
+                {
+                    Text = $"{ShortTime(r.StartTime)} → {ShortTime(r.EndTime)}　{FormatDuration(r.DurationSeconds)}",
+                }).ToList(),
+            };
+        }
+        foreach (var removed in upd.RemovedTasks)
+        {
+            byName.Remove(I18nMenu.Tr(removed));
+        }
+        TaskList.ItemsSource = byName.Values
+            .OrderByDescending(vm => vm.Summary)
+            .ToList();
+    }
+
+    /// <summary>离开页面停流（UserControl 无 OnNavigatedFrom，用 Unloaded）。</summary>
+    private void Page_Unloaded(object sender, RoutedEventArgs e)
+    {
+        _stream?.Stop();
     }
 
     private void ClearTiles()
