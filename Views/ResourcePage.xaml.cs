@@ -286,6 +286,14 @@ public partial class ResourcePage : UserControl
                     IconImage = LoadIcon(item.Icon),
                     PinKey = pinKey,
                     IsPinned = pinned,
+                    // 已置顶：图钉 accent 蓝（未置顶：中性灰）
+                    PinIcon = new Wpf.Ui.Controls.SymbolIcon(
+                        Wpf.Ui.Controls.SymbolRegular.Pin24)
+                    {
+                        Foreground = pinned
+                            ? FindBrush("OasAccentBrush")
+                            : FindBrush("OasTextTertiaryBrush"),
+                    },
                 };
             }).ToList();
             StatusText.Text = $"{date} · {visible.Count} 项资产";
