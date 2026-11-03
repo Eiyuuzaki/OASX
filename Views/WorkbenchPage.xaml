@@ -22,15 +22,18 @@
                     <TextBlock Text="配置" FontWeight="SemiBold" />
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"
                                 HorizontalAlignment="Right">
-                        <Button Content="＋" MinWidth="30" Padding="0" FontSize="13"
-                                ToolTip="新建配置（以 template 为模板）"
-                                Click="ConfigAdd_Click" />
-                        <Button Content="改" MinWidth="30" Padding="0" FontSize="12" Margin="4,0,0,0"
-                                ToolTip="重命名当前配置"
-                                Click="ConfigRename_Click" />
-                        <Button Content="删" MinWidth="30" Padding="0" FontSize="12" Margin="4,0,0,0"
-                                ToolTip="删除当前配置"
-                                Click="ConfigDelete_Click" />
+                        <ui:Button Icon="{ui:SymbolIcon Add24}" Padding="6" Margin="2,0,0,0"
+                                   Background="Transparent" BorderThickness="0"
+                                   ToolTip="新建配置（以 template 为模板）"
+                                   Click="ConfigAdd_Click" />
+                        <ui:Button Icon="{ui:SymbolIcon Edit24}" Padding="6" Margin="2,0,0,0"
+                                   Background="Transparent" BorderThickness="0"
+                                   ToolTip="重命名当前配置"
+                                   Click="ConfigRename_Click" />
+                        <ui:Button Icon="{ui:SymbolIcon Delete24}" Padding="6" Margin="2,0,0,0"
+                                   Background="Transparent" BorderThickness="0"
+                                   ToolTip="删除当前配置"
+                                   Click="ConfigDelete_Click" />
                     </StackPanel>
                 </DockPanel>
                 <ListBox Grid.Row="1" x:Name="ConfigList"
@@ -132,7 +135,7 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
-                    <Button Grid.Row="0" Content="← 返回任务列表" HorizontalAlignment="Left" Margin="0,0,0,8"
+                    <ui:Button Grid.Row="0" Icon="{ui:SymbolIcon ArrowLeft24}" Content="返回任务列表" HorizontalAlignment="Left" Margin="0,0,0,8"
                             Click="BackToOverview_Click" />
                     <!-- Page 只能挂在 Window/Frame 里——宿主必须是 Frame -->
                     <Frame Grid.Row="1" x:Name="ArgsFrame"
