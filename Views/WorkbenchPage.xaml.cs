@@ -42,6 +42,20 @@ public partial class WorkbenchPage : UserControl
             {
                 await LoadMenuAsync();
                 _menuLoaded = true;
+
+                // ★ 预热：首次进参数页要 JIT ArgsPage 类 + 其控件栈
+                //（一次性成本，实测首次点击卡 1-2 秒——"第一次点不动"）。
+                // 在工作台加载完成时提前付出：建一个丢弃实例，
+                // 它的 args 请求打不存在的任务会 404，静默。
+                try
+                {
+                    var warmup = new ArgsPage("__warmup__", "__warmup__");
+                    _ = warmup;
+                }
+                catch
+                {
+                    // 预热失败不影响功能
+                }
             }
         }
         catch (Exception ex)
