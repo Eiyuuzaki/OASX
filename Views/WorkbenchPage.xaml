@@ -120,7 +120,9 @@
                     </Grid.RowDefinitions>
                     <Button Grid.Row="0" Content="← 返回任务列表" HorizontalAlignment="Left" Margin="0,0,0,8"
                             Click="BackToOverview_Click" />
-                    <ContentControl Grid.Row="1" x:Name="ArgsHost" />
+                    <!-- Page 只能挂在 Window/Frame 里——宿主必须是 Frame -->
+                    <Frame Grid.Row="1" x:Name="ArgsFrame"
+                           NavigationUIVisibility="Hidden" />
                 </Grid>
             </Border>
         </Grid>

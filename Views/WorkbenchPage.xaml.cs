@@ -89,9 +89,7 @@ public partial class WorkbenchPage : UserControl
         if (sender is Border { Tag: string task } &&
             WorkbenchState.ActiveScript is string script)
         {
-            var args = new ArgsPage(script, task);
-            args.BackRequested += ShowOverview;
-            ArgsHost.Content = args;
+            ArgsFrame.Navigate(new ArgsPage(script, task));
             ShowArgsView();
         }
     }
@@ -105,7 +103,6 @@ public partial class WorkbenchPage : UserControl
     private void ShowOverview()
     {
         ArgsHostPanel.Visibility = Visibility.Collapsed;
-        ArgsHost.Content = null;
         OverviewPanel.Visibility = Visibility.Visible;
     }
 
