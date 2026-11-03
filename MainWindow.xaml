@@ -53,6 +53,6 @@
         </ui:NavigationView>
 
         <!-- ContentDialog 浮层宿主 -->
-        <ContentPresenter x:Name="RootDialogHost" />
+        <ContentPresenter x:Name="RootDialogHost" Grid.Row="0" Grid.RowSpan="2" Panel.ZIndex="100" />
     </Grid>
 </ui:FluentWindow>
