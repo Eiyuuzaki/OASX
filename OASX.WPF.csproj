@@ -16,6 +16,8 @@
          NavigationView / FluentWindow / TitleBar / Mica 全部内置，
          且控件源码开放——出 bug 我们能自己读源码修，不必等框架作者。 -->
     <PackageReference Include="WPF-UI" Version="4.3.0" />
+    <!-- 托盘图标（4.x 拆分为独立包） -->
+    <PackageReference Include="WPF-UI.Tray" Version="4.3.0" />
   </ItemGroup>
 
   <ItemGroup>

@@ -57,8 +57,11 @@ public partial class MainWindow : FluentWindow
             Width = double.Parse(parts[2], CultureInfo.InvariantCulture);
             Height = double.Parse(parts[3], CultureInfo.InvariantCulture);
             // 多显示器拔掉后旧坐标可能落在屏幕外——超界则交还系统居中
-            var vs = SystemParameters.VirtualScreen;
-            if (left >= vs.Left - 50 && left < vs.Right && top >= vs.Top - 50 && top < vs.Bottom)
+            var vsLeft = SystemParameters.VirtualScreenLeft;
+            var vsTop = SystemParameters.VirtualScreenTop;
+            var vsRight = vsLeft + SystemParameters.VirtualScreenWidth;
+            var vsBottom = vsTop + SystemParameters.VirtualScreenHeight;
+            if (left >= vsLeft - 50 && left < vsRight && top >= vsTop - 50 && top < vsBottom)
             {
                 WindowStartupLocation = WindowStartupLocation.Manual;
                 Left = left;
@@ -98,10 +101,11 @@ public partial class MainWindow : FluentWindow
         if (_trayIcon is not null) return;
         _trayIcon = new Wpf.Ui.Tray.Controls.NotifyIcon
         {
-            Tooltip = "OASX",
+            TooltipText = "OASX",
             Icon = new System.Windows.Media.Imaging.BitmapImage(
                 new Uri("pack://application:,,,/Assets/appicon.png")),
-            ForceLeftClickTrayIcon = true,
+            FocusOnLeftClick = true,
+            MenuOnRightClick = true,
         };
         _trayIcon.LeftClick += (_, _) => RestoreFromTray();
 
