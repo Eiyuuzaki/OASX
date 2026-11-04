@@ -30,6 +30,8 @@ public sealed class RunRecordVm
 public partial class DashboardPage : UserControl
 {
     private OasScriptSocket? _socket;
+
+    private static string TodayKey => DateTime.Today.ToString("yyyy-MM-dd");
     private bool _schedulerRunning;
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(30) };
     private string _currentConfig = "";
