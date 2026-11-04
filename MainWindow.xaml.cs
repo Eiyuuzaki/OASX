@@ -148,6 +148,7 @@ public partial class MainWindow : FluentWindow
                     "工作台" or "workbench" => typeof(WorkbenchPage),
                     "统计" or "stats" => typeof(StatisticsPage),
                     "资产" or "resource" => typeof(ResourcePage),
+                    "活动" or "activity" => typeof(ActivityPage),
                     "绘卷" or "huijuan" => typeof(HuijuanPage),
                     "日志" or "log" => typeof(LogPage),
                     "设置" or "settings" => typeof(SettingsPage),
