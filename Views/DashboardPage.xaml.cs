@@ -1,26 +1,64 @@
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Threading;
 using OASX.Services;
 
 namespace OASX.Views;
 
-public sealed record AssetVm(string Name, string CountText, string DeltaText, Brush DeltaBrush);
+/// <summary>任务队列行。</summary>
+public sealed class QueueVm
+{
+    public string Name { get; init; } = "";
+    public string NextRunLabel { get; init; } = "";
+}
+
+/// <summary>最近执行记录行。</summary>
+public sealed class RunRecordVm
+{
+    public string Label { get; init; } = "";
+    public string DurationLabel { get; init; } = "";
+}
 
 /// <summary>
-/// Dashboard（规范 4.2）：当前账号概况为主视觉，资产快照为主内容，
-/// 调度器状态为次级系统信息。账号来源 = 全局账号上下文，本页不自持选择状态。
+/// Dashboard（规范：OAS 自动化运行控制中心）。
+/// 数据全部来自真实接口：全局账号上下文、/ws 调度器实时状态与队列、
+/// /device/current 模拟器连接、/stats 今日统计。
+/// 无 pause/resume 端点——不提供假按钮；失败计数无数据源——不展示。
 /// </summary>
 public partial class DashboardPage : UserControl
 {
+    private OasScriptSocket? _socket;
+    private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(30) };
+    private string _currentConfig = "";
+
     public DashboardPage()
     {
         InitializeComponent();
-        Loaded += (_, _) => _ = RefreshFromContextAsync();
+        Loaded += (_, _) =>
+        {
+            _ = RefreshAllAsync();
+            _timer.Tick += async (_, _) => await RefreshEnvironmentAsync();
+            _timer.Start();
+        };
+        Unloaded += Page_Unloaded;
     }
 
-    /// <summary>按全局当前账号刷新概况（无账号 → 空态）。</summary>
-    private async Task RefreshFromContextAsync()
+    // ==================== 生命周期 ====================
+
+    private void Page_Unloaded(object sender, RoutedEventArgs e)
+    {
+        _timer.Stop();
+        _socket?.Stop();
+    }
+
+    // ==================== 刷新主流程 ====================
+
+    private async void Refresh_Click(object sender, RoutedEventArgs e) =>
+        await RefreshAllAsync();
+
+    private async Task RefreshAllAsync()
     {
         var ctx = GlobalAccountContext.Instance;
         if (ctx.Accounts.Count == 0 && !ctx.IsLoading)
@@ -35,98 +73,256 @@ public partial class DashboardPage : UserControl
             AccountDetailText.Text = ctx.Accounts.Count > 0
                 ? "在资产页选择账号后展示概况"
                 : (ctx.IsLoading ? "账号加载中…" : "未发现任何账号（后端无角色数据）");
-            EmptyText.Visibility = Visibility.Visible;
-            AssetList.ItemsSource = null;
-            SchedulerText.Text = "—";
+            SetOasService(false, "不可达");
+            SetScheduler(null, null);
+            SetDevice(null);
+            TodayDoneText.Text = "—";
+            TodayPendingText.Text = "—";
+            TodayRuntimeText.Text = "—";
+            QueueList.ItemsSource = null;
+            QueueEmptyText.Visibility = Visibility.Visible;
+            RunsList.ItemsSource = null;
+            RunsEmptyText.Visibility = Visibility.Visible;
+            ReminderText.Text = "未选择账号——在资产页选择后开始管理运行";
             return;
         }
 
-        // 1. 账号（主）
         AccountNameText.Text = entry.Name;
         AccountDetailText.Text = $"Lv{entry.Level} · {entry.ServerName} · 调度器 {entry.Config}";
 
-        // 2. 资产快照（该账号 = (config, roleKey) 的最新一天）
-        await LoadAssetSnapshotAsync(entry);
+        // 调度器配置变化 → 重连 WS
+        if (entry.Config != _currentConfig)
+        {
+            _currentConfig = entry.Config;
+            _socket?.Stop();
+            _socket = new OasScriptSocket();
+            _socket.StateReceived += OnStateReceived;
+            _socket.ScheduleReceived += OnScheduleReceived;
+            _socket.Start(entry.Config);
+        }
 
-        // 3. 调度器状态（次级）
-        await RefreshSchedulerAsync(entry.Config);
+        await RefreshEnvironmentAsync();
+        await RefreshTodayStatsAsync(entry.Config);
     }
 
-    private async Task LoadAssetSnapshotAsync(AccountEntry entry)
+    // ==================== 环境（OAS/模拟器） ====================
+
+    private async Task RefreshEnvironmentAsync()
+    {
+        // OAS 服务：轻量请求探测
+        try
+        {
+            _ = await OasApi.GetConfigListAsync();
+            SetOasService(true, "正常");
+        }
+        catch
+        {
+            SetOasService(false, "不可达");
+            ReminderText.Text = "OAS 服务不可达——检查后端是否运行";
+            return;
+        }
+
+        // 模拟器连接（当前账号所属调度器绑定的设备）
+        if (GlobalAccountContext.Instance.Current is { } entry)
+        {
+            try
+            {
+                var dev = await OasDeviceApi.GetCurrentAsync(entry.Config);
+                SetDevice(dev);
+                UpdateReminders(entry.Config, schedulerRunning: SchedulerDot.Fill == FindBrush("OasSuccessBrush"), dev);
+            }
+            catch
+            {
+                SetDevice(null);
+            }
+        }
+    }
+
+    private void SetOasService(bool ok, string label)
+    {
+        OasServiceDot.Fill = new SolidColorBrush(ok
+            ? Color.FromRgb(0x16A34A) : Color.FromRgb(0xDC4545));
+        OasServiceText.Text = label;
+    }
+
+    private void SetDevice(OasConfigApi.DeviceCurrent? dev)
+    {
+        if (dev is null)
+        {
+            DeviceDot.Fill = new SolidColorBrush(Color.FromRgb(0x8A8A8A));
+            DeviceText.Text = "未知";
+            return;
+        }
+        DeviceDot.Fill = new SolidColorBrush(dev.Online
+            ? Color.FromRgb(0x16A34A) : Color.FromRgb(0xD97706));
+        DeviceText.Text = dev.Online
+            ? $"已连接 · {dev.EmulatorName ?? dev.Serial}"
+            : "离线";
+    }
+
+    // ==================== 调度器（WS 实时） ====================
+
+    private void OnStateReceived(string state)
+    {
+        Dispatcher.Invoke(() => SetScheduler(state, null));
+    }
+
+    private void OnScheduleReceived(ScheduleData sched)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            SetScheduler(null, sched);
+
+            // 今日待执行 = pending + waiting
+            TodayPendingText.Text = (sched.Pending.Count + sched.Waiting.Count).ToString("N0");
+
+            // 任务队列：pending + waiting 取前 5
+            var items = sched.Pending.Concat(sched.Waiting).ToList();
+            QueueList.ItemsSource = items.Take(5).Select(q => new QueueVm
+            {
+                Name = I18nMenu.Tr(q.Name),
+                NextRunLabel = q.NextRun.Length > 0 ? $"下次 {q.NextRun[Min(10, q.NextRun.Length)..]}" : "",
+            }).ToList();
+            QueueEmptyText.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+
+            // 当前执行任务
+            if (sched.Running is { } run && run.Name.Length > 0)
+            {
+                CurrentTaskName.Text = I18nMenu.Tr(run.Name);
+                CurrentTaskDetail.Text = run.NextRun.Length > 0 ? $"计划 {run.NextRun}" : "执行中";
+            }
+            else
+            {
+                CurrentTaskName.Text = "当前没有执行任务";
+                CurrentTaskDetail.Text = "调度器空闲时不会执行任务";
+            }
+        });
+    }
+
+    private static int Min(int a, int b) => a < b ? a : b;
+
+    /// <summary>调度器状态（state 优先，其次从队列推断）。</summary>
+    private void SetScheduler(string? state, ScheduleData? sched)
+    {
+        var running = state is not null
+            ? state.Contains("RUNNING", StringComparison.OrdinalIgnoreCase)
+            : sched?.Running is not null;
+
+        SchedulerDot.Fill = new SolidColorBrush(running
+            ? Color.FromRgb(0x16A34A) : Color.FromRgb(0x8A8A8A));
+        SchedulerStateText.Text = running ? "运行中" : (state ?? "空闲/停止");
+        StartBtn.IsEnabled = !running;
+        StopBtn.IsEnabled = running;
+    }
+
+    // ==================== 今日统计 + 执行记录 ====================
+
+    private async Task RefreshTodayStatsAsync(string config)
     {
         try
         {
-            if (entry.Dates.Count == 0)
+            var today = DateTime.Today.ToString("yyyy-MM-dd");
+            var day = await OasStatsApi.GetDayAsync(config, today);
+            if (day is null || day.TotalTaskRunCount == 0)
             {
-                EmptyText.Visibility = Visibility.Visible;
-                AssetList.ItemsSource = null;
-                UpdatedAtText.Text = "";
+                TodayDoneText.Text = "0";
+                TodayRuntimeText.Text = "0秒";
+                RunsList.ItemsSource = null;
+                RunsEmptyText.Visibility = Visibility.Visible;
                 return;
             }
-            var date = entry.Dates[0];   // 最新一天
-            var day = await OasResourceApi.GetResourceDayAsync(entry.Config, date, entry.RoleKey);
-            if (day is null || day.Items.Count == 0)
-            {
-                EmptyText.Visibility = Visibility.Visible;
-                AssetList.ItemsSource = null;
-                UpdatedAtText.Text = "";
-                return;
-            }
-            EmptyText.Visibility = Visibility.Collapsed;
-            UpdatedAtText.Text = $"更新于 {day.UpdatedAt}";
 
-            var whitelist = CurrencyIconRegistry.Get();
-            var visible = day.Items
-                .Where(i => whitelist.Contains(CurrencyIconRegistry.BaseName(i.Icon)) && i.Count > 0)
-                .GroupBy(i => CurrencyIconRegistry.BaseName(i.Icon))
-                .Select(g =>
+            TodayDoneText.Text = day.TotalTaskRunCount.ToString("N0");
+            TodayRuntimeText.Text = FormatDuration(day.TotalRuntimeSeconds);
+
+            // 最近执行记录：全部任务的 runs 按开始时间倒序取 5
+            var runs = day.Tasks
+                .SelectMany(kv => kv.Value.Runs.Select(r => new { Task = kv.Key, Run = r }))
+                .OrderByDescending(x => x.Run.StartTime)
+                .Take(5)
+                .Select(x => new RunRecordVm
                 {
-                    var agg = g.OrderByDescending(x => x.Id).First();
-                    var delta = g.Sum(x => x.Delta ?? 0);
-                    return new AssetVm(
-                        agg.Name,
-                        FormatCount(agg.Count),
-                        delta == 0 ? "" : FormatDelta(delta),
-                        new SolidColorBrush(delta >= 0
-                            ? Color.FromRgb(0x4C, 0xAF, 0x50)
-                            : Color.FromRgb(0xE5, 0x53, 0x53)));
-                })
-                .Take(7)
-                .ToList();
-            AssetList.ItemsSource = visible;
+                    Label = $"{ShortTime(x.Run.StartTime)} → {ShortTime(x.Run.EndTime)}　{I18nMenu.Tr(x.Task)}",
+                    DurationLabel = FormatDuration(x.Run.DurationSeconds),
+                }).ToList();
+            RunsList.ItemsSource = runs;
+            RunsEmptyText.Visibility = runs.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         }
         catch (Exception ex)
         {
-            EmptyText.Visibility = Visibility.Visible;
-            AssetList.ItemsSource = null;
-            UpdatedAtText.Text = $"加载失败：{ex.Message}";
+            TodayDoneText.Text = "—";
+            TodayRuntimeText.Text = "—";
+            StatusHint(ex.Message);
         }
     }
 
-    /// <summary>调度器状态（次级信息，不阻塞账号数据）。</summary>
-    private async Task RefreshSchedulerAsync(string config)
+    private void StatusHint(string msg) => ReminderText.Text = $"统计数据暂不可获取：{msg}";
+
+    // ==================== 提醒（真实异常才展示） ====================
+
+    private void UpdateReminders(string config, bool schedulerRunning,
+        OasConfigApi.DeviceCurrent? dev)
     {
-        SchedulerText.Text = "查询中…";
-        var state = await OasApi.GetScriptStateAsync(config);
-        SchedulerText.Text = $"{config} · {(state is null ? "状态未知" : state.State)}";
+        var reminders = new List<string>();
+        if (!schedulerRunning && OasServiceText.Text == "正常")
+        {
+            reminders.Add($"调度器 {config} 未运行——在工作台启动后开始执行任务");
+        }
+        if (dev is { Online: false })
+        {
+            reminders.Add($"模拟器 {dev.EmulatorName ?? dev.Serial} 离线——任务将无法执行");
+        }
+        ReminderText.Text = reminders.Count > 0
+            ? string.Join("\n", reminders)
+            : "一切正常";
     }
 
-    private static string FormatCount(long n) => n switch
-    {
-        >= 100_000_000 => $"{n / 100_000_000.0:0.0}亿",
-        >= 10_000 => $"{n / 10_000.0:0.0}万",
-        _ => n.ToString("N0"),
-    };
+    // ==================== 操作（仅真实端点） ====================
 
-    private static string FormatDelta(long d)
+    private async void StartBtn_Click(object sender, RoutedEventArgs e)
     {
-        var sign = d > 0 ? "+" : "";
-        var v = Math.Abs(d) switch
-        {
-            >= 100_000_000 => $"{Math.Abs(d) / 100_000_000.0:0.0}亿",
-            >= 10_000 => $"{Math.Abs(d) / 10_000.0:0.0}万",
-            _ => Math.Abs(d).ToString("N0"),
-        };
-        return $"{sign}{v}";
+        if (GlobalAccountContext.Instance.Current is not { } entry) return;
+        StartBtn.IsEnabled = false;
+        var (ok, body) = await OasApi.StartScriptAsync(entry.Config);
+        StateTextFromOp(ok, ok ? "已发送启动" : $"启动失败：{body}");
+        await Task.Delay(1200);   // 等后端状态传播
+        await RefreshAllAsync();
+    }
+
+    private async void StopBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (GlobalAccountContext.Instance.Current is not { } entry) return;
+        StopBtn.IsEnabled = false;
+        var (ok, body) = await OasApi.StopScriptAsync(entry.Config);
+        StateTextFromOp(ok, ok ? "已发送停止" : $"停止失败：{body}");
+        await Task.Delay(1200);
+        await RefreshAllAsync();
+    }
+
+    private void StateTextFromOp(bool ok, string msg) =>
+        CurrentTaskDetail.Text = msg;
+
+    // ==================== 导航 ====================
+
+    private void GoWorkbench_Click(object sender, RoutedEventArgs e) =>
+        ((MainWindow)Window.GetWindow(this)).RootNav.Navigate(typeof(WorkbenchPage));
+
+    private void GoLog_Click(object sender, RoutedEventArgs e) =>
+        ((MainWindow)Window.GetWindow(this)).RootNav.Navigate(typeof(LogPage));
+
+    // ==================== 工具 ====================
+
+    private static string ShortTime(string raw)
+    {
+        var sp = raw.Split(' ');
+        return sp.Length > 1 ? sp[1][..8] : raw;
+    }
+
+    private static string FormatDuration(double seconds)
+    {
+        var ts = TimeSpan.FromSeconds(seconds);
+        if (ts.TotalHours >= 1) return $"{(int)ts.TotalHours}时{ts.Minutes}分";
+        if (ts.TotalMinutes >= 1) return $"{ts.Minutes}分{ts.Seconds}秒";
+        return $"{seconds:0.#}秒";
     }
 }

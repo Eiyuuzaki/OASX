@@ -14,6 +14,9 @@ public partial class MainWindow : FluentWindow
     /// <summary>ContentDialog 浮层宿主。</summary>
     public System.Windows.Controls.ContentPresenter DialogHost => RootDialogHost;
 
+    /// <summary>导航视图（子页面跳转入口，如 Dashboard → 工作台/日志）。</summary>
+    public NavigationView RootNav => RootNavigation;
+
     private Wpf.Ui.Tray.Controls.NotifyIcon? _trayIcon;
     private bool _forceExit;
 

@@ -1,76 +1,219 @@
 <UserControl x:Class="OASX.Views.DashboardPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
-    <!-- 规范 4.2：账号是主上下文（账号卡置顶），调度器状态为次级系统信息 -->
-    <ScrollViewer Padding="32,20,32,28" VerticalScrollBarVisibility="Auto">
-        <StackPanel MaxWidth="980">
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             Unloaded="Page_Unloaded">
+    <!-- 规范：OAS 自动化运行控制中心。账号主上下文 + 调度器/设备状态 + 
+         当前任务 + 今日概况 + 任务队列 + 提醒 + 最近执行记录。
+         全部数据来自真实接口；无数据时显示明确空态。 -->
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="28,20,28,24">
+        <StackPanel MaxWidth="1080" HorizontalAlignment="Stretch">
 
-            <!-- 1. 当前游戏账号（主视觉） -->
-            <Border CornerRadius="8" Padding="20" Margin="0,0,0,16"
-                    Background="{DynamicResource OasSurfaceBrush}"
-                    BorderBrush="{DynamicResource OasBorderBrush}" BorderThickness="1">
-                <StackPanel Orientation="Horizontal">
-                    <ui:SymbolIcon Symbol="PersonAccounts24" FontSize="28"
-                                   VerticalAlignment="Center" Margin="0,0,14,0" />
-                    <StackPanel VerticalAlignment="Center">
-                        <TextBlock x:Name="AccountNameText" Text="未选择账号" FontSize="20"
-                                   FontWeight="SemiBold" />
-                        <TextBlock x:Name="AccountDetailText" Text="在资产页选择账号后展示概况"
-                                   FontSize="12"
-                                   Foreground="{DynamicResource OasTextSecondaryBrush}" />
-                    </StackPanel>
+            <!-- ===== 页面标题栏 ===== -->
+            <Grid Margin="0,0,0,16">
+                <StackPanel>
+                    <TextBlock Text="总览" FontSize="24" FontWeight="SemiBold"
+                               FontFamily="{StaticResource AppFontFamily}" />
+                    <TextBlock Text="OAS 自动化运行总览" FontSize="12"
+                               Foreground="{DynamicResource OasTextSecondaryBrush}" />
                 </StackPanel>
+                <ui:Button HorizontalAlignment="Right" VerticalAlignment="Top"
+                           Icon="{ui:SymbolIcon ArrowClockwise24}" MinWidth="40"
+                           ToolTip="刷新" Click="Refresh_Click" />
+            </Grid>
+
+            <!-- ===== 账号与运行环境 ===== -->
+            <Border CornerRadius="{StaticResource RadiusCard}" Padding="16"
+                    Background="{DynamicResource OasSurfaceBrush}"
+                    BorderBrush="{DynamicResource OasBorderBrush}"
+                    BorderThickness="1" Margin="0,0,0,16">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Orientation="Horizontal">
+                        <ui:SymbolIcon Symbol="PersonAccounts24" FontSize="30"
+                                       VerticalAlignment="Center" Margin="0,0,14,0" />
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock x:Name="AccountNameText" Text="未选择账号" FontSize="18"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                            <TextBlock x:Name="AccountDetailText" Text="在资产页选择账号"
+                                       FontSize="12"
+                                       Foreground="{DynamicResource OasTextSecondaryBrush}" />
+                        </StackPanel>
+                    </StackPanel>
+                    <!-- 运行状态（状态圆点 + 文字，不做大统计卡） -->
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="16,0,0,0">
+                        <StackPanel Orientation="Horizontal" Margin="0,2">
+                            <Ellipse Width="8" Height="8" VerticalAlignment="Center"
+                                     Fill="{DynamicResource OasTextTertiaryBrush}"
+                                     x:Name="OasServiceDot" />
+                            <TextBlock Text="OAS 服务" Margin="8,0,0,0" FontSize="12" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource OasTextSecondaryBrush}" />
+                            <TextBlock x:Name="OasServiceText" Text="—" Margin="8,0,0,0" FontSize="12"
+                                       VerticalAlignment="Center"
+                                       Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,2">
+                            <Ellipse Width="8" Height="8" VerticalAlignment="Center"
+                                     Fill="{DynamicResource OasTextTertiaryBrush}"
+                                     x:Name="SchedulerDot" />
+                            <TextBlock Text="调度器" Margin="8,0,0,0" FontSize="12" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource OasTextSecondaryBrush}" />
+                            <TextBlock x:Name="SchedulerStateText" Text="—" Margin="8,0,0,0" FontSize="12"
+                                       VerticalAlignment="Center"
+                                       Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,2">
+                            <Ellipse Width="8" Height="8" VerticalAlignment="Center"
+                                     Fill="{DynamicResource OasTextTertiaryBrush}"
+                                     x:Name="DeviceDot" />
+                            <TextBlock Text="模拟器" Margin="8,0,0,0" FontSize="12" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource OasTextSecondaryBrush}" />
+                            <TextBlock x:Name="DeviceText" Text="—" Margin="8,0,0,0" FontSize="12"
+                                       VerticalAlignment="Center"
+                                       Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
             </Border>
 
-            <!-- 2. 账号资产快照 -->
-            <Border CornerRadius="8" Padding="20" Margin="0,0,0,16"
+            <!-- ===== 运行概览（8:4） ===== -->
+            <Grid Margin="0,0,0,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*" />
+                    <ColumnDefinition Width="8" />
+                    <ColumnDefinition Width="1*" />
+                </Grid.ColumnDefinitions>
+                <!-- 当前执行任务 -->
+                <Border Grid.Column="0" CornerRadius="{StaticResource RadiusCard}" Padding="16"
+                        Background="{DynamicResource OasSurfaceBrush}"
+                        BorderBrush="{DynamicResource OasBorderBrush}" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="当前执行任务" FontSize="14" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                        <TextBlock x:Name="CurrentTaskName" Text="当前没有执行任务" FontSize="20"
+                                   FontWeight="SemiBold" Margin="0,8,0,0"
+                                   Foreground="{DynamicResource OasTextPrimaryBrush}"
+                                   FontFamily="{StaticResource AppFontFamily}" />
+                        <TextBlock x:Name="CurrentTaskDetail" Text="调度器空闲时不会执行任务"
+                                   FontSize="12" Margin="0,2,0,0"
+                                   Foreground="{DynamicResource OasTextSecondaryBrush}" />
+                        <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                            <ui:Button x:Name="StartBtn" Content="启动" MinWidth="96" MinHeight="32"
+                                       Appearance="{x:Static ui:ControlAppearance.Primary}"
+                                       Click="StartBtn_Click" />
+                            <ui:Button x:Name="StopBtn" Content="停止" MinWidth="96" MinHeight="32"
+                                       Margin="8,0,0,0" Click="StopBtn_Click" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+                <!-- 今日任务概况 -->
+                <Border Grid.Column="2" CornerRadius="{StaticResource RadiusCard}" Padding="16"
+                        Background="{DynamicResource OasSurfaceBrush}"
+                        BorderBrush="{DynamicResource OasBorderBrush}" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="今日任务概况" FontSize="14" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                        <TextBlock Text="已完成次数" FontSize="12" Margin="0,10,0,0"
+                                   Foreground="{DynamicResource OasTextSecondaryBrush}" />
+                        <TextBlock x:Name="TodayDoneText" Text="—" FontSize="25" FontWeight="SemiBold"
+                                   FontFamily="{StaticResource AppFontFamily}"
+                                   Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                        <TextBlock Text="待执行项" FontSize="12" Margin="0,8,0,0"
+                                   Foreground="{DynamicResource OasTextSecondaryBrush}" />
+                        <TextBlock x:Name="TodayPendingText" Text="—" FontSize="25" FontWeight="SemiBold"
+                                   FontFamily="{StaticResource AppFontFamily}"
+                                   Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                        <TextBlock Text="今日运行时长" FontSize="12" Margin="0,8,0,0"
+                                   Foreground="{DynamicResource OasTextSecondaryBrush}" />
+                        <TextBlock x:Name="TodayRuntimeText" Text="—" FontSize="14" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- ===== 任务队列与运行提醒（8:4） ===== -->
+            <Grid Margin="0,0,0,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*" />
+                    <ColumnDefinition Width="8" />
+                    <ColumnDefinition Width="1*" />
+                </Grid.ColumnDefinitions>
+                <!-- 任务队列 -->
+                <Border Grid.Column="0" CornerRadius="{StaticResource RadiusCard}" Padding="16"
+                        Background="{DynamicResource OasSurfaceBrush}"
+                        BorderBrush="{DynamicResource OasBorderBrush}" BorderThickness="1">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,6">
+                            <TextBlock Text="任务队列" FontSize="14" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                            <ui:Button HorizontalAlignment="Right" Content="查看全部任务" Padding="8,2"
+                                       Background="Transparent" BorderThickness="0"
+                                       Click="GoWorkbench_Click" />
+                        </Grid>
+                        <TextBlock x:Name="QueueEmptyText" Text="队列为空" Visibility="Collapsed"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource OasTextSecondaryBrush}" />
+                        <ItemsControl x:Name="QueueList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,3">
+                                        <TextBlock Text="{Binding Name}" FontSize="13" VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                                        <TextBlock Text="{Binding NextRunLabel}" HorizontalAlignment="Right"
+                                                   FontSize="12" VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource OasTextSecondaryBrush}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+                <!-- 运行提醒 -->
+                <Border Grid.Column="2" CornerRadius="{StaticResource RadiusCard}" Padding="16"
+                        Background="{DynamicResource OasSurfaceBrush}"
+                        BorderBrush="{DynamicResource OasBorderBrush}" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="运行提醒" FontSize="14" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                        <TextBlock x:Name="ReminderText" Text="一切正常" FontSize="12" Margin="0,8,0,0"
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource OasTextSecondaryBrush}" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- ===== 最近执行记录 ===== -->
+            <Border CornerRadius="{StaticResource RadiusCard}" Padding="16"
                     Background="{DynamicResource OasSurfaceBrush}"
                     BorderBrush="{DynamicResource OasBorderBrush}" BorderThickness="1">
                 <StackPanel>
-                    <Grid Margin="0,0,0,12">
-                        <TextBlock Text="资产" FontSize="16" FontWeight="SemiBold" />
-                        <TextBlock x:Name="UpdatedAtText" HorizontalAlignment="Right"
-                                   Foreground="{DynamicResource OasTextSecondaryBrush}" />
+                    <Grid Margin="0,0,0,6">
+                        <TextBlock Text="最近执行记录" FontSize="14" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                        <ui:Button HorizontalAlignment="Right" Content="查看日志" Padding="8,2"
+                                   Background="Transparent" BorderThickness="0"
+                                   Click="GoLog_Click" />
                     </Grid>
-                    <TextBlock x:Name="EmptyText" Text="该账号暂无资产数据" Visibility="Visible"
+                    <TextBlock x:Name="RunsEmptyText" Text="今日暂无执行记录" Visibility="Collapsed"
+                               FontSize="12"
                                Foreground="{DynamicResource OasTextSecondaryBrush}" />
-                    <ItemsControl x:Name="AssetList">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <UniformGrid Columns="7" />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
+                    <ItemsControl x:Name="RunsList">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <StackPanel Margin="4,2">
-                                    <TextBlock Text="{Binding Name}" FontSize="12"
-                                               TextTrimming="CharacterEllipsis"
-                                               Foreground="{DynamicResource OasTextSecondaryBrush}" />
-                                    <TextBlock Text="{Binding CountText}" FontWeight="SemiBold"
+                                <Grid Margin="0,3">
+                                    <TextBlock Text="{Binding Label}" FontSize="12" VerticalAlignment="Center"
                                                Foreground="{DynamicResource OasTextPrimaryBrush}" />
-                                    <TextBlock Text="{Binding DeltaText}" FontSize="12"
-                                               Foreground="{Binding DeltaBrush}" />
-                                </StackPanel>
+                                    <TextBlock Text="{Binding DurationLabel}" HorizontalAlignment="Right"
+                                               FontSize="12" VerticalAlignment="Center"
+                                               Foreground="{DynamicResource OasTextSecondaryBrush}" />
+                                </Grid>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
-                </StackPanel>
-            </Border>
-
-            <!-- 3. 调度器状态（次级：系统运行信息） -->
-            <Border CornerRadius="8" Padding="20"
-                    Background="{DynamicResource OasSurfaceBrush}"
-                    BorderBrush="{DynamicResource OasBorderBrush}" BorderThickness="1">
-                <StackPanel Orientation="Horizontal">
-                    <ui:SymbolIcon Symbol="TaskSquare24" FontSize="20"
-                                   VerticalAlignment="Center" Margin="0,0,14,0" />
-                    <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="调度器" FontSize="14" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource OasTextPrimaryBrush}" />
-                        <TextBlock x:Name="SchedulerText" Text="未知" FontSize="12"
-                                   Foreground="{DynamicResource OasTextSecondaryBrush}" />
-                    </StackPanel>
                 </StackPanel>
             </Border>
 
