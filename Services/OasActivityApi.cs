@@ -25,13 +25,20 @@ public static class OasActivityApi
 
     public record LiveWindow(string Key, long End, string EndText);
 
+    /// <summary>周常反推信号（客户端字段，用于在清单上显示依据）。</summary>
+    public record WeeklySignals(
+        int PvpScore, int PvpRank, int LastWeekPvpStage, int SeasonDailyWin,
+        int CoopPlayTimes, int CoopJoinTimes, int CoopTotalWin,
+        int DojoWin, int DojoLose, int DojoScore,
+        Dictionary<string, int>? BattlepassLv, int JiejieCards);
+
     public record ActivityBoard(
         bool Success, string ConfigName,
         List<DailyTask> Daily, int DailyDone, int DailyTotal,
         List<MonsterTask> Monster, int MonsterDone,
         List<string> Activity, bool ActivityAvailable,
         List<CurrentActivity> CurrentActivities, GuildInfo? Guild,
-        List<LiveWindow> LiveWindows,
+        List<LiveWindow> LiveWindows, WeeklySignals? WeeklySignals,
         int ServerWeekDay, string ServerTimeText,
         string? Error, string? Hint);
 

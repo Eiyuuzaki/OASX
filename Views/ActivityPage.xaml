@@ -160,6 +160,10 @@
                                                    Foreground="{DynamicResource OasTextPrimaryBrush}" />
                                         <TextBlock Text="{Binding Note}" FontSize="11"
                                                    Foreground="{DynamicResource OasTextTertiaryBrush}" />
+                                        <TextBlock Text="{Binding SignalText}" FontSize="11"
+                                                   FontWeight="SemiBold"
+                                                   Visibility="{Binding SignalVisibility}"
+                                                   Foreground="{DynamicResource OasAccentBrush}" />
                                     </StackPanel>
                                 </CheckBox>
                             </DataTemplate>

@@ -35,9 +35,32 @@ public sealed class WeeklyItemVm : System.ComponentModel.INotifyPropertyChanged
 {
     private bool _done;
 
+    private string _signalText = "";
+
     public int Id { get; init; }
     public string Label { get; init; } = "";
     public string Note { get; init; } = "";
+
+    /// <summary>反推依据（来自客户端数据），空则不显示。</summary>
+    public string SignalText
+    {
+        get => _signalText;
+        set
+        {
+            if (_signalText == value)
+            {
+                return;
+            }
+            _signalText = value;
+            PropertyChanged?.Invoke(this, new(nameof(SignalText)));
+            PropertyChanged?.Invoke(this, new(nameof(SignalVisibility)));
+        }
+    }
+
+    public System.Windows.Visibility SignalVisibility =>
+        string.IsNullOrEmpty(_signalText)
+            ? System.Windows.Visibility.Collapsed
+            : System.Windows.Visibility.Visible;
 
     public bool Done
     {
@@ -223,6 +246,43 @@ public partial class ActivityPage : UserControl
         UpdateWeeklySummary();
     }
 
+    /// <summary>把客户端数据反推成周常依据（不自动勾选，只给出判断依据）。</summary>
+    private void ApplyWeeklySignals(OasActivityApi.WeeklySignals? sig)
+    {
+        foreach (var item in _weekly)
+        {
+            item.SignalText = "";
+        }
+        if (sig is null)
+        {
+            return;
+        }
+
+        void Set(int id, string text)
+        {
+            var item = _weekly.FirstOrDefault(x => x.Id == id);
+            if (item is not null)
+            {
+                item.SignalText = text;
+            }
+        }
+
+        // 花合战：各活动等级
+        if (sig.BattlepassLv is { Count: > 0 })
+        {
+            var maxLv = sig.BattlepassLv.Values.Max();
+            Set(1, $"花合战等级 {maxLv}");
+        }
+        // 斗技 / 协同
+        Set(3, $"斗技 {sig.PvpScore} 分（上周段位 {sig.LastWeekPvpStage}）" +
+               $"　协同 {sig.CoopPlayTimes}/{sig.CoopJoinTimes} 次");
+        // 地域鬼王（无独立字段，用每日任务信号提示见下）
+        // 结界卡
+        Set(10, $"持有结界卡 {sig.JiejieCards}");
+        // 道馆
+        Set(11, $"道馆 胜 {sig.DojoWin} · 负 {sig.DojoLose}（积分 {sig.DojoScore}）");
+    }
+
     private void UpdateWeeklySummary()
     {
         WeeklySummaryText.Text = $"{_weekly.Count(x => x.Done)}/{_weekly.Count}" +
@@ -331,6 +391,8 @@ public partial class ActivityPage : UserControl
                 .ToList();
 
             // 阴阳寮
+            ApplyWeeklySignals(board.WeeklySignals);
+
             var g = board.Guild;
             GuildText.Text = g is null || string.IsNullOrEmpty(g.Name)
                 ? "—（游戏内需先加入阴阳寮/打开寮页面）"
