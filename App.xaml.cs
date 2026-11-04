@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using OASX.Services;
 using System.Windows;
@@ -36,6 +37,41 @@ public partial class App : Application
 
         // 自动拉起后端（设置项，失败不阻塞 UI）
         _ = OasBackendLauncher.EnsureRunningAsync();
+
+        // QA 自检：--share-demo 渲染一张样例分享图后退出（验证渲染管线）
+        if (e.Args.Contains("--share-demo"))
+        {
+            _ = RenderShareDemoAsync();
+        }
+    }
+
+    /// <summary>分享图自检：渲染样例并落盘，供无 UI 环境下验证。</summary>
+    private static async Task RenderShareDemoAsync()
+    {
+        await Task.Delay(2500);   // 等资源字典与主题就绪
+        try
+        {
+            var sample = new List<(string Name, string Count, string Delta, bool Up)>
+            {
+                ("金币", "1.4亿", "410.7万", true),
+                ("勾玉", "9,535", "4,416", true),
+                ("体力", "63.9万", "424", false),
+                ("荣誉", "510", "6,980", false),
+            };
+            var path = Services.ShareImageRenderer.RenderAssets(
+                "样例角色", "Lv60 · 海外加速区",
+                DateTime.Today.ToString("yyyy-MM-dd"), sample);
+            System.IO.File.AppendAllText(
+                System.IO.Path.Combine(AppContext.BaseDirectory, "share_demo.log"),
+                path + Environment.NewLine);
+        }
+        catch (Exception ex)
+        {
+            System.IO.File.AppendAllText(
+                System.IO.Path.Combine(AppContext.BaseDirectory, "share_demo.log"),
+                "FAIL: " + ex + Environment.NewLine);
+        }
+        Current.Shutdown();
     }
 
     /// <summary>把持久化的主题应用到全局（设置页切换时也会调用）。</summary>

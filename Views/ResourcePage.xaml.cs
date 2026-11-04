@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Windows;
@@ -319,6 +320,47 @@ public partial class ResourcePage : UserControl
         catch (Exception ex)
         {
             StatusText.Text = $"加载失败：{ex.Message}";
+        }
+    }
+
+    /// <summary>生成资产分享图（纯前端渲染，保存到「图片\OASX」）。</summary>
+    private void Share_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (AssetCards.ItemsSource is not IEnumerable<AssetCardVm> cards)
+            {
+                StatusText.Text = "没有可分享的资产数据";
+                return;
+            }
+            if ((AccountSelector.SelectedItem as dynamic)?.Entry is not AccountEntry entry)
+            {
+                StatusText.Text = "先选择账号";
+                return;
+            }
+            var date = CurrentDate ?? DateTime.Today.ToString("yyyy-MM-dd");
+            var items = cards.Select(c => (
+                Name: c.Name,
+                Count: c.CountText,
+                Delta: c.DeltaText.TrimStart('+'),
+                Up: c.DeltaText.StartsWith('+'))).ToList();
+            if (items.Count == 0)
+            {
+                StatusText.Text = "没有可分享的资产数据";
+                return;
+            }
+            var path = ShareImageRenderer.RenderAssets(
+                entry.Name, $"Lv{entry.Level} · {entry.ServerName}",
+                date, items);
+            StatusText.Text = $"分享图已保存：{path}";
+            Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{path}\"")
+            {
+                UseShellExecute = true,
+            });
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"分享图生成失败：{ex.Message}";
         }
     }
 

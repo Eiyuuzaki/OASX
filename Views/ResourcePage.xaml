@@ -21,6 +21,10 @@
                           SelectionChanged="AccountSelector_SelectionChanged" />
                 <ComboBox x:Name="DateSelector" MinWidth="140" MinHeight="40" Margin="12,0,0,0"
                           SelectionChanged="DateSelector_SelectionChanged" />
+                <ui:Button x:Name="ShareButton" MinWidth="40" MinHeight="40" Margin="12,0,0,0"
+                           Icon="{ui:SymbolIcon Share24}"
+                           ToolTip="生成资产分享图（保存到 图片\OASX）"
+                           Click="Share_Click" />
                 <TextBlock x:Name="StatusText" VerticalAlignment="Center" Margin="12,0,0,0"
                            FontSize="12"
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
