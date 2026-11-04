@@ -56,6 +56,7 @@ public static class OasConfigApi
         res.EnsureSuccessStatusCode();
         return true;
     }
+}
 
 /// <summary>当前配置绑定的设备（模拟器连接状态）。</summary>
 public sealed record DeviceCurrent(
