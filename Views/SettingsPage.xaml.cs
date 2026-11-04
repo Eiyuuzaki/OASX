@@ -2,8 +2,13 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
+using System.Text.Json;
 using Microsoft.Win32;
 using OASX.Services;
+using ContentDialog = Wpf.Ui.Controls.ContentDialog;
+using ContentDialogButton = Wpf.Ui.Controls.ContentDialogButton;
+using ContentDialogResult = Wpf.Ui.Controls.ContentDialogResult;
 
 namespace OASX.Views;
 
@@ -62,6 +67,93 @@ public partial class SettingsPage : UserControl
         OasSettings.BackendAddress = addr;
         BackendBox.Text = addr;
         OasApi.Reset();
+    }
+
+    // ==================== 后端操作（真实端点） ====================
+
+    private async void TestBackend_Click(object sender, RoutedEventArgs e)
+    {
+        BackendStatusText.Text = "检测中…";
+        try
+        {
+            _ = await OasApi.GetConfigListAsync();
+            BackendDot.Fill = new SolidColorBrush(Color.FromRgb(0x16, 0xA3, 0x4A));
+            BackendStatusText.Text = "连接正常";
+        }
+        catch
+        {
+            BackendDot.Fill = new SolidColorBrush(Color.FromRgb(0xDC, 0x45, 0x45));
+            BackendStatusText.Text = "不可达";
+        }
+    }
+
+    /// <summary>导出诊断包：GET /home/export_diagnostic → 打开产物所在目录。</summary>
+    private async void ExportDiagnostic_Click(object sender, RoutedEventArgs e)
+    {
+        BackendStatusText.Text = "生成诊断包…";
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            var res = await OasApi.Http.GetAsync("/home/export_diagnostic", cts.Token);
+            res.EnsureSuccessStatusCode();
+            using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync(cts.Token));
+            var root = doc.RootElement;
+            var ok = root.TryGetProperty("success", out var sEl) && sEl.GetBoolean();
+            var path = root.TryGetProperty("path", out var pEl) ? pEl.GetString() ?? "" : "";
+            if (ok && path.Length > 0)
+            {
+                BackendStatusText.Text = $"已导出：{path}";
+                // 打开资源管理器并选中产物
+                Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{path}\"")
+                {
+                    UseShellExecute = true,
+                });
+            }
+            else
+            {
+                var err = root.TryGetProperty("error", out var eEl) ? eEl.GetString() : "";
+                BackendStatusText.Text = $"导出失败：{err}";
+            }
+        }
+        catch (Exception ex)
+        {
+            BackendStatusText.Text = $"导出失败：{ex.Message}";
+        }
+    }
+
+    /// <summary>停止后端：GET /home/kill_server（需确认）。</summary>
+    private async void StopBackend_Click(object sender, RoutedEventArgs e)
+    {
+        var host = (Window.GetWindow(this) as MainWindow)?.DialogHost;
+        if (host is not null)
+        {
+            var dialog = new ContentDialog(host)
+            {
+                Title = "停止后端",
+                Content = new TextBlock
+                {
+                    Text = "将向后端发送停止指令。停止后需重新启动 OAS 才能继续使用（可开启「启动时自动拉起后端」）。",
+                    TextWrapping = TextWrapping.Wrap,
+                    MaxWidth = 360,
+                },
+                PrimaryButtonText = "停止",
+                CloseButtonText = "取消",
+                DefaultButton = ContentDialogButton.Primary,
+                DialogWidth = 420,
+            };
+            if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
+        }
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
+            await OasApi.Http.GetAsync("/home/kill_server", cts.Token);
+            BackendStatusText.Text = "已发送停止指令";
+            BackendDot.Fill = new SolidColorBrush(Color.FromRgb(0x8A, 0x8A, 0x8A));
+        }
+        catch
+        {
+            BackendStatusText.Text = "已发送（后端可能已退出）";
+        }
     }
 
     // ==================== 个性化 ====================

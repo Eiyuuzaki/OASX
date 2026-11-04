@@ -14,26 +14,44 @@
                     Background="{DynamicResource LayerFillColorDefaultBrush}"
                     BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                     BorderThickness="1">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ui:SymbolIcon Grid.Column="0" Symbol="Server24" FontSize="20"
-                                   VerticalAlignment="Center" Margin="0,0,14,0" />
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                        <TextBlock Text="后端地址" FontSize="14" />
-                        <TextBlock Text="OASX 通过 HTTP/SSE 连接该地址" FontSize="12"
-                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:SymbolIcon Grid.Column="0" Symbol="Server24" FontSize="20"
+                                       VerticalAlignment="Center" Margin="0,0,14,0" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="后端地址" FontSize="14" />
+                            <TextBlock Text="OASX 通过 HTTP/SSE 连接该地址" FontSize="12"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                            <ui:TextBox x:Name="BackendBox" MinWidth="220" MinHeight="32" Margin="0,0,8,0" />
+                            <ui:Button Content="保存" MinWidth="72" MinHeight="32"
+                                       Appearance="{x:Static ui:ControlAppearance.Primary}"
+                                       Click="SaveBackend_Click" />
+                        </StackPanel>
+                    </Grid>
+                    <!-- 操作行：连接状态 / 测试 / 诊断导出 / 停止后端（真实端点） -->
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <Ellipse Width="8" Height="8" x:Name="BackendDot"
+                                 VerticalAlignment="Center"
+                                 Fill="{DynamicResource OasTextTertiaryBrush}" />
+                        <TextBlock x:Name="BackendStatusText" Text="未检测" FontSize="12"
+                                   VerticalAlignment="Center" Margin="7,0,16,0"
+                                   Foreground="{DynamicResource OasTextSecondaryBrush}" />
+                        <ui:Button Content="测试连接" MinWidth="88" MinHeight="30" Click="TestBackend_Click" />
+                        <ui:Button Content="导出诊断包" MinWidth="104" MinHeight="30" Margin="8,0,0,0"
+                                   Click="ExportDiagnostic_Click"
+                                   ToolTip="调用 /home/export_diagnostic 生成诊断 zip" />
+                        <ui:Button Content="停止后端" MinWidth="88" MinHeight="30" Margin="8,0,0,0"
+                                   Click="StopBackend_Click"
+                                   ToolTip="调用 /home/kill_server（后端停止后需手动或自动拉起）" />
                     </StackPanel>
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                        <ui:TextBox x:Name="BackendBox" MinWidth="220" MinHeight="32" Margin="0,0,8,0" />
-                        <ui:Button Content="保存" MinWidth="72" MinHeight="32"
-                                   Appearance="{x:Static ui:ControlAppearance.Primary}"
-                                   Click="SaveBackend_Click" />
-                    </StackPanel>
-                </Grid>
+                </StackPanel>
             </Border>
 
             <!-- ============ 个性化 ============ -->
