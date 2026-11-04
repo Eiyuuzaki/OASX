@@ -33,12 +33,51 @@ public static class ThemeService
     /// <summary>应用指定深浅色（含语义色字典热切换与持久化触发方的偏好）。
     /// **必须在 UI 线程执行**：SystemEvents 回调在后台线程，
     /// 直接改 WPF 主题/字典会出现半更新（深浅色乱串的根因）。</summary>
+    /// <summary>已应用主题的窗口（幂等判据之一）。</summary>
+    private static WeakReference<Window>? _themedWindow;
+    private static bool _lastDark;
+    private static WindowBackdropType _lastBackdrop;
+
     public static void Apply(bool dark)
+    {
+        try
+        {
+            ApplyCore(dark);
+        }
+        catch (Exception ex)
+        {
+            // 主题应用失败不能阻断调用方（曾导致导航中断、页面空白）
+            Log("Apply failed: " + ex);
+        }
+    }
+
+    private static void ApplyCore(bool dark)
     {
         var app = Application.Current;
         if (app is not null && !app.Dispatcher.CheckAccess())
         {
             app.Dispatcher.BeginInvoke(new Action(() => Apply(dark)));
+            return;
+        }
+
+        // 幂等：同一个窗口 + 相同的深浅色/材质 → 直接返回。
+        // 反复调用 ApplicationThemeManager.Apply 会重建窗口 chrome，
+        // 触发 FluentWindow.SetWindowChrome 的 Freezable 上下文异常（整页黑屏）。
+        var backdropNow = ResolveBackdropType();
+        var currentWindow = app?.MainWindow;
+        var alreadyThemed = currentWindow is not null
+                            && _themedWindow is not null
+                            && _themedWindow.TryGetTarget(out var themed)
+                            && ReferenceEquals(themed, currentWindow)
+                            && dark == _lastDark
+                            && backdropNow == _lastBackdrop;
+        if (alreadyThemed)
+        {
+            // 仍确保深色标志在位（廉价、无 chrome 重建）
+            if (currentWindow is FluentWindow fwKeep)
+            {
+                SetImmersiveDarkMode(fwKeep, dark);
+            }
             return;
         }
 
@@ -61,6 +100,13 @@ public static class ThemeService
         }
 
         ApplySemanticDictionary(dark);
+
+        _lastDark = dark;
+        _lastBackdrop = backdrop;
+        if (currentWindow is not null)
+        {
+            _themedWindow = new WeakReference<Window>(currentWindow);
+        }
 
         // 诊断：WPF-UI 认为的主题 + 合并字典里的 ThemesDictionary 状态
         try
@@ -143,6 +189,41 @@ public static class ThemeService
         catch
         {
             // 日志失败不影响功能
+        }
+    }
+
+    /// <summary>只处理窗口级主题（深色标志 + 材质），**不调用
+    /// ApplicationThemeManager.Apply**：后者会重建窗口 chrome，
+    /// 在句柄刚就绪时可能抛 Freezable 上下文异常并中断调用方（导航）。</summary>
+    public static void ApplyWindowChromeOnly()
+    {
+        try
+        {
+            if (Application.Current?.MainWindow is not FluentWindow fw)
+            {
+                return;
+            }
+            var mode = OasSettings.ThemeMode;
+            var dark = mode switch
+            {
+                "light" => false,
+                "dark" => true,
+                _ => IsSystemDark(),
+            };
+            IsDark = dark;
+            var backdrop = ResolveBackdropType();
+            SetImmersiveDarkMode(fw, dark);
+            if (fw.WindowBackdropType != backdrop)
+            {
+                fw.WindowBackdropType = backdrop;
+            }
+            _lastDark = dark;
+            _lastBackdrop = backdrop;
+            _themedWindow = new WeakReference<Window>(fw);
+        }
+        catch (Exception ex)
+        {
+            Log("ApplyWindowChromeOnly failed: " + ex.Message);
         }
     }
 
