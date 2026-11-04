@@ -24,7 +24,39 @@
 
             <!-- ===== 账号与运行环境 ===== -->
             <!-- 两行式：第一行 账号信息 + 状态 chip 横排；第二行 绘卷横条（活动期） -->
-            <Border CornerRadius="{StaticResource RadiusCard}" Padding="16"
+                        <!-- 结界寄养（点击进入活动页） -->
+            <Border CornerRadius="{StaticResource RadiusCard}" Padding="16,14" Margin="0,0,0,16"
+                    Background="{DynamicResource OasSurfaceBrush}"
+                    BorderBrush="{DynamicResource OasAccentBrush}" BorderThickness="1"
+                    Cursor="Hand" MouseLeftButtonDown="FosterDash_Click">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Image x:Name="FosterDashIcon" Width="44" Height="44"
+                           VerticalAlignment="Center" />
+                    <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="结界寄养" FontSize="13" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                        <TextBlock x:Name="FosterDashText" Text="加载中…" FontSize="12" Margin="0,2,0,0"
+                                   Foreground="{DynamicResource OasTextSecondaryBrush}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
+                        <TextBlock x:Name="FosterDashCountdown" Text="" FontSize="16" FontWeight="SemiBold"
+                                   HorizontalAlignment="Right"
+                                   FontFamily="{StaticResource AppFontFamily}"
+                                   Foreground="{DynamicResource OasAccentBrush}" />
+                        <TextBlock x:Name="FosterDashEnd" Text="" FontSize="11" Margin="0,2,0,0"
+                                   HorizontalAlignment="Right"
+                                   Foreground="{DynamicResource OasTextTertiaryBrush}" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+
+<Border CornerRadius="{StaticResource RadiusCard}" Padding="16"
                     Background="{DynamicResource OasSurfaceBrush}"
                     BorderBrush="{DynamicResource OasBorderBrush}"
                     BorderThickness="1" Margin="0,0,0,16">
@@ -245,37 +277,6 @@
                 </Border>
             </Grid>
 
-
-            <!-- 结界寄养（点击进入活动页） -->
-            <Border CornerRadius="{StaticResource RadiusCard}" Padding="16,14" Margin="0,0,0,16"
-                    Background="{DynamicResource OasSurfaceBrush}"
-                    BorderBrush="{DynamicResource OasBorderBrush}" BorderThickness="1"
-                    Cursor="Hand" MouseLeftButtonDown="FosterDash_Click">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <Image x:Name="FosterDashIcon" Width="44" Height="44"
-                           VerticalAlignment="Center" />
-                    <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
-                        <TextBlock Text="结界寄养" FontSize="13" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource OasTextPrimaryBrush}" />
-                        <TextBlock x:Name="FosterDashText" Text="加载中…" FontSize="12" Margin="0,2,0,0"
-                                   Foreground="{DynamicResource OasTextSecondaryBrush}" />
-                    </StackPanel>
-                    <StackPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
-                        <TextBlock x:Name="FosterDashCountdown" Text="" FontSize="16" FontWeight="SemiBold"
-                                   HorizontalAlignment="Right"
-                                   FontFamily="{StaticResource AppFontFamily}"
-                                   Foreground="{DynamicResource OasAccentBrush}" />
-                        <TextBlock x:Name="FosterDashEnd" Text="" FontSize="11" Margin="0,2,0,0"
-                                   HorizontalAlignment="Right"
-                                   Foreground="{DynamicResource OasTextTertiaryBrush}" />
-                    </StackPanel>
-                </Grid>
-            </Border>
 
             <!-- ===== 最近执行记录 ===== -->
             <Border CornerRadius="{StaticResource RadiusCard}" Padding="16"
