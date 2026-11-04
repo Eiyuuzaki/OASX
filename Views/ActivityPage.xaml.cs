@@ -394,10 +394,25 @@ public partial class ActivityPage : UserControl
             var ts = TimeSpan.FromSeconds(remain);
             FosterText.Text = $"⏳ 距离成熟还有 {ts.Hours}小时{ts.Minutes}分" +
                               $"（{state.HarvestTimeText} 收取）";
-            FosterSubText.Text = $"上次寄养 {state.RewardTimeText} · 周期 {state.CycleHours} 小时" +
+            FosterSubText.Text = $"上次寄养 {state.RewardTimeText} · 寄养周期固定 6 小时" +
                                  (state.NotifyEnabled
                                      ? " · 到点将推送通知"
                                      : " · 通知未启用（设置页可开启）");
+            // 卡类型徽标：OAS 寄养只吃斗鱼/太鼓，显示当前配置的卡
+            var card = state.CardType ?? "";
+            if (card.Length > 0)
+            {
+                FosterCardText.Text = card == "斗鱼" ? "🐟 斗鱼" : "🥁 太鼓";
+                FosterCardBadge.Background = new System.Windows.Media.SolidColorBrush(
+                    card == "斗鱼"
+                        ? System.Windows.Media.Color.FromArgb(0x2E, 0x00, 0x7A, 0xCC)
+                        : System.Windows.Media.Color.FromArgb(0x2E, 0xC5, 0x4C, 0x1E));
+                FosterCardBadge.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                FosterCardBadge.Visibility = Visibility.Collapsed;
+            }
         }
         catch (Exception ex)
         {

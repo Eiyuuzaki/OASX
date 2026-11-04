@@ -94,7 +94,6 @@ public partial class SettingsPage : UserControl
                     _paramValues[k] = v;
                 }
                 _RefreshParamFields();
-                _SelectCycle(cfg.Value.CycleHours);
             }
             else
             {
@@ -130,20 +129,6 @@ public partial class SettingsPage : UserControl
         NotifyProviderBox.SelectedIndex = 0;
     }
 
-    private void _SelectCycle(int hours)
-    {
-        for (var i = 0; i < NotifyCycleBox.Items.Count; i++)
-        {
-            if (NotifyCycleBox.Items[i] is ComboBoxItem { Tag: string t }
-                && int.TryParse(t, out var h) && h == hours)
-            {
-                NotifyCycleBox.SelectedIndex = i;
-                return;
-            }
-        }
-        NotifyCycleBox.SelectedIndex = 0;
-    }
-
     private void NotifyProvider_Changed(object sender, SelectionChangedEventArgs e)
     {
         if (_loadingNotify)
@@ -152,14 +137,6 @@ public partial class SettingsPage : UserControl
         }
         _RefreshParamFields();
         _ = SaveNotifyAsync();
-    }
-
-    private void NotifyCycle_Changed(object sender, SelectionChangedEventArgs e)
-    {
-        if (!_loadingNotify)
-        {
-            _ = SaveNotifyAsync();
-        }
     }
 
     private void NotifyEnable_Toggled(object sender, RoutedEventArgs e)
@@ -217,8 +194,7 @@ public partial class SettingsPage : UserControl
             var provider = NotifyProviderBox.SelectedItem is ComboBoxItem { Tag: string t }
                 ? t : "null";
             var enable = NotifyEnableSwitch.IsChecked == true;
-            var cycle = NotifyCycleBox.SelectedItem is ComboBoxItem { Tag: string ct }
-                && int.TryParse(ct, out var h) ? h : 6;
+            const int cycle = 6; // 寄养周期固定 6h（游戏机制）
             // 必填校验
             if (_currentProvider is not null)
             {

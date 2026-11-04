@@ -184,10 +184,18 @@
                     Background="{DynamicResource OasSurfaceBrush}"
                     BorderBrush="{DynamicResource OasBorderBrush}" BorderThickness="1">
                 <StackPanel>
-                    <TextBlock x:Name="FosterText"
-                               Text="游戏内打开一次结界页并寄养后，这里会显示倒计时"
-                               FontSize="13" TextWrapping="Wrap"
-                               Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                    <Grid>
+                        <TextBlock x:Name="FosterText"
+                                   Text="游戏内打开一次结界页并寄养后，这里会显示倒计时"
+                                   FontSize="13" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                        <Border x:Name="FosterCardBadge" HorizontalAlignment="Right"
+                                VerticalAlignment="Center" CornerRadius="4"
+                                Padding="6,2" Visibility="Collapsed">
+                            <TextBlock x:Name="FosterCardText" Text="" FontSize="12"
+                                       FontWeight="SemiBold" />
+                        </Border>
+                    </Grid>
                     <TextBlock x:Name="FosterSubText" Text="" FontSize="11" Margin="0,4,0,0"
                                Foreground="{DynamicResource OasTextTertiaryBrush}" />
                 </StackPanel>

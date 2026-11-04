@@ -87,15 +87,7 @@
                                   Margin="0,0,0,8" SelectionChanged="NotifyProvider_Changed" />
                         <StackPanel x:Name="NotifyFieldsPanel" Grid.Row="1" Grid.Column="0"
                                     Grid.ColumnSpan="2" Margin="0,0,0,8" />
-                        <TextBlock Text="寄养周期" Grid.Row="2" FontSize="13" VerticalAlignment="Center"
-                                   Foreground="{DynamicResource OasTextPrimaryBrush}" />
-                        <ComboBox x:Name="NotifyCycleBox" Grid.Row="2" Grid.Column="1" MinWidth="160"
-                                  Margin="0,0,0,8" SelectionChanged="NotifyCycle_Changed">
-                            <ComboBoxItem Content="6 小时" Tag="6" />
-                            <ComboBoxItem Content="8 小时" Tag="8" />
-                            <ComboBoxItem Content="12 小时" Tag="12" />
-                        </ComboBox>
-                    </Grid>
+</Grid>
                     <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
                         <ui:Button x:Name="NotifyTestButton" Content="发送测试通知"
                                    Appearance="Primary" Click="NotifyTest_Click" />

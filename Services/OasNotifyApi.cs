@@ -16,7 +16,7 @@ public static class OasNotifyApi
         bool Success, string ConfigName, long RewardT,
         string RewardTimeText, string HarvestTimeText,
         int RemainingSeconds, int CycleHours, bool NotifyEnabled,
-        string? Error);
+        string? CardType, string? Error);
 
     public record ProviderParam(string Name);
 
