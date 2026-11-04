@@ -15,7 +15,7 @@ public static class OasNotifyApi
     public record FosterSlot(
         bool? Active, long? T, string? StartText, string? EndText,
         int? Hours, string? CardItem, string? CardName,
-        int? Remaining, bool? Empty, string? Error);
+        int? Remaining, bool? Empty, bool? Unknown, string? Error);
 
     public record FosterState(
         bool Success, string ConfigName,

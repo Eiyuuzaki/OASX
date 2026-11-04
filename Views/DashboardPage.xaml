@@ -42,6 +42,8 @@
                                    Foreground="{DynamicResource OasTextPrimaryBrush}" />
                         <TextBlock x:Name="FosterDashText" Text="加载中…" FontSize="12" Margin="0,2,0,0"
                                    Foreground="{DynamicResource OasTextSecondaryBrush}" />
+                        <TextBlock x:Name="FosterDashOwnText" Text="" FontSize="11" Margin="0,2,0,0"
+                                   Foreground="{DynamicResource OasTextTertiaryBrush}" />
                     </StackPanel>
                     <StackPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
                         <TextBlock x:Name="FosterDashCountdown" Text="" FontSize="16" FontWeight="SemiBold"

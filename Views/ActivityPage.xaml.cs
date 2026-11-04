@@ -454,11 +454,15 @@ public partial class ActivityPage : UserControl
         }
         if (own.Error is not null)
         {
-            return $"自结界卡：读取失败（{own.Error}）";
+            return $"自结界卡槽：读取失败（{own.Error}）";
         }
         if (own.Empty == true)
         {
-            return "自结界卡槽：当前无卡";
+            return "自结界卡槽：空（自己放卡后会在这里显示倒计时）";
+        }
+        if (own.Unknown == true)
+        {
+            return "自结界卡槽：未读取（游戏内打开一次结界页后可显示）";
         }
         var ts = TimeSpan.FromSeconds(own.Remaining ?? 0);
         return $"自结界卡：{own.CardName ?? own.CardItem} " +

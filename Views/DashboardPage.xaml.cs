@@ -141,6 +141,7 @@ public partial class DashboardPage : UserControl
                 FosterDashText.Text = "需要游戏运行";
                 FosterDashCountdown.Text = "";
                 FosterDashEnd.Text = "";
+                FosterDashOwnText.Text = "";
                 return;
             }
             var foster = state.Foster;
@@ -153,6 +154,7 @@ public partial class DashboardPage : UserControl
             }
             var remain = foster.Remaining ?? 0;
             var cardName = foster.CardName ?? "";
+            FosterDashOwnText.Text = OwnDashText(state);
             if (remain <= 0)
             {
                 FosterDashText.Text = $"{cardName} 已成熟";
@@ -179,6 +181,30 @@ public partial class DashboardPage : UserControl
         {
             // 游戏未运行等情况静默
         }
+    }
+
+    /// <summary>自结界卡槽状态行（空/未读取/倒计时）。</summary>
+    private static string OwnDashText(OasNotifyApi.FosterState state)
+    {
+        var own = state.Own;
+        if (own is null || own.Unknown == true)
+        {
+            return "";
+        }
+        if (own.Error is not null)
+        {
+            return "自结界卡槽：读取失败";
+        }
+        if (own.Empty == true)
+        {
+            return "自结界卡槽：空";
+        }
+        if ((own.Remaining ?? 0) <= 0)
+        {
+            return "自结界卡：已成熟可收取";
+        }
+        var ts = TimeSpan.FromSeconds(own.Remaining ?? 0);
+        return $"自结界卡：{own.CardName ?? own.CardItem} ⏳ {ts.Hours}小时{ts.Minutes:00}分";
     }
 
     /// <summary>点击寄养卡 → 跳转活动页。</summary>
