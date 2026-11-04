@@ -258,7 +258,9 @@ public partial class MainWindow : FluentWindow
         {
             var item = new System.Windows.Controls.MenuItem
             {
-                Header = opt.Label,
+                Header = opt.Schedulers.Count > 1
+                    ? $"{opt.Label}　（调度器：{opt.SchedulerText}）"
+                    : opt.Label,
                 IsCheckable = true,
                 IsChecked = ctx.Current is { } cur
                             && cur.Config == opt.Entry.Config

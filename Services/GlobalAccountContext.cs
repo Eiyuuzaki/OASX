@@ -106,7 +106,12 @@ public sealed class GlobalAccountContext
                          (found is null ? "NOT FOUND" : found.DisplayName));
                     if (found is not null)
                     {
-                        Current = found;
+                        // 规范化到该角色的主条目（数据最新、优先主调度器），
+                        // 避免恢复出 oas1 的旧快照而仪表盘显示过期等级/区服
+                        var canonical = BuildOptions()
+                            .FirstOrDefault(o => IdentityKey(o.Entry) == IdentityKey(found))
+                            ?.Entry;
+                        Current = canonical ?? found;
                     }
                 }
                 else
@@ -134,29 +139,82 @@ public sealed class GlobalAccountContext
     }
 
     /// <summary>切换当前账号（同账号不重复触发事件）。</summary>
-    /// <summary>账号选择项（同名账号带调度器消歧）。
-    /// 标题栏与资产页共用同一份构造逻辑，避免两处标签不一致。</summary>
+    /// <summary>账号选择项（按角色身份去重；附带该角色可用的调度器）。</summary>
     public sealed class AccountOption
     {
         public required AccountEntry Entry { get; init; }
         public required string Label { get; init; }
+
+        /// <summary>同一角色出现的所有调度器（配置名）。</summary>
+        public required IReadOnlyList<string> Schedulers { get; init; }
+
+        public string SchedulerText => Schedulers.Count > 1
+            ? $"{Schedulers[0]} 等 {Schedulers.Count} 个"
+            : Schedulers.FirstOrDefault() ?? "";
     }
 
-    /// <summary>构造下拉选项：同名账号追加 (调度器) 消歧。</summary>
+    /// <summary>角色身份键：优先 short_id + 区服，退回 名称 + 区服。
+    /// 同一个号在不同配置下的 role_key 格式可能不同（{{id@server}} vs 其他），
+    /// 不能用 role_key 去重。</summary>
+    private static string IdentityKey(AccountEntry a) =>
+        !string.IsNullOrEmpty(a.ShortId)
+            ? $"{a.ShortId}@{a.ServerName}"
+            : $"{a.Name}@{a.ServerName}";
+
+    /// <summary>构造选项：**按角色身份去重**——同一个号跨多个调度器只出现一次，
+    /// 取数据最新的一份作为当前条目（执行用该调度器）。</summary>
     public IReadOnlyList<AccountOption> BuildOptions()
     {
-        var dupNames = _accounts
-            .GroupBy(a => a.DisplayName)
-            .Where(g => g.Count() > 1)
-            .Select(g => g.Key)
-            .ToHashSet();
-        return _accounts.Select(a => new AccountOption
+        var options = _accounts
+            .GroupBy(IdentityKey)
+            .Select(g =>
+            {
+                // 数据最新的那份（Dates 已按倒序，取首日最大者）
+                var canonical = g
+                    .OrderByDescending(a => a.Dates.FirstOrDefault() ?? "")
+                    .First();
+                var schedulers = g.Select(a => a.Config)
+                    .Distinct()
+                    .OrderBy(c => c)
+                    .ToList();
+                return new AccountOption
+                {
+                    Entry = canonical,
+                    Label = canonical.DisplayName,
+                    Schedulers = schedulers,
+                };
+            })
+            .OrderBy(o => o.Label, StringComparer.Ordinal)
+            .ToList();
+        DumpOptions(options);
+        return options;
+    }
+
+    /// <summary>诊断：把去重结果打进 account_restore.log（排障用）。</summary>
+    private void DumpOptions(IReadOnlyList<AccountOption> options)
+    {
+        try
         {
-            Entry = a,
-            Label = dupNames.Contains(a.DisplayName)
-                ? $"{a.DisplayName}（{a.Config}）"
-                : a.DisplayName,
-        }).ToList();
+            var sb = new System.Text.StringBuilder();
+            sb.Append(DateTime.Now.ToString("HH:mm:ss"))
+              .Append(" options raw=").Append(_accounts.Count)
+              .Append(" deduped=").Append(options.Count)
+              .AppendLine();
+            foreach (var o in options)
+            {
+                sb.Append("    ").Append(o.Label)
+                  .Append(" | schedulers ").Append(string.Join(",", o.Schedulers))
+                  .Append(" | use ").Append(o.Entry.Config).Append("/")
+                  .AppendLine(o.Entry.RoleKey);
+            }
+            File.AppendAllText(
+                Path.Combine(AppContext.BaseDirectory, "account_restore.log"),
+                sb.ToString());
+        }
+        catch
+        {
+            // 日志失败不影响功能
+        }
     }
 
     public void SetCurrent(AccountEntry? entry)
@@ -180,6 +238,19 @@ public sealed class GlobalAccountContext
     }
 
     /// <summary>按 (config, roleKey) 定位账号条目。</summary>
-    public AccountEntry? Find(string config, string roleKey) =>
-        _accounts.FirstOrDefault(a => a.Config == config && a.RoleKey == roleKey);
+    public AccountEntry? Find(string config, string roleKey)
+    {
+        var exact = _accounts.FirstOrDefault(
+            a => a.Config == config && a.RoleKey == roleKey);
+        if (exact is not null)
+        {
+            return exact;
+        }
+        // 回退：同一角色在不同配置下 role_key 格式可能不同——
+        // 按身份键找到该账号，取数据最新的一份
+        return _accounts
+            .Where(a => IdentityKey(a) == roleKey || a.RoleKey == roleKey)
+            .OrderByDescending(a => a.Dates.FirstOrDefault() ?? "")
+            .FirstOrDefault();
+    }
 }
