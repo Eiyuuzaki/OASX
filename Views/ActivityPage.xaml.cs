@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -29,6 +30,34 @@ public sealed class CurrentActivityVm
     public string EndText { get; init; } = "";
 }
 
+/// <summary>周常清单条目（社区整理；游戏内无面板，本地勾选）。</summary>
+public sealed class WeeklyItemVm : System.ComponentModel.INotifyPropertyChanged
+{
+    private bool _done;
+
+    public int Id { get; init; }
+    public string Label { get; init; } = "";
+    public string Note { get; init; } = "";
+
+    public bool Done
+    {
+        get => _done;
+        set
+        {
+            if (_done == value)
+            {
+                return;
+            }
+            _done = value;
+            PropertyChanged?.Invoke(this, new(nameof(Done)));
+            DoneChanged?.Invoke();
+        }
+    }
+
+    public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+    public event Action? DoneChanged;
+}
+
 /// <summary>悬赏封印行。</summary>
 public sealed class MonsterTaskVm
 {
@@ -50,6 +79,25 @@ public partial class ActivityPage : UserControl
     };
 
     private bool _lastHasTasks;
+    private readonly List<WeeklyItemVm> _weekly = [];
+
+    /// <summary>社区整理版周常清单（网易大神/NGA/知乎 多来源一致条目）。</summary>
+    private static readonly (int Id, string Label, string Note)[] WeeklySeed =
+    [
+        (1, "花合战 100 活跃度", "周活跃度奖励"),
+        (2, "每周秘闻副本", "通关；首次分享 +20 勾"),
+        (3, "斗技 / 协同斗技", "周结算 60-700 勾 / 60-300 勾"),
+        (4, "地域鬼王", "每日 20-60 勾；周首次分享 +20 勾"),
+        (5, "寮三十（寮集体任务）", "每日任务里有计数，可对照"),
+        (6, "寮资金 / 寮包领取", "寮界面领取"),
+        (7, "狩猎战 / 阴界之门", "按周/日时段开放"),
+        (8, "逢魔之时", "每日 19:00-21:00"),
+        (9, "御魂副本清次数", "周次数与体力规划"),
+        (10, "结界突破 / 寄养结界卡", "结界卡产出资源"),
+        (11, "道馆", "每日开放时段"),
+        (12, "大神 App 签到（周满勤）", "满勤给黑蛋碎片"),
+        (13, "功勋商店周礼包", "30 功勋 7 个/周；蓝票 120 功勋 1 张/周"),
+    ];
 
     public ActivityPage()
     {
@@ -63,6 +111,7 @@ public partial class ActivityPage : UserControl
             ctx.AccountsLoaded += OnAccountsLoaded;
             _autoRefresh.Tick += OnAutoRefreshTick;
             _autoRefresh.Start();
+            LoadWeekly();
             _ = LoadAsync();
         };
         Unloaded += (_, _) =>
@@ -90,6 +139,95 @@ public partial class ActivityPage : UserControl
 
     private async void Refresh_Click(object sender, RoutedEventArgs e) =>
         await LoadAsync(force: true);
+
+    // ==================== 周常清单（本地，周一 5:00 重置） ====================
+
+    private const string WeeklyKey = "weeklyChecklist";
+
+    /// <summary>本周标识：以周一 5:00 为界（yyyy-Www）。</summary>
+    private static string CurrentWeekKey()
+    {
+        var now = DateTime.Now;
+        var anchor = now.Date.AddHours(5);
+        if (now < anchor)
+        {
+            anchor = anchor.AddDays(-1);
+        }
+        var monday = anchor.AddDays(-(((int)anchor.DayOfWeek + 6) % 7));
+        var week = System.Globalization.ISOWeek.GetWeekOfYear(monday);
+        return $"{monday:yyyy}-W{week:00}";
+    }
+
+    private void LoadWeekly()
+    {
+        var week = CurrentWeekKey();
+        var done = new HashSet<int>();
+        try
+        {
+            var raw = OasSettings.Get(WeeklyKey, "");
+            if (raw.Length > 0)
+            {
+                using var doc = JsonDocument.Parse(raw);
+                var root = doc.RootElement;
+                if (root.TryGetProperty("week", out var w) && w.GetString() == week &&
+                    root.TryGetProperty("done", out var d) &&
+                    d.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var item in d.EnumerateArray())
+                    {
+                        if (item.TryGetInt32(out var id))
+                        {
+                            done.Add(id);
+                        }
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // 解析失败按空处理
+        }
+
+        _weekly.Clear();
+        foreach (var (id, label, note) in WeeklySeed)
+        {
+            var vm = new WeeklyItemVm
+            {
+                Id = id,
+                Label = label,
+                Note = note,
+                Done = done.Contains(id),
+            };
+            vm.DoneChanged += SaveWeekly;
+            _weekly.Add(vm);
+        }
+        WeeklyList.ItemsSource = null;
+        WeeklyList.ItemsSource = _weekly;
+        UpdateWeeklySummary();
+    }
+
+    private void SaveWeekly()
+    {
+        try
+        {
+            OasSettings.Set(WeeklyKey, JsonSerializer.Serialize(new
+            {
+                week = CurrentWeekKey(),
+                done = _weekly.Where(x => x.Done).Select(x => x.Id).ToArray(),
+            }));
+        }
+        catch
+        {
+            // 保存失败不影响勾选
+        }
+        UpdateWeeklySummary();
+    }
+
+    private void UpdateWeeklySummary()
+    {
+        WeeklySummaryText.Text = $"{_weekly.Count(x => x.Done)}/{_weekly.Count}" +
+                                 $"（{CurrentWeekKey()}）";
+    }
 
     private async Task LoadAsync(bool force = false)
     {

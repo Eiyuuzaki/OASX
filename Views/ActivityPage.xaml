@@ -134,6 +134,40 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
 
+            <!-- 每周任务（周常）：游戏内无面板，按社区清单手动勾选 -->
+            <Grid Margin="0,10,0,6">
+                <TextBlock Text="每周任务（周常）" FontSize="14" FontWeight="SemiBold"
+                           Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                <TextBlock x:Name="WeeklySummaryText" Text="" FontSize="12"
+                           HorizontalAlignment="Right" VerticalAlignment="Center"
+                           Foreground="{DynamicResource OasTextSecondaryBrush}" />
+            </Grid>
+            <Border CornerRadius="{StaticResource RadiusCard}" Padding="16" Margin="0,0,0,6"
+                    Background="{DynamicResource OasSurfaceBrush}"
+                    BorderBrush="{DynamicResource OasBorderBrush}" BorderThickness="1">
+                <StackPanel>
+                    <TextBlock Text="游戏内没有周常面板，这里是社区常用清单；勾选记录本地保存，周一 5:00 自动重置。"
+                               FontSize="11" TextWrapping="Wrap" Margin="0,0,0,10"
+                               Foreground="{DynamicResource OasTextTertiaryBrush}" />
+                    <ItemsControl x:Name="WeeklyList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <CheckBox IsChecked="{Binding Done, Mode=TwoWay}"
+                                          Margin="0,5" FontSize="13"
+                                          Foreground="{DynamicResource OasTextPrimaryBrush}">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Label}" FontSize="13"
+                                                   Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                                        <TextBlock Text="{Binding Note}" FontSize="11"
+                                                   Foreground="{DynamicResource OasTextTertiaryBrush}" />
+                                    </StackPanel>
+                                </CheckBox>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
             <!-- 进行中的活动时段 -->
             <TextBlock Text="进行中的活动时段" FontSize="14" FontWeight="SemiBold"
                        Margin="0,10,0,6"
