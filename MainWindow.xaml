@@ -51,7 +51,8 @@
             <ui:NavigationView.FooterMenuItems>
                 <ui:NavigationViewItem Content="设置" TargetPageType="{x:Type views:SettingsPage}"
                                        Icon="{ui:SymbolIcon Settings24}" />
-            <ui:NavigationViewItem Content="关于" TargetPageType="{x:Type views:AboutPage}" />
+                <ui:NavigationViewItem Content="关于" TargetPageType="{x:Type views:AboutPage}"
+                                       Icon="{ui:SymbolIcon Info24}" />
             </ui:NavigationView.FooterMenuItems>
         </ui:NavigationView>
 
