@@ -10,6 +10,9 @@ namespace OASX.Views;
 /// <summary>单卷展示模型。</summary>
 public sealed class ScrollCardVm
 {
+    /// <summary>卷序号（01..）：按卷 ID 升序，与游戏内"卷一/卷二"顺序一致。</summary>
+    public string IndexText { get; init; } = "";
+
     public string Name { get; init; } = "";
     public double Percent { get; init; }
     public string PercentText { get; init; } = "";
@@ -154,8 +157,9 @@ public partial class HuijuanPage : UserControl
             EmptyText.Visibility = scrolls.Count == 0
                 ? Visibility.Visible : Visibility.Collapsed;
 
-            ScrollList.ItemsSource = scrolls.Select(s => new ScrollCardVm
+            ScrollList.ItemsSource = scrolls.Select((s, i) => new ScrollCardVm
             {
+                IndexText = (i + 1).ToString("00"),
                 Name = s.Name,
                 Percent = Math.Clamp(s.Percent, 0, 100),
                 PercentText = $"{s.Percent:0.##}%",

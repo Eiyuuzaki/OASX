@@ -119,8 +119,17 @@
                                 <!-- 卷名 + 状态 ｜ 百分比 -->
                                 <Grid>
                                     <StackPanel Orientation="Horizontal">
+                                        <Border CornerRadius="4" Padding="5,1" Margin="0,2,8,0"
+                                                VerticalAlignment="Center"
+                                                Background="{DynamicResource OasAccentBrush}">
+                                            <TextBlock Text="{Binding IndexText}" FontSize="11"
+                                                       FontWeight="SemiBold"
+                                                       FontFamily="{StaticResource AppFontFamily}"
+                                                       Foreground="White" />
+                                        </Border>
                                         <TextBlock Text="{Binding Name}" FontSize="15"
                                                    FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
+                                                   VerticalAlignment="Center"
                                                    Foreground="{DynamicResource OasTextPrimaryBrush}" />
                                         <Border CornerRadius="4" Padding="6,1" Margin="8,2,0,0"
                                                 VerticalAlignment="Center"
