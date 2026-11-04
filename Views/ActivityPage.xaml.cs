@@ -325,9 +325,16 @@ public partial class ActivityPage : UserControl
         var yuhun = FromDaily("御魂");
         Set(9, yuhun.Text);
 
+        // 逢魔之时：用户确认 evening_event（17:00-23:00）就是逢魔时段。
+        // 时段开着只代表"可以做"，不代表"已参与"——只做提醒，不自动勾选。
+        var fengmo = (board?.LiveWindows ?? [])
+            .FirstOrDefault(w => w.Key == "evening_event");
+        Set(8, fengmo is not null
+            ? $"开放中，至 {fengmo.EndText}"
+            : "每日 17:00-23:00 开放");
+
         // 自动勾选：寮三十 / 狩猎战（用户手动取消过的不覆盖）
-        // ⚠️ 逢魔之时不自动判定：active_time_list 的 key 无中文名映射，
-        // dojo_peak_of_monsters 曾被误当逢魔（实际时段 00:00-09:00，逢魔在晚间）
+        // ⚠️ 逢魔不做完成判定：候选信号 sfv_daily_fengmo 语义未验证
         AutoSet(5, guild.Done);
         AutoSet(7, hunt.Done);
 
