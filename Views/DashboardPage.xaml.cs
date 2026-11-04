@@ -119,13 +119,26 @@ public partial class DashboardPage : UserControl
         public Brush DeltaBrush { get; init; } = Brushes.Transparent;
     }
 
-    /// <summary>绘卷积分徽标：账号最新一天中名称含"绘卷"的项按名称聚合
-    /// （每期活动换新 ID，同名求和）。无数据时隐藏徽标。</summary>
+    /// <summary>绘卷积分徽标：仅当日采样含绘卷数据时显示（活动期标记）。
+    /// 非活动期（最新采样非今日 / 无绘卷项）自动隐藏。</summary>
     private async Task LoadScrollBadgeAsync(AccountEntry entry)
     {
+        const bool demoMode = true;   // TODO: 假数据预览开关，验收后删除
         try
         {
+            if (demoMode)
+            {
+                RenderScrollDemo();
+                return;
+            }
             if (entry.Dates.Count == 0)
+            {
+                ScrollBadge.Visibility = Visibility.Collapsed;
+                return;
+            }
+            // 活动期判定（数据驱动）：最新采样必须是今天——
+            // 非活动期没有新采样，上期遗留值不展示
+            if (entry.Dates[0] != TodayKey)
             {
                 ScrollBadge.Visibility = Visibility.Collapsed;
                 return;
@@ -136,6 +149,11 @@ public partial class DashboardPage : UserControl
             var scrollItems = (day?.Items ?? [])
                 .Where(i => i.Name.Contains("绘卷", StringComparison.Ordinal) && i.Count > 0)
                 .ToList();
+            if (scrollItems.Count == 0)
+            {
+                ScrollBadge.Visibility = Visibility.Collapsed;
+                return;
+            }
             if (scrollItems.Count == 0)
             {
                 ScrollBadge.Visibility = Visibility.Collapsed;
@@ -443,6 +461,34 @@ public partial class DashboardPage : UserControl
             _ => Math.Abs(d).ToString("N0"),
         };
         return $"{sign}{v}";
+    }
+
+    /// <summary>假数据预览（验收用，验收后删除 demoMode 开关）。</summary>
+    private void RenderScrollDemo()
+    {
+        ScrollTotalText.Text = "8,532";
+        ScrollDeltaText.Text = "+1,240";
+        ScrollDeltaText.Foreground = new SolidColorBrush(
+            Color.FromRgb(0x16, 0xA3, 0x4A));
+        var rows = new (string Name, long Count, long Delta)[]
+        {
+            ("绘卷碎片·小", 3200, 500),
+            ("绘卷碎片·中", 1800, 300),
+            ("绘卷碎片·大", 120, 40),
+        };
+        ScrollParts.ItemsSource = rows.Select(r => new ScrollPartVm
+        {
+            IconImage = LoadIcon(r.Name.Contains('小') ? "pic_suipian"
+                : r.Name.Contains('中') ? "pic_suipian2" : "pic_suipian3"),
+            IconVisibility = Visibility.Visible,
+            Label = ShortLabel(r.Name),
+            LabelVisibility = Visibility.Collapsed,
+            CountText = FormatCount(r.Count),
+            DeltaText = FormatDelta(r.Delta),
+            DeltaBrush = new SolidColorBrush(Color.FromRgb(0x16, 0xA3, 0x4A)),
+        }).ToList();
+        ScrollParts.Visibility = Visibility.Visible;
+        ScrollBadge.Visibility = Visibility.Visible;
     }
 
     /// <summary>绘卷项短标签：'绘卷碎片·小' → '小'，'绘卷积分' → '积分'。</summary>
