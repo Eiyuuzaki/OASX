@@ -31,9 +31,6 @@ public partial class DashboardPage : UserControl
 {
     private OasScriptSocket? _socket;
 
-    /// <summary>假数据预览开关（验收用，验收后删除）。</summary>
-    private const bool ScrollBadgeDemo = true;
-
     private static string TodayKey => DateTime.Today.ToString("yyyy-MM-dd");
     private bool _schedulerRunning;
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(30) };
@@ -70,12 +67,6 @@ public partial class DashboardPage : UserControl
         if (ctx.Accounts.Count == 0 && !ctx.IsLoading)
         {
             await ctx.LoadAccountsAsync();
-        }
-
-        // demo 模式：假数据渲染不依赖账号状态
-        if (ScrollBadgeDemo)
-        {
-            RenderScrollDemo();
         }
 
         var entry = ctx.Current;
@@ -136,11 +127,6 @@ public partial class DashboardPage : UserControl
     {
         try
         {
-            if (ScrollBadgeDemo)
-            {
-                RenderScrollDemo();
-                return;
-            }
             if (entry.Dates.Count == 0)
             {
                 ScrollBadge.Visibility = Visibility.Collapsed;
@@ -471,34 +457,6 @@ public partial class DashboardPage : UserControl
             _ => Math.Abs(d).ToString("N0"),
         };
         return $"{sign}{v}";
-    }
-
-    /// <summary>假数据预览（验收用，验收后删除 demoMode 开关）。</summary>
-    private void RenderScrollDemo()
-    {
-        ScrollTotalText.Text = "8,532";
-        ScrollDeltaText.Text = "+1,240";
-        ScrollDeltaText.Foreground = new SolidColorBrush(
-            Color.FromRgb(0x16, 0xA3, 0x4A));
-        var rows = new (string Name, long Count, long Delta)[]
-        {
-            ("绘卷碎片·小", 3200, 500),
-            ("绘卷碎片·中", 1800, 300),
-            ("绘卷碎片·大", 120, 40),
-        };
-        ScrollParts.ItemsSource = rows.Select(r => new ScrollPartVm
-        {
-            IconImage = LoadIcon(r.Name.Contains('小') ? "pic_suipian"
-                : r.Name.Contains('中') ? "pic_suipian2" : "pic_suipian3"),
-            IconVisibility = Visibility.Visible,
-            Label = ShortLabel(r.Name),
-            LabelVisibility = Visibility.Collapsed,
-            CountText = FormatCount(r.Count),
-            DeltaText = FormatDelta(r.Delta),
-            DeltaBrush = new SolidColorBrush(Color.FromRgb(0x16, 0xA3, 0x4A)),
-        }).ToList();
-        ScrollParts.Visibility = Visibility.Visible;
-        ScrollBadge.Visibility = Visibility.Visible;
     }
 
     /// <summary>绘卷项短标签：'绘卷碎片·小' → '小'，'绘卷积分' → '积分'。</summary>
