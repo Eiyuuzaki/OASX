@@ -102,7 +102,45 @@ public partial class DashboardPage : UserControl
         }
 
         await RefreshEnvironmentAsync();
+        await LoadScrollBadgeAsync(entry);
         await RefreshTodayStatsAsync(entry.Config);
+    }
+
+    /// <summary>绘卷积分徽标：账号最新一天中名称含"绘卷"的项按名称聚合
+    /// （每期活动换新 ID，同名求和）。无数据时隐藏徽标。</summary>
+    private async Task LoadScrollBadgeAsync(AccountEntry entry)
+    {
+        try
+        {
+            if (entry.Dates.Count == 0)
+            {
+                ScrollBadge.Visibility = Visibility.Collapsed;
+                return;
+            }
+            var date = entry.Dates[0];
+            var day = await OasResourceApi.GetResourceDayAsync(
+                entry.Config, date, entry.RoleKey);
+            var scrollItems = (day?.Items ?? [])
+                .Where(i => i.Name.Contains("绘卷", StringComparison.Ordinal) && i.Count > 0)
+                .ToList();
+            if (scrollItems.Count == 0)
+            {
+                ScrollBadge.Visibility = Visibility.Collapsed;
+                return;
+            }
+            var total = scrollItems.Sum(i => i.Count);
+            var delta = scrollItems.Sum(i => i.Delta ?? 0);
+            ScrollTotalText.Text = FormatCount(total);
+            ScrollDeltaText.Text = delta == 0 ? "" : FormatDelta(delta);
+            ScrollDeltaText.Foreground = new SolidColorBrush(delta >= 0
+                ? Color.FromRgb(0x16, 0xA3, 0x4A)
+                : Color.FromRgb(0xDC, 0x45, 0x45));
+            ScrollBadge.Visibility = Visibility.Visible;
+        }
+        catch
+        {
+            ScrollBadge.Visibility = Visibility.Collapsed;
+        }
     }
 
     // ==================== 环境（OAS/模拟器） ====================
