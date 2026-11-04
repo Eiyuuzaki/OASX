@@ -467,13 +467,6 @@ public partial class ActivityPage : UserControl
             // 阴阳寮
             ApplyWeeklySignals(board.WeeklySignals, board);
 
-            var g = board.Guild;
-            GuildText.Text = g is null || string.IsNullOrEmpty(g.Name)
-                ? "—（游戏内需先加入阴阳寮/打开寮页面）"
-                : $"{g.Name}　Lv{g.Lv}　职位 {DutyName(g.Duty)}"
-                  + (g.GymLeftChallenge is { } left ? $"　宴会剩余挑战 {left:0}" : "")
-                  + (g.GiftBagWeekTimes is { } gb ? $"　周礼包 {gb}" : "");
-
             ActivityText.Text = board.ActivityAvailable && board.Activity?.Count > 0
                 ? string.Join("\n", board.Activity)
                 : "活动面板任务需要先在游戏内打开「活动」页面读取一次（客户端懒加载），之后刷新即可显示。";

@@ -20,9 +20,6 @@ public static class OasActivityApi
 
     public record CurrentActivity(string Id, string Name, string Begin, string End);
 
-    public record GuildInfo(string Name, int? Lv, int? Duty, int? GymState,
-        double? GymLeftChallenge, int? GiftBagWeekTimes);
-
     public record LiveWindow(string Key, long End, string EndText);
 
     /// <summary>周常反推信号（客户端字段，用于在清单上显示依据）。</summary>
@@ -37,7 +34,7 @@ public static class OasActivityApi
         List<DailyTask> Daily, int DailyDone, int DailyTotal,
         List<MonsterTask> Monster, int MonsterDone,
         List<string> Activity, bool ActivityAvailable,
-        List<CurrentActivity> CurrentActivities, GuildInfo? Guild,
+        List<CurrentActivity> CurrentActivities,
         List<LiveWindow> LiveWindows, WeeklySignals? WeeklySignals,
         int ServerWeekDay, string ServerTimeText,
         string? Error, string? Hint);
