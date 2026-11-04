@@ -116,7 +116,7 @@ public partial class ActivityPage : UserControl
         (5, "寮三十（寮集体任务）", "自动：取每日任务「集体任务」进度"),
         (6, "寮资金 / 寮包领取", "寮界面领取"),
         (7, "狩猎战 / 阴界之门", "自动：取每日任务「狩猎战/阴界之门」"),
-        (8, "逢魔之时", "自动：看活动时段是否在开放中"),
+        (8, "逢魔之时", "每日晚间开放；客户端无可判定字段，手动记录"),
         (9, "御魂副本", "客户端无次数计数，手动记录"),
         (10, "功勋商店周礼包", "30 功勋 7 个/周；蓝票 120 功勋 1 张/周"),
     ];
@@ -325,18 +325,11 @@ public partial class ActivityPage : UserControl
         var yuhun = FromDaily("御魂");
         Set(9, yuhun.Text);
 
-        // 逢魔之时：看活动时段是否在开放中
-        var now = DateTime.Now;
-        var peak = (board?.LiveWindows ?? [])
-            .FirstOrDefault(w => w.Key.Contains("dojo_peak_of_monsters",
-                StringComparison.Ordinal));
-        var peakLive = peak is not null;
-        Set(8, peakLive ? $"开放中，至 {peak!.EndText}" : "当前不在开放时段");
-
-        // 自动勾选：寮三十 / 狩猎战 / 逢魔（用户手动取消过的不覆盖）
+        // 自动勾选：寮三十 / 狩猎战（用户手动取消过的不覆盖）
+        // ⚠️ 逢魔之时不自动判定：active_time_list 的 key 无中文名映射，
+        // dojo_peak_of_monsters 曾被误当逢魔（实际时段 00:00-09:00，逢魔在晚间）
         AutoSet(5, guild.Done);
         AutoSet(7, hunt.Done);
-        AutoSet(8, peakLive);
 
         void AutoSet(int id, bool done)
         {
