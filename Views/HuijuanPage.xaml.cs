@@ -55,6 +55,43 @@ public partial class HuijuanPage : UserControl
         // 页面无后台任务；预留
     }
 
+    /// <summary>活动期 UI 预览（--demo 启动参数；验收后删）。</summary>
+    private static bool DemoActive =>
+        Environment.GetCommandLineArgs().Contains("--demo");
+
+    /// <summary>造一套"进行中"的棋盘：前两卷已满、其余在填，含个人积分排名。</summary>
+    private static OasHuijuanApi.HuijuanBoard BuildDemoBoard()
+    {
+        const long threshold = 20700000;
+        (string Name, long Score, bool Finished, string FinishTime)[] rows =
+        {
+            ("双生纪元", 20701340, true, "2026-11-12 09:41:22"),
+            ("神未曾应", 20700210, true, "2026-11-14 21:03:47"),
+            ("交汇之迹", 16228000, false, ""),
+            ("一生一刹", 8940600, false, ""),
+            ("长夜亘古", 2401500, false, ""),
+            ("生之颂祝", 294500, false, ""),
+        };
+        var scrolls = rows.Select((r, i) => new OasHuijuanApi.ScrollEntry(
+            Id: (627 + i).ToString(),
+            Score: r.Score,
+            Percent: Math.Round(r.Score * 100.0 / threshold, 2),
+            Finished: r.Finished,
+            FinishTimeText: r.FinishTime,
+            Name: r.Name,
+            HeroId: 609,
+            Img: "pic_ssr_xy_01",
+            BeginText: "2026-11-10 08:00",
+            EndText: "2026-11-30 23:59")).ToList();
+
+        var self = JsonDocument.Parse(
+            "{\"score\": 4286, \"rank\": 1204}").RootElement.Clone();
+        return new OasHuijuanApi.HuijuanBoard(
+            Success: true, ConfigName: "demo", Issue: 85, Threshold: threshold,
+            Active: true, Scrolls: scrolls, Self: self, Rank: [],
+            Error: null, Hint: null);
+    }
+
     private async void Refresh_Click(object sender, RoutedEventArgs e) =>
         await LoadAsync(force: true);
 
@@ -85,7 +122,9 @@ public partial class HuijuanPage : UserControl
 
         try
         {
-            var board = await OasHuijuanApi.GetBoardAsync(entry.Config, force);
+            var board = DemoActive
+                ? BuildDemoBoard()
+                : await OasHuijuanApi.GetBoardAsync(entry.Config, force);
             if (board is null || !board.Success)
             {
                 SetBadge("读取失败", Brushes.Gray);
@@ -100,9 +139,11 @@ public partial class HuijuanPage : UserControl
 
             IssueText.Text = board.Issue.ToString(CultureInfo.InvariantCulture);
             ThresholdText.Text = board.Threshold.ToString("N0");
-            SubtitleText.Text = board.Active
-                ? "本期绘卷进行中——数据来自运行中的游戏客户端（20 秒缓存）"
-                : "本期已结束——显示上一期最终结果";
+            SubtitleText.Text = DemoActive
+                ? "演示数据（活动期 UI 预览，非真实采集）"
+                : board.Active
+                    ? "本期绘卷进行中——数据来自运行中的游戏客户端（20 秒缓存）"
+                    : "本期已结束——显示上一期最终结果";
 
             SetBadge(board.Active ? "进行中" : "已结束",
                 board.Active ? Brush("OasSuccessBrush", Color.FromRgb(0x16, 0xA3, 0x4A))

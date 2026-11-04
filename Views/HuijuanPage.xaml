@@ -7,7 +7,7 @@
         <StackPanel MaxWidth="980" HorizontalAlignment="Stretch">
 
             <!-- 页头：标题 + 活动状态 + 刷新 -->
-            <Grid Margin="0,0,0,16">
+            <Grid Margin="0,0,0,12">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="绘卷" FontSize="24" FontWeight="SemiBold"
@@ -30,7 +30,7 @@
             </Grid>
 
             <!-- 当前账号 + 期数 -->
-            <Border CornerRadius="{StaticResource RadiusCard}" Padding="16" Margin="0,0,0,16"
+            <Border CornerRadius="{StaticResource RadiusCard}" Padding="12" Margin="0,0,0,12"
                     Background="{DynamicResource OasSurfaceBrush}"
                     BorderBrush="{DynamicResource OasBorderBrush}" BorderThickness="1">
                 <Grid>
@@ -70,8 +70,8 @@
             </Border>
 
             <!-- 我的参与（活动期才有数据） -->
-            <Border x:Name="SelfCard" CornerRadius="{StaticResource RadiusCard}" Padding="16"
-                    Margin="0,0,0,16" Visibility="Collapsed"
+            <Border x:Name="SelfCard" CornerRadius="{StaticResource RadiusCard}" Padding="12"
+                    Margin="0,0,0,12" Visibility="Collapsed"
                     Background="{DynamicResource OasSurfaceBrush}"
                     BorderBrush="{DynamicResource OasBorderBrush}" BorderThickness="1">
                 <StackPanel>
@@ -97,26 +97,30 @@
             </Border>
 
             <!-- 六卷棋盘 -->
-            <TextBlock Text="各卷进度" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,6"
+            <TextBlock Text="各卷进度" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,4"
                        Foreground="{DynamicResource OasTextPrimaryBrush}" />
             <TextBlock x:Name="EmptyText" Text="正在读取…" FontSize="12" Margin="0,0,0,8"
                        Foreground="{DynamicResource OasTextSecondaryBrush}" />
             <ItemsControl x:Name="ScrollList">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <!-- 两列：与游戏内绘卷面板一致 -->
+                        <UniformGrid Columns="2" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Border CornerRadius="{StaticResource RadiusCard}" Padding="16" Margin="0,0,0,10"
-                                Background="{DynamicResource OasSurfaceBrush}">
-                            <Border.Style>
-                                <Style TargetType="Border">
-                                    <Setter Property="BorderBrush"
-                                            Value="{DynamicResource OasBorderBrush}" />
-                                    <Setter Property="BorderThickness" Value="1" />
-                                </Style>
-                            </Border.Style>
+                        <Border CornerRadius="{StaticResource RadiusCard}" Padding="12"
+                                Margin="0,0,8,6"
+                                Background="{DynamicResource OasSurfaceBrush}"
+                                BorderBrush="{DynamicResource OasBorderBrush}"
+                                BorderThickness="1">
                             <StackPanel>
+                                <!-- 卷名 + 状态 ｜ 百分比 -->
                                 <Grid>
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="SemiBold"
+                                        <TextBlock Text="{Binding Name}" FontSize="15"
+                                                   FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
                                                    Foreground="{DynamicResource OasTextPrimaryBrush}" />
                                         <Border CornerRadius="4" Padding="6,1" Margin="8,2,0,0"
                                                 VerticalAlignment="Center"
@@ -126,21 +130,19 @@
                                         </Border>
                                     </StackPanel>
                                     <TextBlock Text="{Binding PercentText}" HorizontalAlignment="Right"
-                                               FontSize="20" FontWeight="SemiBold"
+                                               FontSize="19" FontWeight="SemiBold"
                                                FontFamily="{StaticResource AppFontFamily}"
                                                Foreground="{DynamicResource OasAccentBrush}" />
                                 </Grid>
-                                <ProgressBar Height="6" Margin="0,8,0,6" Minimum="0" Maximum="100"
+                                <ProgressBar Height="6" Margin="0,6,0,6" Minimum="0" Maximum="100"
                                              Value="{Binding Percent, Mode=OneWay}"
                                              Foreground="{DynamicResource OasAccentBrush}"
                                              Background="{DynamicResource OasSurfaceSecondaryBrush}" />
-                                <Grid>
-                                    <TextBlock Text="{Binding ScoreText}" FontSize="12"
-                                               Foreground="{DynamicResource OasTextSecondaryBrush}" />
-                                    <TextBlock Text="{Binding WindowText}" HorizontalAlignment="Right"
-                                               FontSize="12"
-                                               Foreground="{DynamicResource OasTextTertiaryBrush}" />
-                                </Grid>
+                                <TextBlock Text="{Binding ScoreText}" FontSize="12"
+                                           Foreground="{DynamicResource OasTextSecondaryBrush}" />
+                                <TextBlock Text="{Binding WindowText}" FontSize="11"
+                                           Margin="0,2,0,0" TextWrapping="Wrap"
+                                           Foreground="{DynamicResource OasTextTertiaryBrush}" />
                             </StackPanel>
                         </Border>
                     </DataTemplate>
