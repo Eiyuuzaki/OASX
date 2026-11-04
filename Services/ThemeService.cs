@@ -45,18 +45,105 @@ public static class ThemeService
         IsDark = dark;
 
         var backdrop = ResolveBackdropType();
+        // 1) 先应用应用级主题（WPF-UI 内部会调整窗口 chrome）
         ApplicationThemeManager.Apply(
             dark ? ApplicationTheme.Dark : ApplicationTheme.Light, backdrop);
 
-        // ⚠️ 直接把背景材质写到主窗口 DP：MainWindow.xaml 不再硬编码
-        // WindowBackdropType，否则 XAML 的 Mica 会在 SourceInitialized 时
-        // 覆盖掉这里应用的 Acrylic（设置页标签 acrylic、实际 Mica 的根因）。
+        // 2) 再设置窗口级深色标志与材质：顺序颠倒会被 WPF-UI 的主题应用覆盖，
+        //    导致 Acrylic/Mica 仍按系统浅色上色（深浅乱串）。
         if (Application.Current?.MainWindow is FluentWindow fw)
         {
-            fw.WindowBackdropType = backdrop;
+            SetImmersiveDarkMode(fw, dark);
+            if (fw.WindowBackdropType != backdrop)
+            {
+                fw.WindowBackdropType = backdrop;
+            }
         }
 
         ApplySemanticDictionary(dark);
+
+        // 诊断：WPF-UI 认为的主题 + 合并字典里的 ThemesDictionary 状态
+        try
+        {
+            var appTheme = ApplicationThemeManager.GetAppTheme();
+            var sb = new System.Text.StringBuilder();
+            sb.Append($"appTheme={appTheme} requestedDark={dark} dicts=[");
+            foreach (var d in Application.Current.Resources.MergedDictionaries)
+            {
+                var src = d.Source?.OriginalString ?? "(inline)";
+                var kind = d is Wpf.Ui.Markup.ThemesDictionary ? " (ThemesDictionary)"
+                    : d is Wpf.Ui.Markup.ControlsDictionary ? " (ControlsDictionary)" : "";
+                sb.Append(System.IO.Path.GetFileName(src)).Append(kind).Append(';');
+            }
+            sb.Append(']');
+            Log(sb.ToString());
+        }
+        catch (Exception ex)
+        {
+            Log("theme diag failed: " + ex.Message);
+        }
+    }
+
+    [System.Runtime.InteropServices.DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(
+        IntPtr hwnd, int attr, ref int value, int size);
+
+    /// <summary>DWMWA_USE_IMMERSIVE_DARK_MODE = 20（旧版 19）。</summary>
+    public static void SetImmersiveDarkMode(Window window, bool dark)
+    {
+        try
+        {
+            var hwnd = new System.Windows.Interop.WindowInteropHelper(window).Handle;
+            if (hwnd == IntPtr.Zero)
+            {
+                Log($"immersive: hwnd=0 (窗口句柄未就绪) dark={dark}");
+                return;
+            }
+            var flag = dark ? 1 : 0;
+            var hr20 = DwmSetWindowAttribute(hwnd, 20, ref flag, sizeof(int));
+            var hr19 = hr20 != 0
+                ? DwmSetWindowAttribute(hwnd, 19, ref flag, sizeof(int))
+                : 0;
+            // 读回校验
+            var read = -1;
+            DwmGetWindowAttributeInt(hwnd, 20, ref read);
+            Log($"immersive: hwnd={hwnd.ToInt64():X} dark={dark} " +
+                $"hr20={hr20} hr19={hr19} readback={read}");
+        }
+        catch (Exception ex)
+        {
+            Log("immersive EXCEPTION: " + ex.Message);
+        }
+    }
+
+    [System.Runtime.InteropServices.DllImport("dwmapi.dll")]
+    private static extern int DwmGetWindowAttribute(
+        IntPtr hwnd, int attr, ref int value, int size);
+
+    private static void DwmGetWindowAttributeInt(IntPtr hwnd, int attr, ref int value)
+    {
+        try
+        {
+            DwmGetWindowAttribute(hwnd, attr, ref value, sizeof(int));
+        }
+        catch
+        {
+            // 读取失败保留 -1
+        }
+    }
+
+    private static void Log(string msg)
+    {
+        try
+        {
+            System.IO.File.AppendAllText(
+                System.IO.Path.Combine(AppContext.BaseDirectory, "theme.log"),
+                $"{DateTime.Now:HH:mm:ss.fff} {msg}" + Environment.NewLine);
+        }
+        catch
+        {
+            // 日志失败不影响功能
+        }
     }
 
     /// <summary>设置项 → 窗口背景材质类型。</summary>
@@ -110,25 +197,54 @@ public static class ThemeService
 
     /// <summary>语义色字典热切换：替换合并字典列表中的 Light/Dark.xaml。
     /// WPF DynamicResource 会跟随新字典重新求值，全窗颜色即时更新。</summary>
+    /// <summary>语义色字典热切换：替换合并字典中「我们自己的」Light/Dark.xaml。
+    /// 判定必须精确——WPF-UI 自己的主题字典文件名也是 Dark.xaml，
+    /// 模糊匹配会误伤（曾导致 pane 用旧主题、深浅色乱串 + 字典无限追加）。</summary>
     private static void ApplySemanticDictionary(bool dark)
     {
         var dicts = Application.Current.Resources.MergedDictionaries;
-        var source = new Uri(
+        var target = new Uri(
             $"pack://application:,,,/Themes/{(dark ? "Dark" : "Light")}.xaml");
 
-        // 找到已有的语义字典实例并原位替换（保持合并顺序）
-        for (var i = 0; i < dicts.Count; i++)
+        static bool IsOurs(ResourceDictionary d)
         {
-            var src = dicts[i].Source;
-            if (src is not null &&
-                (src.OriginalString.Contains("/Themes/Light.xaml") ||
-                 src.OriginalString.Contains("/Themes/Dark.xaml")))
+            var src = d.Source?.OriginalString ?? "";
+            if (src.Length == 0)
             {
-                dicts[i] = new ResourceDictionary { Source = source };
-                return;
+                return false;
             }
+            var isThemeFile =
+                src.EndsWith("Themes/Light.xaml", StringComparison.OrdinalIgnoreCase) ||
+                src.EndsWith("Themes/Dark.xaml", StringComparison.OrdinalIgnoreCase);
+            if (!isThemeFile)
+            {
+                return false;
+            }
+            // 相对路径（App.xaml 声明）或本程序集 component URI
+            return !src.Contains(";component/", StringComparison.OrdinalIgnoreCase) ||
+                   src.Contains("OASX.WPF;component/", StringComparison.OrdinalIgnoreCase);
         }
-        // 不存在则追加（首次）
-        dicts.Add(new ResourceDictionary { Source = source });
+
+        // 移除所有旧语义字典（含历史重复/错误追加项），记住原位置
+        var insertAt = -1;
+        for (var i = dicts.Count - 1; i >= 0; i--)
+        {
+            if (!IsOurs(dicts[i]))
+            {
+                continue;
+            }
+            insertAt = i;
+            dicts.RemoveAt(i);
+        }
+
+        var dict = new ResourceDictionary { Source = target };
+        if (insertAt >= 0 && insertAt <= dicts.Count)
+        {
+            dicts.Insert(insertAt, dict);
+        }
+        else
+        {
+            dicts.Add(dict);
+        }
     }
 }

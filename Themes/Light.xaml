@@ -1,5 +1,8 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:po="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options"
+                    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                    mc:Ignorable="po">
 
     <!-- OASX 语义色 — 浅色主题（参考 Fluent 2 Light） -->
 
@@ -15,8 +18,6 @@
     <SolidColorBrush x:Key="OasSuccessBrush" Color="#16A34A" />
     <SolidColorBrush x:Key="OasWarningBrush" Color="#D97706" />
     <SolidColorBrush x:Key="OasDangerBrush" Color="#DC4545" />
-    <!-- 窗口 chrome（标题栏/侧栏）主题底色：半透明，保留 Mica/Acrylic 透出，
-         同时避免壁纸颜色把 chrome 染成与内容相反的方向（深浅乱串） -->
-    <SolidColorBrush x:Key="OasChromeBrush" Color="#D9FFFFFF" />
+
 
 </ResourceDictionary>

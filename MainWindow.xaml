@@ -15,11 +15,6 @@
                  FontFamily="{StaticResource AppFontFamily}">
 
     <Grid>
-        <!-- chrome 底层：主题色半透明覆盖整个窗口，
-             让标题栏/侧栏在深色主题下不再被浅色壁纸"染浅"（层次低于 NavigationView） -->
-        <Border Background="{DynamicResource OasChromeBrush}" />
-
-        <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -88,6 +83,5 @@
 
         <!-- ContentDialog 浮层宿主 -->
         <ContentPresenter x:Name="RootDialogHost" Grid.Row="0" Grid.RowSpan="2" Panel.ZIndex="100" />
-        </Grid>
     </Grid>
 </ui:FluentWindow>

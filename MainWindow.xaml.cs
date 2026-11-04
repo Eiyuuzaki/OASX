@@ -25,8 +25,14 @@ public partial class MainWindow : FluentWindow
     {
         InitializeComponent();
 
-        // 背景材质由 ThemeService 统一决议（XAML 不硬编码，避免覆盖设置）
-        WindowBackdropType = ThemeService.ResolveBackdropType();
+        // 句柄就绪即时应用主题：Deep色标志必须在材质生效前设置，
+        // 否则 Acrylic/Mica 按浅色上色（深浅乱串）。此处不再提前设置材质。
+        SourceInitialized += (_, _) => ThemeService.Apply();
+
+        // 激活时重申深色标志：部分场景（DWM 重排、切换材质、系统事件）
+        // 会把标志冲掉，导致材质按浅色上色（深浅乱串）。
+        Activated += (_, _) => ThemeService.SetImmersiveDarkMode(
+            this, ThemeService.IsDark);
 
         // BGI 同款：页面服务 + TargetPageType，导航全部由 NavigationView
         // 内部接管（点击 → 内部 Navigate → 页面服务出实例）。
