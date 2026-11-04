@@ -31,6 +31,9 @@ public partial class DashboardPage : UserControl
 {
     private OasScriptSocket? _socket;
 
+    /// <summary>假数据预览开关（验收用，验收后删除）。</summary>
+    private const bool ScrollBadgeDemo = true;
+
     private static string TodayKey => DateTime.Today.ToString("yyyy-MM-dd");
     private bool _schedulerRunning;
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(30) };
@@ -70,7 +73,7 @@ public partial class DashboardPage : UserControl
         }
 
         // demo 模式：假数据渲染不依赖账号状态
-        if (demoMode)
+        if (ScrollBadgeDemo)
         {
             RenderScrollDemo();
         }
