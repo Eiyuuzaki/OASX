@@ -339,6 +339,12 @@ public partial class MainWindow : FluentWindow
         var ctx = GlobalAccountContext.Instance;
         ctx.AccountsLoaded += RefreshAccountSwitcher;
         ctx.CurrentChanged += _ => RefreshAccountSwitcher();
+        // 账号就绪后立刻预热"在线角色"，这样第一次打开菜单就能显示标注
+        ctx.AccountsLoaded += () => _ = RefreshLiveRoleAsync();
+        if (ctx.Accounts.Count > 0)
+        {
+            _ = RefreshLiveRoleAsync();
+        }
         RefreshAccountSwitcher();
     }
 
@@ -418,13 +424,25 @@ public partial class MainWindow : FluentWindow
             {
                 VerticalAlignment = VerticalAlignment.Center,
             };
+            // 标注：哪个账号是此刻在线的 / 哪条数据已过期
+            var live = OasRoleApi.Cached;
+            var isOnline = live is { Success: true } &&
+                           opt.Entry.RoleKey.Split('@').FirstOrDefault() == live.AvatarId;
+            var dataDate = opt.Entry.Dates.FirstOrDefault() ?? "";
+            var stale = dataDate.Length > 0 &&
+                        dataDate != DateTime.Today.ToString("yyyy-MM-dd");
+            var suffix = (isOnline ? "　在线" : "")
+                         + (stale ? $"　数据 {dataDate}" : "");
+
             textPanel.Children.Add(new System.Windows.Controls.TextBlock
             {
-                Text = opt.Label,
+                Text = opt.Label + suffix,
                 FontSize = 13,
                 FontWeight = current ? FontWeights.SemiBold : FontWeights.Normal,
                 TextTrimming = TextTrimming.CharacterEllipsis,
-                Foreground = FindBrush("OasTextPrimaryBrush"),
+                Foreground = isOnline
+                    ? FindBrush("OasSuccessBrush")
+                    : FindBrush("OasTextPrimaryBrush"),
             });
             if (opt.Schedulers.Count > 1)
             {
@@ -474,6 +492,9 @@ public partial class MainWindow : FluentWindow
             AccountPopupPanel.Children.Add(btn);
         }
 
+        // 后台刷新在线角色：本次先用缓存，下次打开菜单即可显示「在线」标注
+        _ = RefreshLiveRoleAsync();
+
         AccountPopup.PlacementTarget = AccountButton;
         // 延迟到输入队列之后打开：StaysOpen=False 的弹层会被"同一次左键抬起"
         // 当作外部点击而立刻关闭（表现为点了没反应）。
@@ -485,6 +506,23 @@ public partial class MainWindow : FluentWindow
                        $"isOpen={AccountPopup.IsOpen}");
             }),
             System.Windows.Threading.DispatcherPriority.Input);
+    }
+
+    /// <summary>刷新"当前在线角色"缓存（失败静默；仅用于菜单标注）。</summary>
+    private async Task RefreshLiveRoleAsync()
+    {
+        var ctx = GlobalAccountContext.Instance;
+        var config = ctx.Current?.Config;
+        if (string.IsNullOrEmpty(config))
+        {
+            return;
+        }
+        var role = await OasRoleApi.GetLiveAsync(config);
+        if (role is { Success: true })
+        {
+            LogNav($"live role: {role.Name} Lv{role.Level} {role.ServerShowName} " +
+                   $"({role.AvatarId}@{role.ServerId})");
+        }
     }
 
     private static System.Windows.Media.Brush FindBrush(string key) =>
