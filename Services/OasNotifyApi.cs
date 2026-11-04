@@ -23,11 +23,13 @@ public static class OasNotifyApi
     public record ProviderInfo(List<string> Required, List<string> Optional);
 
     public record NotifyConfigState(
-        bool Success, bool NotifyEnable, string NotifyConfig, int CycleHours);
+        bool Success, bool NotifyEnable, string NotifyConfig, int CycleHours,
+        string? ManualCardType, string? AutoCardType);
 
     private record ConfigBody(
         bool NotifyEnable, string Provider,
-        Dictionary<string, string>? Params, int CycleHours);
+        Dictionary<string, string>? Params, int CycleHours,
+        string? ManualCardType);
 
     /// <summary>POST /notify/foster/refresh → 当前寄养倒计时。</summary>
     public static async Task<FosterState?> GetFosterAsync()
@@ -39,8 +41,11 @@ public static class OasNotifyApi
     }
 
     /// <summary>GET /notify/config → 当前通知配置（解析 YAML 为 provider+params）。</summary>
-    public static async Task<(bool Enable, string Provider,
-        Dictionary<string, string> Params, int CycleHours)?> GetConfigAsync()
+    public record ConfigSnapshot(bool Enable, string Provider,
+        Dictionary<string, string> Params, int CycleHours,
+        string ManualCardType, string AutoCardType);
+
+    public static async Task<ConfigSnapshot?> GetConfigAsync()
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
         var state = await OasApi.Http.GetFromJsonAsync<NotifyConfigState>(
@@ -50,7 +55,9 @@ public static class OasNotifyApi
             return null;
         }
         var (provider, kv) = ParseYaml(state.NotifyConfig);
-        return (state.NotifyEnable, provider, kv, state.CycleHours);
+        return new ConfigSnapshot(state.NotifyEnable, provider, kv,
+            state.CycleHours, state.ManualCardType ?? "",
+            state.AutoCardType ?? "");
     }
 
     /// <summary>极简 YAML 解析：顶层 key: value 行。</summary>
@@ -86,11 +93,12 @@ public static class OasNotifyApi
 
     /// <summary>保存通知配置（后端生成 YAML 并写入 OAS 配置）。</summary>
     public static async Task<bool> SaveConfigAsync(
-        bool enable, string provider, Dictionary<string, string> @params, int cycleHours)
+        bool enable, string provider, Dictionary<string, string> @params,
+        int cycleHours, string? manualCardType = null)
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
         var body = new ConfigBody(enable, provider,
-            @params.Count > 0 ? @params : null, cycleHours);
+            @params.Count > 0 ? @params : null, cycleHours, manualCardType);
         var resp = await OasApi.Http.PutAsJsonAsync("notify/config", body, JsonOptions, cts.Token);
         return resp.IsSuccessStatusCode;
     }

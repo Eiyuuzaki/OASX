@@ -87,13 +87,14 @@ public partial class SettingsPage : UserControl
             var cfg = await OasNotifyApi.GetConfigAsync();
             if (cfg is not null)
             {
-                NotifyEnableSwitch.IsChecked = cfg.Value.Enable;
-                _SelectProvider(cfg.Value.Provider);
-                foreach (var (k, v) in cfg.Value.Params)
+                NotifyEnableSwitch.IsChecked = cfg.Enable;
+                _SelectProvider(cfg.Provider);
+                foreach (var pair in cfg.Params)
                 {
-                    _paramValues[k] = v;
+                    _paramValues[pair.Key] = pair.Value;
                 }
                 _RefreshParamFields();
+                _SelectManualCard(cfg.ManualCardType);
             }
             else
             {
@@ -127,6 +128,27 @@ public partial class SettingsPage : UserControl
             }
         }
         NotifyProviderBox.SelectedIndex = 0;
+    }
+
+    private void _SelectManualCard(string card)
+    {
+        for (var i = 0; i < ManualCardBox.Items.Count; i++)
+        {
+            if (ManualCardBox.Items[i] is ComboBoxItem { Tag: string t } && t == card)
+            {
+                ManualCardBox.SelectedIndex = i;
+                return;
+            }
+        }
+        ManualCardBox.SelectedIndex = 0;
+    }
+
+    private void ManualCard_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (!_loadingNotify)
+        {
+            _ = SaveNotifyAsync();
+        }
     }
 
     private void NotifyProvider_Changed(object sender, SelectionChangedEventArgs e)
@@ -208,8 +230,10 @@ public partial class SettingsPage : UserControl
                     return;
                 }
             }
+            var manualCard = ManualCardBox.SelectedItem is ComboBoxItem { Tag: string mc }
+                ? mc : "";
             var ok = await OasNotifyApi.SaveConfigAsync(
-                enable, provider, _paramValues, cycle);
+                enable, provider, _paramValues, cycle, manualCard);
             NotifyStatusText.Text = ok
                 ? $"已保存 {DateTime.Now:HH:mm:ss}" + (enable ? "（已启用）" : "")
                 : "保存失败";
