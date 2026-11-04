@@ -18,7 +18,7 @@ public sealed class ScrollCardVm
     public double Percent { get; init; }
     public string PercentText { get; init; } = "";
 
-    /// <summary>排名 + 档位，如 "排名 412 · 第5档"；无数据时为空。</summary>
+    /// <summary>我在该卷的排名，如 "排名 412"；无数据时为空。</summary>
     public string RankText { get; init; } = "";
     public System.Windows.Visibility RankVisibility { get; init; } =
         System.Windows.Visibility.Collapsed;
@@ -122,9 +122,7 @@ public partial class HuijuanPage : UserControl
             EndText: "2026-11-30 23:59",
             SelfScore: r.Mine,
             SelfRank: r.MyRank,
-            Remain: Math.Max(0, threshold - r.Score),
-            RankLevels: [0, 20, 100, 200, 300, 500, 1000, 99999999],
-            RankRewards: [213000, 213005, 213010, 213015, 213020, 213025, 213030])).ToList();
+            Remain: Math.Max(0, threshold - r.Score))).ToList();
 
         var self = JsonDocument.Parse(
             "{\"score\": 4286, \"rank\": 1204}").RootElement.Clone();
@@ -203,10 +201,7 @@ public partial class HuijuanPage : UserControl
 
             ScrollList.ItemsSource = scrolls.Select((s, i) =>
             {
-                var rank = TierLabel(s.SelfRank, s.RankLevels);
-                var rankText = s.SelfRank is > 0
-                    ? $"排名 {s.SelfRank.Value:N0}" + (rank.Length > 0 ? $" · {rank}" : "")
-                    : "";
+                var rankText = s.SelfRank is > 0 ? $"排名 {s.SelfRank.Value:N0}" : "";
                 return new ScrollCardVm
                 {
                     IndexText = (i + 1).ToString("00"),
@@ -263,23 +258,6 @@ public partial class HuijuanPage : UserControl
         {
             SelfHintText.Text = "本期已结束，无参与数据";
         }
-    }
-
-    /// <summary>用真实档位配置换算"我的排名属于第几档"（只显示档位号，降噪）。</summary>
-    private static string TierLabel(int? rank, List<int>? levels)
-    {
-        if (rank is null || rank <= 0 || levels is null || levels.Count < 2)
-        {
-            return "";
-        }
-        for (var i = 0; i < levels.Count - 1; i++)
-        {
-            if (rank >= levels[i] && rank < levels[i + 1])
-            {
-                return $"第{i + 1}档";
-            }
-        }
-        return "";
     }
 
     /// <summary>数字压缩：≥1 万用"万"（20,700,000 → 2070万）。</summary>

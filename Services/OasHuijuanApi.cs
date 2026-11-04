@@ -17,7 +17,7 @@ public static class OasHuijuanApi
         string Id, long Score, double Percent, bool Finished,
         string FinishTimeText, string Name, int? HeroId, string Img,
         string BeginText, string EndText, long SelfScore, int? SelfRank,
-        long Remain, List<int> RankLevels, List<int> RankRewards);
+        long Remain);
 
     public record HuijuanBoard(
         bool Success, string ConfigName, int Issue, long Threshold, bool Active,
