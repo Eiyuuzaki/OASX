@@ -81,6 +81,19 @@
             </ui:NavigationView.FooterMenuItems>
         </ui:NavigationView>
 
+        <!-- 账号切换弹层：用 Popup + 真按钮列表（ContextMenu 在本布局下
+             命中不可靠，点项无反应） -->
+        <Popup x:Name="AccountPopup" Placement="Top" StaysOpen="False"
+               AllowsTransparency="True" PopupAnimation="Fade"
+               VerticalOffset="-6">
+            <Border CornerRadius="{StaticResource RadiusCard}" Padding="6"
+                    Background="{DynamicResource OasSurfaceBrush}"
+                    BorderBrush="{DynamicResource OasBorderBrush}" BorderThickness="1"
+                    MinWidth="280" MaxWidth="380">
+                <StackPanel x:Name="AccountPopupPanel" />
+            </Border>
+        </Popup>
+
         <!-- ContentDialog 浮层宿主 -->
         <ContentPresenter x:Name="RootDialogHost" Grid.Row="0" Grid.RowSpan="2" Panel.ZIndex="100" />
     </Grid>

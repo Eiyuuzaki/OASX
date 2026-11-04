@@ -4,6 +4,7 @@ using System.IO;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using OASX.Services;
 using OASX.Views;
 using Wpf.Ui.Controls;
@@ -327,7 +328,7 @@ public partial class MainWindow : FluentWindow
         }
     }
 
-    /// <summary>点击账号块 → 弹出账号列表（WPF 原生 ContextMenu）。</summary>
+    /// <summary>点击账号块 → 弹出账号列表（窗口内 Popup + 按钮，命中可靠）。</summary>
     private void AccountButton_Click(object sender, RoutedEventArgs e)
     {
         var ctx = GlobalAccountContext.Instance;
@@ -336,58 +337,125 @@ public partial class MainWindow : FluentWindow
                $"loading={ctx.IsLoading} accounts={ctx.Accounts.Count}");
         if (options.Count == 0)
         {
-            // 没有账号时给出可见反馈，而不是静默无反应
             AccountButtonText.Text = ctx.IsLoading ? "账号加载中…" : "未选择账号";
             return;
         }
-        var menu = new System.Windows.Controls.ContextMenu
-        {
-            PlacementTarget = AccountButton,
-            Placement = System.Windows.Controls.Primitives.PlacementMode.Top,
-            // 跟随主题，避免原生白底菜单与 Fluent 界面割裂
-            Background = Application.Current.TryFindResource("OasSurfaceBrush") as System.Windows.Media.Brush,
-            BorderBrush = Application.Current.TryFindResource("OasBorderBrush") as System.Windows.Media.Brush,
-            Foreground = Application.Current.TryFindResource("OasTextPrimaryBrush") as System.Windows.Media.Brush,
-            Padding = new Thickness(4),
-            HasDropShadow = true,
-        };
+
+        AccountPopupPanel.Children.Clear();
+        var accent = Application.Current.TryFindResource("OasAccentBrush")
+            as System.Windows.Media.SolidColorBrush
+            ?? new System.Windows.Media.SolidColorBrush(
+                System.Windows.Media.Color.FromRgb(0x25, 0x63, 0xEB));
+        var accentTint = new System.Windows.Media.SolidColorBrush(
+            System.Windows.Media.Color.FromArgb(
+                0x1F, accent.Color.R, accent.Color.G, accent.Color.B));
+
         foreach (var opt in options)
         {
-            var item = new System.Windows.Controls.MenuItem
+            var current = ctx.Current is { } cur
+                          && cur.Config == opt.Entry.Config
+                          && cur.RoleKey == opt.Entry.RoleKey;
+
+            // 行内容：✓ + 名称 / 调度器副标题（副标题始终 secondary 色，不进蓝底）
+            var grid = new Grid();
+            grid.ColumnDefinitions.Add(new ColumnDefinition
             {
-                Header = opt.Schedulers.Count > 1
-                    ? $"{opt.Label}　（调度器：{opt.SchedulerText}）"
-                    : opt.Label,
-                Padding = new Thickness(8, 6, 8, 6),
-                IsCheckable = true,
-                IsChecked = ctx.Current is { } cur
-                            && cur.Config == opt.Entry.Config
-                            && cur.RoleKey == opt.Entry.RoleKey,
+                Width = new GridLength(22),
+            });
+            grid.ColumnDefinitions.Add(new ColumnDefinition
+            {
+                Width = new GridLength(1, GridUnitType.Star),
+            });
+
+            var check = new Wpf.Ui.Controls.SymbolIcon
+            {
+                Symbol = current
+                    ? Wpf.Ui.Controls.SymbolRegular.Checkmark24
+                    : Wpf.Ui.Controls.SymbolRegular.Spacebar24,
+                FontSize = 14,
+                VerticalAlignment = VerticalAlignment.Center,
+                Visibility = current ? Visibility.Visible : Visibility.Hidden,
+                Foreground = accent,
+            };
+            Grid.SetColumn(check, 0);
+            grid.Children.Add(check);
+
+            var textPanel = new StackPanel
+            {
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            textPanel.Children.Add(new System.Windows.Controls.TextBlock
+            {
+                Text = opt.Label,
+                FontSize = 13,
+                FontWeight = current ? FontWeights.SemiBold : FontWeights.Normal,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                Foreground = FindBrush("OasTextPrimaryBrush"),
+            });
+            if (opt.Schedulers.Count > 1)
+            {
+                textPanel.Children.Add(new System.Windows.Controls.TextBlock
+                {
+                    Text = $"调度器：{string.Join("、", opt.Schedulers)}",
+                    FontSize = 11,
+                    Margin = new Thickness(0, 2, 0, 0),
+                    TextTrimming = TextTrimming.CharacterEllipsis,
+                    Foreground = FindBrush("OasTextSecondaryBrush"),
+                });
+            }
+            Grid.SetColumn(textPanel, 1);
+            grid.Children.Add(textPanel);
+
+            // 行容器：选中=淡 accent 底；未选中=透明（hover 由 Button 提供）
+            var row = new Border
+            {
+                CornerRadius = new CornerRadius(6),
+                Padding = new Thickness(10, 8, 10, 8),
+                Background = current ? accentTint : System.Windows.Media.Brushes.Transparent,
+                Child = grid,
+            };
+
+            var btn = new Wpf.Ui.Controls.Button
+            {
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                Padding = new Thickness(0),
+                Margin = new Thickness(0, 0, 0, 2),
+                Appearance = Wpf.Ui.Controls.ControlAppearance.Transparent,
+                Content = row,
                 Tag = opt,
             };
-            item.Click += (obj, _) =>
+            btn.Click += (obj, _) =>
             {
-                if (obj is System.Windows.Controls.MenuItem
+                if (obj is Wpf.Ui.Controls.Button
                     {
                         Tag: GlobalAccountContext.AccountOption o
                     })
                 {
                     GlobalAccountContext.Instance.SetCurrent(o.Entry);
+                    LogNav($"account switched -> {o.Entry.Config}/{o.Entry.RoleKey}");
                 }
+                AccountPopup.IsOpen = false;
             };
-            menu.Items.Add(item);
+            AccountPopupPanel.Children.Add(btn);
         }
-        // ⚠️ 不能在 Click 里直接 IsOpen=true：同一次左键抬起会被菜单当作
-        // "点击外部"而立刻关闭（表现为点了没反应）。延迟到输入队列之后再打开。
+
+        AccountPopup.PlacementTarget = AccountButton;
+        // 延迟到输入队列之后打开：StaysOpen=False 的弹层会被"同一次左键抬起"
+        // 当作外部点击而立刻关闭（表现为点了没反应）。
         Dispatcher.BeginInvoke(
             new Action(() =>
             {
-                menu.IsOpen = true;
-                LogNav($"account menu opened: items={menu.Items.Count} " +
-                       $"placement={menu.Placement} isOpen={menu.IsOpen}");
+                AccountPopup.IsOpen = true;
+                LogNav($"account popup opened: items={AccountPopupPanel.Children.Count} " +
+                       $"isOpen={AccountPopup.IsOpen}");
             }),
             System.Windows.Threading.DispatcherPriority.Input);
     }
+
+    private static System.Windows.Media.Brush FindBrush(string key) =>
+        Application.Current.TryFindResource(key) as System.Windows.Media.Brush
+        ?? System.Windows.Media.Brushes.Transparent;
 
     private void WireNavigationParent()
     {
