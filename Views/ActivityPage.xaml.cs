@@ -434,7 +434,6 @@ public partial class ActivityPage : UserControl
         }
     }
 
-    /// <summary>卡类型徽标：直接来自游戏内 card_item 映射（真实寄养的卡）。</summary>
     /// <summary>描述游戏内登录角色与所选账号的关系。</summary>
     private string DescribeLiveRole(OasActivityApi.LiveRole? live)
     {
@@ -473,6 +472,7 @@ public partial class ActivityPage : UserControl
             : $"⚠️ {text} —— 与所选账号不符，以上数据属于游戏内角色";
     }
 
+    /// <summary>卡类型徽标：图标取游戏内素材（Assets/Icons），名字取 card_item 映射。</summary>
     private void ShowCardBadge(string? cardName)
     {
         if (string.IsNullOrEmpty(cardName))
@@ -480,15 +480,21 @@ public partial class ActivityPage : UserControl
             FosterCardBadge.Visibility = Visibility.Collapsed;
             return;
         }
-        FosterCardText.Text = cardName.Contains("斗鱼") ? "🐟 " + cardName
-            : cardName.Contains("太鼓") ? "🥁 " + cardName
-            : cardName;
-        FosterCardBadge.Background = new System.Windows.Media.SolidColorBrush(
-            cardName.Contains("斗鱼")
-                ? System.Windows.Media.Color.FromArgb(0x2E, 0x00, 0x7A, 0xCC)
-                : cardName.Contains("太鼓")
-                    ? System.Windows.Media.Color.FromArgb(0x2E, 0xC5, 0x4C, 0x1E)
-                    : System.Windows.Media.Color.FromArgb(0x2E, 0x6B, 0x21, 0xA8));
+        var iconKey = cardName.Contains("斗鱼") ? "realm_douyu"
+            : cardName.Contains("太鼓") ? "realm_taiko"
+            : cardName.Contains("太阴") ? "realm_taiyin"
+            : "";
+        if (iconKey.Length > 0)
+        {
+            FosterCardIcon.Source = new System.Windows.Media.Imaging.BitmapImage(
+                new Uri($"pack://application:,,,/Assets/Icons/{iconKey}.png"));
+            FosterCardIcon.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            FosterCardIcon.Visibility = Visibility.Collapsed;
+        }
+        FosterCardText.Text = cardName;
         FosterCardBadge.Visibility = Visibility.Visible;
     }
 

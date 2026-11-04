@@ -25,6 +25,7 @@
     <!-- MiSans 字体（小米免费商用字体，与 BGI 同款） -->
     <Resource Include="Assets/Fonts/*.ttf" />
     <Resource Include="Assets/currency/*.png" />
+    <Resource Include="Assets/Icons/*.png" />
     <!-- Content 复制到输出目录：CurrencyIconRegistry 运行时枚举磁盘白名单用 -->
     <Content Include="Assets/currency/*.png" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
