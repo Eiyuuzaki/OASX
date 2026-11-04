@@ -141,20 +141,20 @@ public partial class DashboardPage : UserControl
     private void SetOasService(bool ok, string label)
     {
         OasServiceDot.Fill = new SolidColorBrush(ok
-            ? Color.FromRgb(0x16A34A) : Color.FromRgb(0xDC4545));
+            ? Color.FromRgb(0x16, 0xA3, 0x4A) : Color.FromRgb(0xDC, 0x45, 0x45));
         OasServiceText.Text = label;
     }
 
-    private void SetDevice(OasConfigApi.DeviceCurrent? dev)
+    private void SetDevice(DeviceCurrent? dev)
     {
         if (dev is null)
         {
-            DeviceDot.Fill = new SolidColorBrush(Color.FromRgb(0x8A8A8A));
+            DeviceDot.Fill = new SolidColorBrush(Color.FromRgb(0x8A, 0x8A, 0x8A));
             DeviceText.Text = "未知";
             return;
         }
         DeviceDot.Fill = new SolidColorBrush(dev.Online
-            ? Color.FromRgb(0x16A34A) : Color.FromRgb(0xD97706));
+            ? Color.FromRgb(0x16, 0xA3, 0x4A) : Color.FromRgb(0xD9, 0x77, 0x06));
         DeviceText.Text = dev.Online
             ? $"已连接 · {dev.EmulatorName ?? dev.Serial}"
             : "离线";
@@ -209,7 +209,7 @@ public partial class DashboardPage : UserControl
             : sched?.Running is not null;
 
         SchedulerDot.Fill = new SolidColorBrush(running
-            ? Color.FromRgb(0x16A34A) : Color.FromRgb(0x8A8A8A));
+            ? Color.FromRgb(0x16, 0xA3, 0x4A) : Color.FromRgb(0x8A, 0x8A, 0x8A));
         SchedulerStateText.Text = running ? "运行中" : (state ?? "空闲/停止");
         StartBtn.IsEnabled = !running;
         StopBtn.IsEnabled = running;
@@ -261,7 +261,7 @@ public partial class DashboardPage : UserControl
     // ==================== 提醒（真实异常才展示） ====================
 
     private void UpdateReminders(string config, bool schedulerRunning,
-        OasConfigApi.DeviceCurrent? dev)
+        DeviceCurrent? dev)
     {
         var reminders = new List<string>();
         if (!schedulerRunning && OasServiceText.Text == "正常")
@@ -311,6 +311,10 @@ public partial class DashboardPage : UserControl
         ((MainWindow)Window.GetWindow(this)).RootNav.Navigate(typeof(LogPage));
 
     // ==================== 工具 ====================
+
+    /// <summary>按键取主题画刷（语义色）。</summary>
+    private static Brush FindBrush(string key) =>
+        Application.Current.TryFindResource(key) as Brush ?? Brushes.Transparent;
 
     private static string ShortTime(string raw)
     {

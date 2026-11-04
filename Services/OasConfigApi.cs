@@ -70,20 +70,6 @@ public static class OasDeviceApi
         PropertyNameCaseInsensitive = true,
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
     };
-}
-
-/// <summary>当前配置绑定的设备（模拟器连接状态）。</summary>
-public sealed record DeviceCurrent(
-    string ConfigName, string Serial, string? EmulatorName,
-    string? EmulatorType, bool Online);
-
-public static class OasDeviceApi
-{
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-    };
 
     /// <summary>GET /device/current?config_name= → serial/online 等。</summary>
     public static async Task<DeviceCurrent?> GetCurrentAsync(string config)
