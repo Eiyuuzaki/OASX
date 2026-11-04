@@ -8,7 +8,8 @@
     -->
 
     <!-- ============ 字体 ============ -->
-    <FontFamily x:Key="AppFontFamily">Segoe UI Variable, Segoe UI, Microsoft YaHei UI</FontFamily>
+    <!-- MiSans：小米发布的免费商用字体（BGI 同款）；内嵌保证未安装环境一致 -->
+    <FontFamily x:Key="AppFontFamily">pack://application:,,,/Assets/Fonts/#MiSans</FontFamily>
 
     <!-- ============ 间距（4px 基础体系） ============ -->
     <Thickness x:Key="Spacing4">4</Thickness>
