@@ -30,6 +30,7 @@ public sealed class RunRecordVm
 public partial class DashboardPage : UserControl
 {
     private OasScriptSocket? _socket;
+    private bool _schedulerRunning;
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(30) };
     private string _currentConfig = "";
 
@@ -223,16 +224,16 @@ public partial class DashboardPage : UserControl
             }).ToList();
             QueueEmptyText.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
 
-            // 当前执行任务
-            if (sched.Running is { } run && run.Name.Length > 0)
+            // 当前执行任务（running 语义 = 下一个要跑的；显示与否看调度器状态）
+            if (_schedulerRunning && sched.Running is { } run && run.Name.Length > 0)
             {
                 CurrentTaskName.Text = I18nMenu.Tr(run.Name);
                 CurrentTaskDetail.Text = run.NextRun.Length > 0 ? $"计划 {run.NextRun}" : "执行中";
             }
-            else
+            else if (!_schedulerRunning)
             {
                 CurrentTaskName.Text = "当前没有执行任务";
-                CurrentTaskDetail.Text = "调度器空闲时不会执行任务";
+                CurrentTaskDetail.Text = "调度器未运行——在工作台启动后开始执行";
             }
         });
     }
@@ -245,12 +246,21 @@ public partial class DashboardPage : UserControl
         var running = state is not null
             ? state.Contains("RUNNING", StringComparison.OrdinalIgnoreCase)
             : sched?.Running is not null;
+        _schedulerRunning = running;
 
         SchedulerDot.Fill = new SolidColorBrush(running
             ? Color.FromRgb(0x16, 0xA3, 0x4A) : Color.FromRgb(0x8A, 0x8A, 0x8A));
         SchedulerStateText.Text = running ? "运行中" : (state ?? "空闲/停止");
         StartBtn.IsEnabled = !running;
         StopBtn.IsEnabled = running;
+
+        // ⚠️ schedule.running 语义 = "调度器下一个要跑的任务"（停止时也有值），
+        // 不是"正在执行"。当前任务卡必须结合调度器运行态：
+        if (!running)
+        {
+            CurrentTaskName.Text = "当前没有执行任务";
+            CurrentTaskDetail.Text = "调度器未运行——在工作台启动后开始执行";
+        }
     }
 
     // ==================== 今日统计 + 执行记录 ====================
