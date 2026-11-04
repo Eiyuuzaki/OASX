@@ -38,6 +38,10 @@ public partial class App : Application
         // 自动拉起后端（设置项，失败不阻塞 UI）
         _ = OasBackendLauncher.EnsureRunningAsync();
 
+        // 启动即加载账号上下文：任何页面（绘卷/资产/仪表盘）都能直接读 Current，
+        // 不必各自触发加载——否则直达某页时账号为空。
+        _ = GlobalAccountContext.Instance.LoadAccountsAsync();
+
         // QA 自检：--share-demo 渲染一张样例分享图后退出（验证渲染管线）
         if (e.Args.Contains("--share-demo"))
         {

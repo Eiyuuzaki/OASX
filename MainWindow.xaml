@@ -45,6 +45,8 @@
                                        Icon="{ui:SymbolIcon DataHistogram24}" />
                 <ui:NavigationViewItem Content="资产" TargetPageType="{x:Type views:ResourcePage}"
                                        Icon="{ui:SymbolIcon Wallet24}" />
+                <ui:NavigationViewItem Content="绘卷" TargetPageType="{x:Type views:HuijuanPage}"
+                                       Icon="{ui:SymbolIcon Book24}" />
                 <ui:NavigationViewItem Content="日志" TargetPageType="{x:Type views:LogPage}"
                                        Icon="{ui:SymbolIcon SlideText24}" />
             </ui:NavigationView.MenuItems>

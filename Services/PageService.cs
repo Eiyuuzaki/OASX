@@ -15,9 +15,28 @@ public class PageService : INavigationViewPageProvider
         return (T)Activator.CreateInstance(typeof(T))!;
     }
 
-    /// <summary>非泛型入口（NavigationView 内部导航走这里）。</summary>
+    /// <summary>非泛型入口（NavigationView 内部导航走这里）。
+    /// 实例化失败不再静默：异常落 page_fail.log（导航链会吞掉异常，
+    /// 表现成"点了没反应"，没有日志几乎无法定位）。</summary>
     public object? GetPage(Type pageType)
     {
-        return Activator.CreateInstance(pageType);
+        try
+        {
+            return Activator.CreateInstance(pageType);
+        }
+        catch (Exception ex)
+        {
+            try
+            {
+                System.IO.File.AppendAllText(
+                    System.IO.Path.Combine(AppContext.BaseDirectory, "page_fail.log"),
+                    $"{DateTime.Now:HH:mm:ss} {pageType.FullName}\n{ex}\n\n");
+            }
+            catch
+            {
+                // 连日志都写不了则放弃（避免递归）
+            }
+            return null;
+        }
     }
 }

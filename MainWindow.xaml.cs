@@ -36,7 +36,25 @@ public partial class MainWindow : FluentWindow
         Loaded += (_, _) =>
         {
             WireNavigationParent();
-            RootNavigation.Navigate(typeof(DashboardPage));
+
+            // QA 钩子：--page=<仪表盘|工作台|统计|资产|绘卷|日志|设置|关于>
+            // 启动直达指定页（自动化验收用，不影响正常启动）
+            var pageArg = Environment.GetCommandLineArgs()
+                .FirstOrDefault(a => a.StartsWith("--page=", StringComparison.Ordinal));
+            var target = pageArg is null
+                ? typeof(DashboardPage)
+                : pageArg["--page=".Length..] switch
+                {
+                    "工作台" or "workbench" => typeof(WorkbenchPage),
+                    "统计" or "stats" => typeof(StatisticsPage),
+                    "资产" or "resource" => typeof(ResourcePage),
+                    "绘卷" or "huijuan" => typeof(HuijuanPage),
+                    "日志" or "log" => typeof(LogPage),
+                    "设置" or "settings" => typeof(SettingsPage),
+                    "关于" or "about" => typeof(AboutPage),
+                    _ => typeof(DashboardPage),
+                };
+            RootNavigation.Navigate(target);
         };
 
         RestoreWindowBounds();

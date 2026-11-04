@@ -81,16 +81,42 @@ public sealed class GlobalAccountContext
         if (Current is null)
         {
             var saved = OasSettings.Get(CurrentAccountKey, "");
+            Diag($"restore start saved='{saved}' accounts={_accounts.Count}");
             if (saved.Length > 0)
             {
                 var parts = saved.Split('|');
-                if (parts.Length == 2 && Find(parts[0], parts[1]) is { } restored)
+                if (parts.Length == 2)
                 {
-                    Current = restored;
+                    var found = Find(parts[0], parts[1]);
+                    Diag($"restore find config='{parts[0]}' role='{parts[1]}' -> " +
+                         (found is null ? "NOT FOUND" : found.DisplayName));
+                    if (found is not null)
+                    {
+                        Current = found;
+                    }
+                }
+                else
+                {
+                    Diag($"restore format invalid parts={parts.Length}");
                 }
             }
         }
         AccountsLoaded?.Invoke();
+    }
+
+    /// <summary>账号上下文诊断（exe 目录 account_restore.log）。</summary>
+    private static void Diag(string msg)
+    {
+        try
+        {
+            File.AppendAllText(
+                Path.Combine(AppContext.BaseDirectory, "account_restore.log"),
+                $"{DateTime.Now:HH:mm:ss} {msg}\n");
+        }
+        catch
+        {
+            // 日志失败不影响功能
+        }
     }
 
     /// <summary>切换当前账号（同账号不重复触发事件）。</summary>
