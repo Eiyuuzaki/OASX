@@ -1,3 +1,4 @@
+using System.IO;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -99,6 +100,16 @@ public sealed class GlobalAccountContext
         Current = entry;
         OasSettings.Set(CurrentAccountKey,
             entry is null ? "" : $"{entry.Config}|{entry.RoleKey}");
+        if (entry is not null)
+        {
+            try
+            {
+                File.AppendAllText(
+                    System.IO.Path.Combine(AppContext.BaseDirectory, "account_persist.log"),
+                    $"{DateTime.Now:HH:mm:ss} save {entry.Config}|{entry.RoleKey}\n");
+            }
+            catch { }
+        }
         CurrentChanged?.Invoke(entry);
     }
 

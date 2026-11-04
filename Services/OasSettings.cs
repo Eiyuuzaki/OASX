@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 
@@ -13,9 +14,43 @@ namespace OASX.Services;
 /// </summary>
 public static class OasSettings
 {
-    private static readonly string FilePath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "OASX", "settings.json");
+    /// <summary>
+    /// 设置文件路径：多候选 + 可写探测。
+    /// 某些宿主环境（沙箱/继承 ACL）下 %LOCALAPPDATA%\OASX 可能不可写，
+    /// 因此按序探测：LocalAppData → RoamingAppData → exe 目录，取第一个可写的。
+    /// </summary>
+    private static string? _resolvedPath;
+
+    private static string FilePath => _resolvedPath ??= ResolveWritablePath();
+
+    private static string ResolveWritablePath()
+    {
+        var local = Environment.GetFolderPath(
+            Environment.SpecialFolder.LocalApplicationData);
+        var roaming = Environment.GetFolderPath(
+            Environment.SpecialFolder.ApplicationData);
+        var candidates = new List<string>();
+        if (local.Length > 0) candidates.Add(Path.Combine(local, "OASX", "settings.json"));
+        if (roaming.Length > 0) candidates.Add(Path.Combine(roaming, "OASX", "settings.json"));
+        candidates.Add(Path.Combine(AppContext.BaseDirectory, "settings.json"));
+
+        foreach (var c in candidates)
+        {
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(c)!);
+                var probe = c + ".probe";
+                File.WriteAllText(probe, "x");
+                File.Delete(probe);
+                return c;
+            }
+            catch
+            {
+                // 该候选不可写，试下一个
+            }
+        }
+        return candidates[0];   // 全失败：仍用首选，Save 会落错误日志
+    }
 
     private static readonly object Gate = new();
     private static Dictionary<string, string>? _cache;
@@ -40,6 +75,10 @@ public static class OasSettings
         return _cache;
     }
 
+    /// <summary>保存失败诊断日志（exe 同目录）——不再静默吞异常。</summary>
+    private static readonly string ErrorLogPath = Path.Combine(
+        AppContext.BaseDirectory, "settings_error.log");
+
     private static void Save()
     {
         lock (Gate)
@@ -53,14 +92,18 @@ public static class OasSettings
                         WriteIndented = true,
                     }));
             }
-            catch (UnauthorizedAccessException)
+            catch (Exception ex)
             {
-                // 目录被提权实例创建过（用户点过 UAC 的旧实例）会拒绝写入；
-                // 设置保存失败不应打断 UI，下次启动重试。
-            }
-            catch (IOException)
-            {
-                // 磁盘/AV 占用等瞬时失败，同样静默
+                // 保存失败不打断 UI，但必须留证据：路径/异常全量落盘
+                try
+                {
+                    File.AppendAllText(ErrorLogPath,
+                        $"{DateTime.Now:HH:mm:ss} path={FilePath}\n{ex}\n\n");
+                }
+                catch
+                {
+                    // 连日志都写不了——放弃（避免递归）
+                }
             }
         }
     }

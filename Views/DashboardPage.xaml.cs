@@ -33,6 +33,7 @@ public partial class DashboardPage : UserControl
 
     private static string TodayKey => DateTime.Today.ToString("yyyy-MM-dd");
     private bool _schedulerRunning;
+    private DeviceCurrent? _lastDevice;
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(30) };
     private string _currentConfig = "";
 
@@ -228,7 +229,7 @@ public partial class DashboardPage : UserControl
             {
                 var dev = await OasDeviceApi.GetCurrentAsync(entry.Config);
                 SetDevice(dev);
-                UpdateReminders(entry.Config, _schedulerRunning, dev);
+                RecomputeReminders();
             }
             catch
             {
@@ -242,10 +243,13 @@ public partial class DashboardPage : UserControl
         OasServiceDot.Fill = new SolidColorBrush(ok
             ? Color.FromRgb(0x16, 0xA3, 0x4A) : Color.FromRgb(0xDC, 0x45, 0x45));
         OasServiceText.Text = label;
+        RecomputeReminders();
     }
 
     private void SetDevice(DeviceCurrent? dev)
     {
+        _lastDevice = dev;
+        RecomputeReminders();
         if (dev is null)
         {
             DeviceDot.Fill = new SolidColorBrush(Color.FromRgb(0x8A, 0x8A, 0x8A));
@@ -321,6 +325,7 @@ public partial class DashboardPage : UserControl
             CurrentTaskName.Text = "当前没有执行任务";
             CurrentTaskDetail.Text = "调度器未运行——在工作台启动后开始执行";
         }
+        RecomputeReminders();
     }
 
     // ==================== 今日统计 + 执行记录 ====================
@@ -368,15 +373,21 @@ public partial class DashboardPage : UserControl
 
     // ==================== 提醒（真实异常才展示） ====================
 
-    private void UpdateReminders(string config, bool schedulerRunning,
-        DeviceCurrent? dev)
+    /// <summary>提醒：完全由当前已知状态推导（服务/调度器/模拟器），
+    /// 状态每次更新都重算——消除"绿点运行中却提醒未运行"的错位。</summary>
+    private void RecomputeReminders()
     {
         var reminders = new List<string>();
-        if (!schedulerRunning && OasServiceText.Text == "正常")
+        if (OasServiceText.Text == "不可达")
         {
+            reminders.Add("OAS 服务不可达——检查后端是否运行");
+        }
+        else if (!_schedulerRunning)
+        {
+            var config = GlobalAccountContext.Instance.Current?.Config ?? "";
             reminders.Add($"调度器 {config} 未运行——在工作台启动后开始执行任务");
         }
-        if (dev is { Online: false })
+        if (_lastDevice is { Online: false } dev)
         {
             reminders.Add($"模拟器 {dev.EmulatorName ?? dev.Serial} 离线——任务将无法执行");
         }
