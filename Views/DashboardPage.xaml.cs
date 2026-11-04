@@ -406,6 +406,22 @@ public partial class DashboardPage : UserControl
 
     // ==================== 工具 ====================
 
+    /// <summary>资源图标名 → 本地图标（Assets/currency）。</summary>
+    private static ImageSource? LoadIcon(string icon)
+    {
+        var baseName = CurrencyIconRegistry.BaseName(icon);
+        if (baseName.Length == 0) return null;
+        try
+        {
+            var uri = new Uri($"pack://application:,,,/Assets/currency/{baseName}.png");
+            return new System.Windows.Media.Imaging.BitmapImage(uri);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     /// <summary>按键取主题画刷（语义色）。</summary>
     private static Brush FindBrush(string key) =>
         Application.Current.TryFindResource(key) as Brush ?? Brushes.Transparent;
