@@ -79,8 +79,8 @@ public partial class ArgsPage : Page
             CornerRadius = new CornerRadius(8),
             Padding = new Thickness(16, 12, 16, 12),
             Margin = new Thickness(0, 0, 0, 12),
-            Background = FindBrush("ControlFillColorDefaultBrush"),
-            BorderBrush = FindBrush("ControlStrokeColorDefaultBrush"),
+            Background = FindBrush("OasSurfaceBrush"),
+            BorderBrush = FindBrush("OasBorderBrush"),
             BorderThickness = new Thickness(1),
             Child = new StackPanel
             {
@@ -89,7 +89,12 @@ public partial class ArgsPage : Page
                     new TextBlock
                     {
                         // 参数组名也是 i18n 键（device→模拟器设置）
-                        Text = I18nMenu.Tr(group), FontSize = 14, FontWeight = FontWeights.SemiBold,
+                        Text = $"{I18nMenu.Tr(group)}（{args.Count}）",
+                        FontSize = 14,
+                        FontWeight = FontWeights.SemiBold,
+                        FontFamily = (FontFamily)Application.Current
+                            .FindResource("AppFontFamily"),
+                        Foreground = FindBrush("OasTextPrimaryBrush"),
                         Margin = new Thickness(0, 0, 0, 10),
                     },
                     stack,
@@ -98,17 +103,40 @@ public partial class ArgsPage : Page
         };
     }
 
-    /// <summary>单行参数：左标签+说明，右编辑器（按 type 映射）。</summary>
+    /// <summary>单行参数：固定标签列（可换行）+ 自适应编辑列。
+    /// 工作台右栏较窄，编辑控件必须拉伸而不是写死 MinWidth。</summary>
     private UIElement BuildArgRow(string group, string name, string title, string type,
         string value, string desc, List<string>? enumOptions)
     {
+        // 布尔值：标签内嵌复选（避免"标签在最左、小勾在最右"的割裂布局）
+        if (type == "boolean")
+        {
+            var check = BuildBooleanEditor(value == "true");
+            var box = (System.Windows.Controls.CheckBox)check;
+            box.Content = new TextBlock
+            {
+                Text = title,
+                FontSize = 13,
+                TextWrapping = TextWrapping.Wrap,
+                Foreground = FindBrush("OasTextPrimaryBrush"),
+            };
+            box.VerticalAlignment = VerticalAlignment.Center;
+            box.Margin = new Thickness(0, 6, 0, 6);
+            if (!string.IsNullOrEmpty(desc) && desc != title)
+            {
+                box.ToolTip = desc;
+            }
+            return box;
+        }
+
         var label = new TextBlock
         {
             Text = title,
             FontSize = 13,
             VerticalAlignment = VerticalAlignment.Center,
-            MinWidth = 180,
-            TextTrimming = TextTrimming.CharacterEllipsis,
+            TextWrapping = TextWrapping.Wrap,
+            Foreground = FindBrush("OasTextPrimaryBrush"),
+            Margin = new Thickness(0, 0, 12, 0),
         };
         if (!string.IsNullOrEmpty(desc) && desc != title)
         {
@@ -119,7 +147,6 @@ public partial class ArgsPage : Page
         // 与 Wpf.Ui.Controls 的同名控件有二义性
         Control editor = type switch
         {
-            "boolean" => BuildBooleanEditor(value == "true"),
             "enum" when enumOptions is { Count: > 0 } => BuildEnumEditor(value, enumOptions),
             "multi_line" => BuildTextEditor(value, multiline: true),
             "time" => BuildTextEditor(value, multiline: false, hint: "格式 HH:mm:ss"),
@@ -128,13 +155,22 @@ public partial class ArgsPage : Page
             _ => BuildTextEditor(value, multiline: false),
         };
         editor.Margin = new Thickness(0, 2, 0, 2);
-        editor.MinWidth = 260;
+        editor.MinWidth = 0;
+        editor.HorizontalAlignment = HorizontalAlignment.Stretch;
 
         _saveMap[editor] = (group, name, type);
 
         var grid = new Grid { Margin = new Thickness(0, 3, 0, 3) };
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.ColumnDefinitions.Add(new ColumnDefinition
+        {
+            Width = new GridLength(0.42, GridUnitType.Star),
+            MinWidth = 120,
+            MaxWidth = 240,
+        });
+        grid.ColumnDefinitions.Add(new ColumnDefinition
+        {
+            Width = new GridLength(1, GridUnitType.Star),
+        });
         Grid.SetColumn(label, 0);
         Grid.SetColumn(editor, 1);
         grid.Children.Add(label);
@@ -149,8 +185,7 @@ public partial class ArgsPage : Page
             Text = value,
             AcceptsReturn = multiline,
             TextWrapping = multiline ? TextWrapping.Wrap : TextWrapping.NoWrap,
-            MinWidth = 260,
-            MaxWidth = 420,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
         };
         if (hint is not null) box.ToolTip = hint;
         if (multiline) box.MinHeight = 60;
@@ -167,7 +202,12 @@ public partial class ArgsPage : Page
 
     private Control BuildEnumEditor(string value, List<string> options)
     {
-        var combo = new System.Windows.Controls.ComboBox { MinWidth = 260, ItemsSource = options };
+        var combo = new System.Windows.Controls.ComboBox
+        {
+            MinWidth = 140,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            ItemsSource = options,
+        };
         combo.SelectedIndex = options.IndexOf(value);
         combo.SelectionChanged += async (_, _) =>
         {
