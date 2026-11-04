@@ -354,6 +354,25 @@ public partial class DashboardPage : UserControl
     private static Brush FindBrush(string key) =>
         Application.Current.TryFindResource(key) as Brush ?? Brushes.Transparent;
 
+    private static string FormatCount(long n) => n switch
+    {
+        >= 100_000_000 => $"{n / 100_000_000.0:0.0}亿",
+        >= 10_000 => $"{n / 10_000.0:0.0}万",
+        _ => n.ToString("N0"),
+    };
+
+    private static string FormatDelta(long d)
+    {
+        var sign = d > 0 ? "+" : "";
+        var v = Math.Abs(d) switch
+        {
+            >= 100_000_000 => $"{Math.Abs(d) / 100_000_000.0:0.0}亿",
+            >= 10_000 => $"{Math.Abs(d) / 10_000.0:0.0}万",
+            _ => Math.Abs(d).ToString("N0"),
+        };
+        return $"{sign}{v}";
+    }
+
     private static string ShortTime(string raw)
     {
         var sp = raw.Split(' ');
