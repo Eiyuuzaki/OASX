@@ -37,6 +37,16 @@ public sealed class ScrollCardVm
     public Brush StateBrush { get; init; } = Brushes.Gray;
 }
 
+/// <summary>剩余碎片展示模型（图标 + 数量）。</summary>
+public sealed class FragmentVm
+{
+    public System.Windows.Media.ImageSource? IconImage { get; init; }
+    public System.Windows.Visibility IconVisibility { get; init; }
+    public string Label { get; init; } = "";
+    public System.Windows.Visibility LabelVisibility { get; init; }
+    public string CountText { get; init; } = "";
+}
+
 /// <summary>
 /// 绘卷页：本区服绘卷棋盘（区服维度，数据来自运行中客户端的 HuiJuanInfoMgr）。
 /// 一个账号只能看到自己所在区服的数据——客户端本身只拉当前登录服。
@@ -135,7 +145,7 @@ public partial class HuijuanPage : UserControl
         return new OasHuijuanApi.HuijuanBoard(
             Success: true, ConfigName: "demo", Issue: 85, Threshold: threshold,
             Active: true, Scrolls: scrolls, SelfTotal: 4286, BestRank: 412,
-            BestRankScroll: "双生纪元", Fragments: frags,
+            BestRankScroll: "双生纪元", BestRankIndex: 1, Fragments: frags,
             Self: self, Rank: [], Error: null, Hint: null);
     }
 
@@ -255,15 +265,20 @@ public partial class HuijuanPage : UserControl
         // 最佳排名：各卷独立榜里名次最好的那一卷
         var best = board.BestRank;
         SelfRankText.Text = best is > 0
-            ? $"{best.Value:N0}" + (string.IsNullOrEmpty(board.BestRankScroll)
-                ? "" : $"（{board.BestRankScroll}）")
+            ? $"{best.Value:N0}" +
+              (board.BestRankIndex is > 0 ? $"（卷{Cn(board.BestRankIndex.Value)}）" : "")
             : "—";
 
         // 参与卷 / 剩余碎片
         var joined = board.Scrolls?.Count(x => x.SelfScore > 0) ?? 0;
         var total = board.Scrolls?.Count ?? 0;
         JoinText.Text = joined > 0 ? $"{joined} / {total}" : "—";
-        FragmentsText.Text = BuildFragmentsText(board.Fragments);
+        _fragmentVms = BuildFragmentVms(board.Fragments);
+        FragmentsControl.ItemsSource = _fragmentVms;
+        FragmentsControl.Visibility = _fragmentVms.Count > 0
+            ? Visibility.Visible : Visibility.Collapsed;
+        FragmentsPlain.Visibility = _fragmentVms.Count > 0
+            ? Visibility.Collapsed : Visibility.Visible;
 
         SelfHintText.Text = score > 0
             ? "本期参与数据"
@@ -272,31 +287,69 @@ public partial class HuijuanPage : UserControl
                 : "本期已结束，无参与数据";
     }
 
-    /// <summary>剩余碎片文案：小 12 · 中 8 · 大 2（无则显示 —）。</summary>
-    private static string BuildFragmentsText(List<OasHuijuanApi.FragmentEntry>? items)
+    private List<FragmentVm> _fragmentVms = [];
+
+    /// <summary>剩余碎片：图标 + 数量（小→中→大）；图标缺失时退回文字标签。</summary>
+    private static List<FragmentVm> BuildFragmentVms(
+        List<OasHuijuanApi.FragmentEntry>? items)
     {
         if (items is null || items.Count == 0)
         {
-            return "—";
+            return [];
         }
-        static string Short(string name)
-        {
-            var idx = name.IndexOf('·');
-            if (idx >= 0 && idx + 1 < name.Length)
-            {
-                return name[(idx + 1)..];
-            }
-            return name.Replace("绘卷", "").Replace("碎片", "").Trim();
-        }
-        // 固定小 → 中 → 大 的顺序（按名称排序会得到 大/小/中）
         static int Weight(string name) => name.Contains('小') ? 0
             : name.Contains('中') ? 1
             : name.Contains('大') ? 2 : 3;
-        return string.Join("  ·  ", items
+        static string Short(string name)
+        {
+            var idx = name.IndexOf('·');
+            return idx >= 0 && idx + 1 < name.Length
+                ? name[(idx + 1)..]
+                : name.Replace("绘卷", "").Replace("碎片", "").Trim();
+        }
+        return items
             .OrderBy(x => Weight(x.Name))
-            .ThenBy(x => x.Name)
-            .Select(x => $"{Short(x.Name)} {x.Count:N0}"));
+            .Select(x =>
+            {
+                var icon = LoadIcon(x.Icon);
+                return new FragmentVm
+                {
+                    IconImage = icon,
+                    IconVisibility = icon is null ? Visibility.Collapsed : Visibility.Visible,
+                    Label = Short(x.Name),
+                    LabelVisibility = icon is null ? Visibility.Visible : Visibility.Collapsed,
+                    CountText = x.Count.ToString("N0"),
+                };
+            })
+            .ToList();
     }
+
+    /// <summary>货币图标（Assets/currency/{base}.png），缺失返回 null。</summary>
+    private static System.Windows.Media.ImageSource? LoadIcon(string icon)
+    {
+        var baseName = CurrencyIconRegistry.BaseName(icon ?? "");
+        if (baseName.Length == 0)
+        {
+            return null;
+        }
+        try
+        {
+            var uri = new Uri($"pack://application:,,,/Assets/currency/{baseName}.png");
+            return new System.Windows.Media.Imaging.BitmapImage(uri);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>1..10 → 一..十（卷序号展示用）。</summary>
+    private static string Cn(int n) => n switch
+    {
+        1 => "一", 2 => "二", 3 => "三", 4 => "四", 5 => "五",
+        6 => "六", 7 => "七", 8 => "八", 9 => "九", 10 => "十",
+        _ => n.ToString(),
+    };
 
     /// <summary>数字压缩：≥1 万用"万"（20,700,000 → 2070万）。</summary>
     private static string Compact(long value)

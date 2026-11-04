@@ -24,7 +24,7 @@ public static class OasHuijuanApi
     public record HuijuanBoard(
         bool Success, string ConfigName, int Issue, long Threshold, bool Active,
         List<ScrollEntry> Scrolls, long SelfTotal, long? BestRank,
-        string BestRankScroll, List<FragmentEntry> Fragments,
+        string BestRankScroll, int? BestRankIndex, List<FragmentEntry> Fragments,
         JsonElement? Self, List<JsonElement> Rank,
         string? Error, string? Hint);
 

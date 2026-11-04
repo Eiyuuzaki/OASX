@@ -102,9 +102,36 @@
                                    Foreground="{DynamicResource OasTextPrimaryBrush}" />
                         <TextBlock Text="剩余" FontSize="12" VerticalAlignment="Center"
                                    Foreground="{DynamicResource OasTextSecondaryBrush}" />
-                        <TextBlock x:Name="FragmentsText" Text="—" FontSize="13" FontWeight="SemiBold"
+                        <TextBlock x:Name="FragmentsPlain" Text="—" FontSize="13" FontWeight="SemiBold"
                                    Margin="6,0,0,0" VerticalAlignment="Center"
                                    Foreground="{DynamicResource OasAccentBrush}" />
+                        <ItemsControl x:Name="FragmentsControl" VerticalAlignment="Center"
+                                      Margin="8,0,0,0">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,12,0"
+                                                VerticalAlignment="Center">
+                                        <Image Width="22" Height="22" Margin="0,0,5,0"
+                                               Stretch="Uniform" VerticalAlignment="Center"
+                                               Source="{Binding IconImage}"
+                                               Visibility="{Binding IconVisibility}" />
+                                        <TextBlock Text="{Binding Label}" FontSize="12"
+                                                   Margin="0,0,5,0" VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource OasTextSecondaryBrush}"
+                                                   Visibility="{Binding LabelVisibility}" />
+                                        <TextBlock Text="{Binding CountText}" FontSize="14"
+                                                   FontWeight="SemiBold" VerticalAlignment="Center"
+                                                   FontFamily="{StaticResource AppFontFamily}"
+                                                   Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </StackPanel>
                     <TextBlock x:Name="SelfHintText" Text="" FontSize="11" Margin="0,6,0,0"
                                Foreground="{DynamicResource OasTextTertiaryBrush}" />
