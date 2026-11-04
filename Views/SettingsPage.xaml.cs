@@ -26,6 +26,10 @@ public partial class SettingsPage : UserControl
     public SettingsPage()
     {
         InitializeComponent();
+        Loaded += (_, _) =>
+        {
+            _ = LoadNotifyAsync();
+        };
 
         BackendBox.Text = OasSettings.BackendAddress;
         ThemeSelector.SelectedIndex = OasSettings.ThemeMode switch
@@ -54,6 +58,207 @@ public partial class SettingsPage : UserControl
     }
 
     // ==================== OAS 后端 ====================
+
+    // ==================== 通知（onepush）====================
+
+    private Dictionary<string, OasNotifyApi.ProviderInfo>? _providers;
+    private OasNotifyApi.ProviderInfo? _currentProvider;
+    private bool _loadingNotify;
+    private readonly Dictionary<string, string> _paramValues = [];
+
+    private async Task LoadNotifyAsync()
+    {
+        _loadingNotify = true;
+        try
+        {
+            var providers = await OasNotifyApi.GetProvidersAsync();
+            if (providers is null)
+            {
+                NotifyStatusText.Text = "渠道列表加载失败";
+                return;
+            }
+            _providers = providers;
+            NotifyProviderBox.Items.Clear();
+            NotifyProviderBox.Items.Add(_MakeItem("null", "关闭"));
+            foreach (var name in providers.Keys.OrderBy(x => x))
+            {
+                NotifyProviderBox.Items.Add(_MakeItem(name, name));
+            }
+            var cfg = await OasNotifyApi.GetConfigAsync();
+            if (cfg is not null)
+            {
+                NotifyEnableSwitch.IsChecked = cfg.Value.Enable;
+                _SelectProvider(cfg.Value.Provider);
+                foreach (var (k, v) in cfg.Value.Params)
+                {
+                    _paramValues[k] = v;
+                }
+                _RefreshParamFields();
+                _SelectCycle(cfg.Value.CycleHours);
+            }
+            else
+            {
+                _SelectProvider("null");
+            }
+        }
+        catch (Exception ex)
+        {
+            NotifyStatusText.Text = $"加载失败：{ex.Message}";
+        }
+        finally
+        {
+            _loadingNotify = false;
+        }
+    }
+
+    private static ComboBoxItem _MakeItem(string tag, string content) => new()
+    {
+        Tag = tag,
+        Content = content,
+    };
+
+    private void _SelectProvider(string name)
+    {
+        for (var i = 0; i < NotifyProviderBox.Items.Count; i++)
+        {
+            if (NotifyProviderBox.Items[i] is ComboBoxItem { Tag: string t } && t == name)
+            {
+                NotifyProviderBox.SelectedIndex = i;
+                return;
+            }
+        }
+        NotifyProviderBox.SelectedIndex = 0;
+    }
+
+    private void _SelectCycle(int hours)
+    {
+        for (var i = 0; i < NotifyCycleBox.Items.Count; i++)
+        {
+            if (NotifyCycleBox.Items[i] is ComboBoxItem { Tag: string t }
+                && int.TryParse(t, out var h) && h == hours)
+            {
+                NotifyCycleBox.SelectedIndex = i;
+                return;
+            }
+        }
+        NotifyCycleBox.SelectedIndex = 0;
+    }
+
+    private void NotifyProvider_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (_loadingNotify)
+        {
+            return;
+        }
+        _RefreshParamFields();
+        _ = SaveNotifyAsync();
+    }
+
+    private void NotifyCycle_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (!_loadingNotify)
+        {
+            _ = SaveNotifyAsync();
+        }
+    }
+
+    private void NotifyEnable_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (!_loadingNotify)
+        {
+            _ = SaveNotifyAsync();
+        }
+    }
+
+    private void _RefreshParamFields()
+    {
+        NotifyFieldsPanel.Children.Clear();
+        _paramValues.Clear();
+        if (NotifyProviderBox.SelectedItem is not ComboBoxItem { Tag: string tag } ||
+            tag == "null" || _providers is null || !_providers.TryGetValue(tag, out var info))
+        {
+            _currentProvider = null;
+            return;
+        }
+        _currentProvider = info;
+        foreach (var name in info.Required.Concat(info.Optional))
+        {
+            var row = new Grid { Margin = new Thickness(0, 0, 0, 8) };
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(150) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            var label = new TextBlock
+            {
+                Text = name + (info.Required.Contains(name) ? " *" : ""),
+                FontSize = 13,
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            var box = new Wpf.Ui.Controls.TextBox
+            {
+                PlaceholderText = info.Required.Contains(name)
+                    ? "必填" : "选填",
+                Text = _paramValues.TryGetValue(name, out var v) ? v : "",
+            };
+            box.TextChanged += (o, _) =>
+            {
+                _paramValues[name] = box.Text;
+            };
+            Grid.SetColumn(label, 0);
+            Grid.SetColumn(box, 1);
+            row.Children.Add(label);
+            row.Children.Add(box);
+            NotifyFieldsPanel.Children.Add(row);
+        }
+    }
+
+    private async Task SaveNotifyAsync()
+    {
+        try
+        {
+            var provider = NotifyProviderBox.SelectedItem is ComboBoxItem { Tag: string t }
+                ? t : "null";
+            var enable = NotifyEnableSwitch.IsChecked == true;
+            var cycle = NotifyCycleBox.SelectedItem is ComboBoxItem { Tag: string ct }
+                && int.TryParse(ct, out var h) ? h : 6;
+            // 必填校验
+            if (_currentProvider is not null)
+            {
+                var missing = _currentProvider.Required
+                    .Where(r => !_paramValues.TryGetValue(r, out var v)
+                                || string.IsNullOrWhiteSpace(v))
+                    .ToList();
+                if (missing.Count > 0)
+                {
+                    NotifyStatusText.Text = $"缺少必填参数：{string.Join("、", missing)}";
+                    return;
+                }
+            }
+            var ok = await OasNotifyApi.SaveConfigAsync(
+                enable, provider, _paramValues, cycle);
+            NotifyStatusText.Text = ok
+                ? $"已保存 {DateTime.Now:HH:mm:ss}" + (enable ? "（已启用）" : "")
+                : "保存失败";
+        }
+        catch (Exception ex)
+        {
+            NotifyStatusText.Text = $"保存失败：{ex.Message}";
+        }
+    }
+
+    private async void NotifyTest_Click(object sender, RoutedEventArgs e)
+    {
+        NotifyTestButton.IsEnabled = false;
+        try
+        {
+            await SaveNotifyAsync();
+            NotifyStatusText.Text = "测试中…";
+            var result = await OasNotifyApi.TestAsync();
+            NotifyStatusText.Text = $"测试：{result}";
+        }
+        finally
+        {
+            NotifyTestButton.IsEnabled = true;
+        }
+    }
 
     private void SaveBackend_Click(object sender, RoutedEventArgs e)
     {

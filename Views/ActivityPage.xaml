@@ -172,6 +172,27 @@
                 </StackPanel>
             </Border>
 
+            <!-- 结界寄养（6h 一收，到点推送提醒） -->
+            <Grid Margin="0,10,0,6">
+                <TextBlock Text="结界寄养" FontSize="14" FontWeight="SemiBold"
+                           Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                <TextBlock x:Name="FosterNotifyText" Text="" FontSize="12"
+                           HorizontalAlignment="Right" VerticalAlignment="Center"
+                           Foreground="{DynamicResource OasTextSecondaryBrush}" />
+            </Grid>
+            <Border CornerRadius="{StaticResource RadiusCard}" Padding="16" Margin="0,0,0,6"
+                    Background="{DynamicResource OasSurfaceBrush}"
+                    BorderBrush="{DynamicResource OasBorderBrush}" BorderThickness="1">
+                <StackPanel>
+                    <TextBlock x:Name="FosterText"
+                               Text="游戏内打开一次结界页并寄养后，这里会显示倒计时"
+                               FontSize="13" TextWrapping="Wrap"
+                               Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                    <TextBlock x:Name="FosterSubText" Text="" FontSize="11" Margin="0,4,0,0"
+                               Foreground="{DynamicResource OasTextTertiaryBrush}" />
+                </StackPanel>
+            </Border>
+
             <!-- 进行中的活动时段 -->
             <TextBlock Text="进行中的活动时段" FontSize="14" FontWeight="SemiBold"
                        Margin="0,10,0,6"

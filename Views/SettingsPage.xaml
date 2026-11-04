@@ -54,6 +54,58 @@
                 </StackPanel>
             </Border>
 
+            <!-- ============ 通知 ============ -->
+            <TextBlock Text="通知" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,6" />
+            <Border CornerRadius="6" Padding="16" Margin="0,0,0,20"
+                    Background="{DynamicResource OasSurfaceBrush}"
+                    BorderBrush="{DynamicResource OasBorderBrush}" BorderThickness="1">
+                <StackPanel>
+                    <Grid Margin="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock Text="寄养成熟提醒" FontSize="14" />
+                            <TextBlock Text="结界卡寄养到期时推送通知（复用 OAS 本家通知配置）"
+                                       FontSize="12" Foreground="{DynamicResource OasTextSecondaryBrush}" />
+                        </StackPanel>
+                        <ui:ToggleSwitch x:Name="NotifyEnableSwitch" HorizontalAlignment="Right"
+                                         VerticalAlignment="Center"
+                                         Checked="NotifyEnable_Toggled" Unchecked="NotifyEnable_Toggled" />
+                    </Grid>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="130" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <TextBlock Text="通知渠道" FontSize="13" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                        <ComboBox x:Name="NotifyProviderBox" Grid.Column="1" MinWidth="240"
+                                  Margin="0,0,0,8" SelectionChanged="NotifyProvider_Changed" />
+                        <StackPanel x:Name="NotifyFieldsPanel" Grid.Row="1" Grid.Column="0"
+                                    Grid.ColumnSpan="2" Margin="0,0,0,8" />
+                        <TextBlock Text="寄养周期" Grid.Row="2" FontSize="13" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                        <ComboBox x:Name="NotifyCycleBox" Grid.Row="2" Grid.Column="1" MinWidth="160"
+                                  Margin="0,0,0,8" SelectionChanged="NotifyCycle_Changed">
+                            <ComboBoxItem Content="6 小时" Tag="6" />
+                            <ComboBoxItem Content="8 小时" Tag="8" />
+                            <ComboBoxItem Content="12 小时" Tag="12" />
+                        </ComboBox>
+                    </Grid>
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                        <ui:Button x:Name="NotifyTestButton" Content="发送测试通知"
+                                   Appearance="Primary" Click="NotifyTest_Click" />
+                        <TextBlock x:Name="NotifyStatusText" Text="" FontSize="12"
+                                   Margin="12,0,0,0" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource OasTextSecondaryBrush}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
             <!-- ============ 个性化 ============ -->
             <TextBlock Text="个性化" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,6" />
             <Border CornerRadius="6" Padding="16" Margin="0,0,0,20"

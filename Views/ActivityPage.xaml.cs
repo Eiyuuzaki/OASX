@@ -134,6 +134,7 @@ public partial class ActivityPage : UserControl
             _autoRefresh.Tick += OnAutoRefreshTick;
             _autoRefresh.Start();
             LoadWeekly();
+            _ = LoadFosterAsync();
             _ = LoadAsync();
         };
         Unloaded += (_, _) =>
@@ -152,6 +153,7 @@ public partial class ActivityPage : UserControl
 
     private void OnAutoRefreshTick(object? sender, EventArgs e)
     {
+        _ = LoadFosterAsync();
         // 有任务数据时才自动刷新（活动/日常进度会变；无数据说明游戏没开，别空跑）
         if (_lastHasTasks && GlobalAccountContext.Instance.Current is not null)
         {
@@ -361,6 +363,46 @@ public partial class ActivityPage : UserControl
     {
         WeeklySummaryText.Text = $"{_weekly.Count(x => x.Done)}/{_weekly.Count}" +
                                  $"（{CurrentWeekKey()}）";
+    }
+
+    // ==================== 结界寄养 ====================
+
+    /// <summary>读寄养倒计时（reward_t + 周期），到点显示收取提示。</summary>
+    private async Task LoadFosterAsync()
+    {
+        try
+        {
+            var state = await OasNotifyApi.GetFosterAsync();
+            if (state is null || !state.Success)
+            {
+                FosterText.Text = state?.Error ?? "读取失败";
+                FosterSubText.Text = "需要游戏运行且已进主界面";
+                return;
+            }
+            var remain = state.RemainingSeconds;
+            if (remain <= 0)
+            {
+                FosterText.Text = "✅ 寄养已成熟，快去收取！";
+                FosterText.Foreground = Brush("OasSuccessBrush",
+                    System.Windows.Media.Color.FromRgb(0x16, 0xA3, 0x4A));
+                FosterSubText.Text = $"成熟时刻 {state.HarvestTimeText}" +
+                                     (state.NotifyEnabled ? " · 已推送通知" : "");
+                return;
+            }
+            FosterText.Foreground = Brush("OasTextPrimaryBrush",
+                System.Windows.Media.Color.FromRgb(0x1F, 0x1F, 0x1F));
+            var ts = TimeSpan.FromSeconds(remain);
+            FosterText.Text = $"⏳ 距离成熟还有 {ts.Hours}小时{ts.Minutes}分" +
+                              $"（{state.HarvestTimeText} 收取）";
+            FosterSubText.Text = $"上次寄养 {state.RewardTimeText} · 周期 {state.CycleHours} 小时" +
+                                 (state.NotifyEnabled
+                                     ? " · 到点将推送通知"
+                                     : " · 通知未启用（设置页可开启）");
+        }
+        catch (Exception ex)
+        {
+            FosterText.Text = $"读取失败：{ex.Message}";
+        }
     }
 
     private async Task LoadAsync(bool force = false)
