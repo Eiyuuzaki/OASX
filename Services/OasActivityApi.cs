@@ -18,11 +18,20 @@ public static class OasActivityApi
 
     public record MonsterTask(string Id, int Process, int Need, bool Fin, int? Type);
 
+    public record CurrentActivity(string Id, string Name, string Begin, string End);
+
+    public record GuildInfo(string Name, int? Lv, int? Duty, int? GymState,
+        double? GymLeftChallenge, int? GiftBagWeekTimes);
+
+    public record LiveWindow(string Key, long End, string EndText);
+
     public record ActivityBoard(
         bool Success, string ConfigName,
         List<DailyTask> Daily, int DailyDone, int DailyTotal,
         List<MonsterTask> Monster, int MonsterDone,
         List<string> Activity, bool ActivityAvailable,
+        List<CurrentActivity> CurrentActivities, GuildInfo? Guild,
+        List<LiveWindow> LiveWindows,
         int ServerWeekDay, string ServerTimeText,
         string? Error, string? Hint);
 

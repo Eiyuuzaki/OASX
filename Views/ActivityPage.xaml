@@ -134,6 +134,69 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
 
+            <!-- 进行中的活动时段 -->
+            <TextBlock Text="进行中的活动时段" FontSize="14" FontWeight="SemiBold"
+                       Margin="0,10,0,6"
+                       Foreground="{DynamicResource OasTextPrimaryBrush}" />
+            <Border CornerRadius="{StaticResource RadiusCard}" Padding="16" Margin="0,0,0,6"
+                    Background="{DynamicResource OasSurfaceBrush}"
+                    BorderBrush="{DynamicResource OasBorderBrush}" BorderThickness="1">
+                <StackPanel>
+                    <TextBlock x:Name="LiveEmptyText" Text="当前没有进行中的时段"
+                               FontSize="12"
+                               Foreground="{DynamicResource OasTextTertiaryBrush}" />
+                    <ItemsControl x:Name="LiveList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,3">
+                                    <TextBlock Text="{Binding Label}" FontSize="13"
+                                               Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                                    <TextBlock Text="{Binding EndText}" HorizontalAlignment="Right"
+                                               FontSize="13" FontWeight="SemiBold"
+                                               FontFamily="{StaticResource AppFontFamily}"
+                                               Foreground="{DynamicResource OasTextSecondaryBrush}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Text="注：时段标识为游戏内部 key（客户端无中文名映射）"
+                               FontSize="11" Margin="0,6,0,0"
+                               Foreground="{DynamicResource OasTextTertiaryBrush}" />
+                </StackPanel>
+            </Border>
+
+            <!-- 当前活动 -->
+            <TextBlock Text="当前活动" FontSize="14" FontWeight="SemiBold" Margin="0,10,0,6"
+                       Foreground="{DynamicResource OasTextPrimaryBrush}" />
+            <Border CornerRadius="{StaticResource RadiusCard}" Padding="16" Margin="0,0,0,6"
+                    Background="{DynamicResource OasSurfaceBrush}"
+                    BorderBrush="{DynamicResource OasBorderBrush}" BorderThickness="1">
+                <ItemsControl x:Name="ActivityList">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,3">
+                                <TextBlock Text="{Binding Name}" FontSize="13"
+                                           TextTrimming="CharacterEllipsis"
+                                           Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                                <TextBlock Text="{Binding EndText}" HorizontalAlignment="Right"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource OasTextSecondaryBrush}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Border>
+
+            <!-- 阴阳寮 -->
+            <TextBlock Text="阴阳寮" FontSize="14" FontWeight="SemiBold" Margin="0,10,0,6"
+                       Foreground="{DynamicResource OasTextPrimaryBrush}" />
+            <Border CornerRadius="{StaticResource RadiusCard}" Padding="16" Margin="0,0,0,6"
+                    Background="{DynamicResource OasSurfaceBrush}"
+                    BorderBrush="{DynamicResource OasBorderBrush}" BorderThickness="1">
+                <TextBlock x:Name="GuildText" Text="—" FontSize="13" TextWrapping="Wrap"
+                           Foreground="{DynamicResource OasTextPrimaryBrush}" />
+            </Border>
+
             <!-- 活动任务（需游戏内打开活动页） -->
             <TextBlock Text="活动任务" FontSize="14" FontWeight="SemiBold" Margin="0,10,0,6"
                        Foreground="{DynamicResource OasTextPrimaryBrush}" />
