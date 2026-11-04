@@ -16,7 +16,8 @@ public static class OasHuijuanApi
     public record ScrollEntry(
         string Id, long Score, double Percent, bool Finished,
         string FinishTimeText, string Name, int? HeroId, string Img,
-        string BeginText, string EndText, long SelfScore, int? SelfRank);
+        string BeginText, string EndText, long SelfScore, int? SelfRank,
+        long Remain, List<int> RankLevels, List<int> RankRewards);
 
     public record HuijuanBoard(
         bool Success, string ConfigName, int Issue, long Threshold, bool Active,

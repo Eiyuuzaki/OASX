@@ -24,6 +24,16 @@ public sealed class ScrollCardVm
 
     /// <summary>我在该卷的排名（每卷独立榜）；无数据时隐藏。</summary>
     public string SelfRankText { get; init; } = "";
+
+    /// <summary>当前排名所处奖励档（如 "300–500 名档"）；无数据隐藏。</summary>
+    public string TierText { get; init; } = "";
+    public System.Windows.Visibility TierVisibility { get; init; } =
+        System.Windows.Visibility.Collapsed;
+
+    /// <summary>距满卷还差多少分（未满时显示）。</summary>
+    public string RemainText { get; init; } = "";
+    public System.Windows.Visibility RemainVisibility { get; init; } =
+        System.Windows.Visibility.Collapsed;
     public System.Windows.Visibility SelfRankVisibility { get; init; } =
         System.Windows.Visibility.Collapsed;
     public string WindowText { get; init; } = "";
@@ -47,12 +57,18 @@ public partial class HuijuanPage : UserControl
             ctx.CurrentChanged += OnContextChanged;
             ctx.AccountsLoaded += OnAccountsLoaded;
             _ = LoadAsync();
+            // 活动期自动刷新（客户端自身 refreshInterval = 60s）
+            _autoRefresh.Interval = TimeSpan.FromSeconds(60);
+            _autoRefresh.Tick += OnAutoRefreshTick;
+            _autoRefresh.Start();
         };
         Unloaded += (_, _) =>
         {
             var ctx = GlobalAccountContext.Instance;
             ctx.CurrentChanged -= OnContextChanged;
             ctx.AccountsLoaded -= OnAccountsLoaded;
+            _autoRefresh.Stop();
+            _autoRefresh.Tick -= OnAutoRefreshTick;
         };
     }
 
@@ -61,6 +77,19 @@ public partial class HuijuanPage : UserControl
 
     /// <summary>账号列表加载完成 → 若此前是空态则补载。</summary>
     private void OnAccountsLoaded() => _ = LoadAsync();
+
+    private readonly System.Windows.Threading.DispatcherTimer _autoRefresh = new();
+
+    private void OnAutoRefreshTick(object? sender, EventArgs e)
+    {
+        // 仅活动期自动刷新（活动外数据不变，刷了也没意义，还会白白连桥）
+        if (_lastActive && !DemoActive && GlobalAccountContext.Instance.Current is not null)
+        {
+            _ = LoadAsync(force: true);
+        }
+    }
+
+    private bool _lastActive;
 
     private void Page_Unloaded(object sender, RoutedEventArgs e)
     {
@@ -96,7 +125,10 @@ public partial class HuijuanPage : UserControl
             BeginText: "2026-11-10 08:00",
             EndText: "2026-11-30 23:59",
             SelfScore: r.Mine,
-            SelfRank: r.MyRank)).ToList();
+            SelfRank: r.MyRank,
+            Remain: Math.Max(0, threshold - r.Score),
+            RankLevels: [0, 20, 100, 200, 300, 500, 1000, 99999999],
+            RankRewards: [213000, 213005, 213010, 213015, 213020, 213025, 213030])).ToList();
 
         var self = JsonDocument.Parse(
             "{\"score\": 4286, \"rank\": 1204}").RootElement.Clone();
@@ -151,6 +183,7 @@ public partial class HuijuanPage : UserControl
                 return;
             }
 
+            _lastActive = board.Active;
             IssueText.Text = board.Issue.ToString(CultureInfo.InvariantCulture);
             ThresholdText.Text = board.Threshold.ToString("N0");
             SubtitleText.Text = DemoActive
@@ -183,6 +216,14 @@ public partial class HuijuanPage : UserControl
                 SelfRankVisibility = s.SelfRank is null || s.SelfRank <= 0
                     ? System.Windows.Visibility.Collapsed
                     : System.Windows.Visibility.Visible,
+                TierText = TierLabel(s.SelfRank, s.RankLevels),
+                TierVisibility = TierLabel(s.SelfRank, s.RankLevels).Length > 0
+                    ? System.Windows.Visibility.Visible
+                    : System.Windows.Visibility.Collapsed,
+                RemainText = s.Remain > 0 ? $"距满卷还差 {s.Remain:N0}" : "",
+                RemainVisibility = s.Remain > 0
+                    ? System.Windows.Visibility.Visible
+                    : System.Windows.Visibility.Collapsed,
                 WindowText = string.IsNullOrEmpty(s.BeginText)
                     ? (s.Finished ? $"满卷于 {s.FinishTimeText}" : "")
                     : $"{s.BeginText} → {s.EndText}" +
@@ -227,6 +268,32 @@ public partial class HuijuanPage : UserControl
         {
             SelfHintText.Text = "本期已结束，无参与数据";
         }
+    }
+
+    /// <summary>用真实档位配置换算"我的排名属于哪一档"。
+    /// rank_levels 形如 [0,20,100,200,300,500,1000,99999999]：第 i 档为
+    /// [levels[i], levels[i+1])，档位数 = levels.Count-1。</summary>
+    private static string TierLabel(int? rank, List<int>? levels)
+    {
+        if (rank is null || rank <= 0 || levels is null || levels.Count < 2)
+        {
+            return "";
+        }
+        for (var i = 0; i < levels.Count - 1; i++)
+        {
+            var lo = levels[i];
+            var hi = levels[i + 1];
+            if (rank >= lo && rank < hi)
+            {
+                var total = levels.Count - 1;
+                var hiText = hi >= 99_999_999 ? "∞" : (hi - 1).ToString("N0");
+                var loText = lo == 0 ? "1" : (lo + 1).ToString("N0");
+                return lo == 0
+                    ? $"第 {i + 1}/{total} 档（{loText}–{hiText}）"
+                    : $"第 {i + 1}/{total} 档（{loText}–{hiText}）";
+            }
+        }
+        return "";
     }
 
     private void SetBadge(string text, Brush brush)

@@ -70,8 +70,8 @@
             </Border>
 
             <!-- 我的参与（活动期才有数据） -->
-            <Border x:Name="SelfCard" CornerRadius="{StaticResource RadiusCard}" Padding="12"
-                    Margin="0,0,0,12" Visibility="Collapsed"
+            <Border x:Name="SelfCard" CornerRadius="{StaticResource RadiusCard}" Padding="10"
+                    Margin="0,0,0,10" Visibility="Collapsed"
                     Background="{DynamicResource OasSurfaceBrush}"
                     BorderBrush="{DynamicResource OasBorderBrush}" BorderThickness="1">
                 <StackPanel>
@@ -111,8 +111,8 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Border CornerRadius="{StaticResource RadiusCard}" Padding="12"
-                                Margin="0,0,8,6"
+                        <Border CornerRadius="{StaticResource RadiusCard}" Padding="10"
+                                Margin="0,0,8,4"
                                 Background="{DynamicResource OasSurfaceBrush}"
                                 BorderBrush="{DynamicResource OasBorderBrush}"
                                 BorderThickness="1">
@@ -144,7 +144,7 @@
                                                FontFamily="{StaticResource AppFontFamily}"
                                                Foreground="{DynamicResource OasAccentBrush}" />
                                 </Grid>
-                                <ProgressBar Height="6" Margin="0,6,0,6" Minimum="0" Maximum="100"
+                                <ProgressBar Height="5" Margin="0,5,0,5" Minimum="0" Maximum="100"
                                              Value="{Binding Percent, Mode=OneWay}"
                                              Foreground="{DynamicResource OasAccentBrush}"
                                              Background="{DynamicResource OasSurfaceSecondaryBrush}" />
@@ -162,9 +162,21 @@
                                                    Foreground="{DynamicResource OasWarningBrush}" />
                                     </StackPanel>
                                 </Grid>
-                                <TextBlock Text="{Binding WindowText}" FontSize="11"
-                                           Margin="0,2,0,0" TextWrapping="Wrap"
-                                           Foreground="{DynamicResource OasTextTertiaryBrush}" />
+                                <Grid Margin="0,2,0,0">
+                                    <TextBlock Text="{Binding WindowText}" FontSize="11"
+                                               TextWrapping="Wrap"
+                                               Foreground="{DynamicResource OasTextTertiaryBrush}" />
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                        <TextBlock Text="{Binding RemainText}" FontSize="11"
+                                                   FontWeight="SemiBold"
+                                                   Visibility="{Binding RemainVisibility}"
+                                                   Foreground="{DynamicResource OasWarningBrush}" />
+                                    </StackPanel>
+                                </Grid>
+                                <TextBlock Text="{Binding TierText}" FontSize="11"
+                                           Margin="0,1,0,0"
+                                           Visibility="{Binding TierVisibility}"
+                                           Foreground="{DynamicResource OasTextSecondaryBrush}" />
                             </StackPanel>
                         </Border>
                     </DataTemplate>
