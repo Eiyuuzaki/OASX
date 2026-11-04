@@ -215,6 +215,23 @@ public static class ThemeService
             Log("backdrop: hwnd=0（句柄未就绪）");
             return;
         }
+        // 优先用 WPF-UI 的 setter：它会同时处理窗口 chrome 与合成，
+        // 只改 DWM 属性会导致材质不合成（整块变黑）。字典重复的坑修掉后，
+        // setter 不再抛 Freezable 异常；万一仍失败，退回 DWM 直调。
+        try
+        {
+            if (window is FluentWindow fluent)
+            {
+                fluent.WindowBackdropType = backdrop;
+                Log($"backdrop={backdrop} via WPF-UI setter");
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            Log($"WPF-UI setter failed ({backdrop}): {ex.Message}；回退 DWM");
+        }
+
         var value = backdrop switch
         {
             WindowBackdropType.Mica => 2,
@@ -265,6 +282,14 @@ public static class ThemeService
         {
             Log("ApplyWindowChromeOnly failed: " + ex.Message);
         }
+    }
+
+    /// <summary>QA：记录 WPF-UI setter 的结果（成功/异常类型）。</summary>
+    public static void LogUiSetterResult(WindowBackdropType backdrop, Exception? ex)
+    {
+        Log(ex is null
+            ? $"WPF-UI setter OK: {backdrop}"
+            : $"WPF-UI setter EX: {backdrop} -> {ex.GetType().Name}: {ex.Message}");
     }
 
     /// <summary>设置项 → 窗口背景材质类型。</summary>

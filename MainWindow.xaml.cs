@@ -34,7 +34,38 @@ public partial class MainWindow : FluentWindow
         Activated += (_, _) => ThemeService.SetImmersiveDarkMode(
             this, ThemeService.IsDark);
 
-        // QA：--backdrop-test 启动 4 秒后依次切换 无/Mica/Acrylic 并记录 DWM 读回
+        // QA：--backdrop-ui-test 用 WPF-UI 的 setter 切材质（验证是否仍抛异常）
+        if (Environment.GetCommandLineArgs().Contains("--backdrop-ui-test"))
+        {
+            var t = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(3),
+            };
+            var seqUi = new[]
+            {
+                WindowBackdropType.Acrylic,
+                WindowBackdropType.Mica,
+                WindowBackdropType.Acrylic,
+            };
+            var k = 0;
+            t.Tick += (_, _) =>
+            {
+                if (k >= seqUi.Length) { t.Stop(); return; }
+                try
+                {
+                    WindowBackdropType = seqUi[k];
+                    ThemeService.LogUiSetterResult(seqUi[k], null);
+                }
+                catch (Exception ex)
+                {
+                    ThemeService.LogUiSetterResult(seqUi[k], ex);
+                }
+                k++;
+            };
+            t.Start();
+        }
+
+        // QA：--backdrop-test 走设置页路径，依次切换 无/Mica/Acrylic
         if (Environment.GetCommandLineArgs().Contains("--backdrop-test"))
         {
             var timer = new System.Windows.Threading.DispatcherTimer
