@@ -34,6 +34,30 @@ public partial class MainWindow : FluentWindow
         Activated += (_, _) => ThemeService.SetImmersiveDarkMode(
             this, ThemeService.IsDark);
 
+        // QA：--backdrop-test 启动 4 秒后依次切换 无/Mica/Acrylic 并记录 DWM 读回
+        if (Environment.GetCommandLineArgs().Contains("--backdrop-test"))
+        {
+            var timer = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(3),
+            };
+            // 走设置页的真实路径：写设置 → ThemeService.Apply()
+            var seq = new[] { "none", "mica", "acrylic" };
+            var idx = 0;
+            timer.Tick += (_, _) =>
+            {
+                if (idx >= seq.Length)
+                {
+                    timer.Stop();
+                    return;
+                }
+                OasSettings.BackdropMode = seq[idx];
+                ThemeService.Apply();
+                idx++;
+            };
+            timer.Start();
+        }
+
         // BGI 同款：页面服务 + TargetPageType，导航全部由 NavigationView
         // 内部接管（点击 → 内部 Navigate → 页面服务出实例）。
         RootNavigation.SetPageProviderService(new PageService());

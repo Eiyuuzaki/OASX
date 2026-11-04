@@ -84,22 +84,30 @@ public static class ThemeService
         IsDark = dark;
 
         var backdrop = ResolveBackdropType();
-        // 1) 先应用应用级主题（WPF-UI 内部会调整窗口 chrome）
-        ApplicationThemeManager.Apply(
-            dark ? ApplicationTheme.Dark : ApplicationTheme.Light, backdrop);
 
-        // 2) 再设置窗口级深色标志与材质：顺序颠倒会被 WPF-UI 的主题应用覆盖，
-        //    导致 Acrylic/Mica 仍按系统浅色上色（深浅乱串）。
+        // 1) 先把**窗口级**的深色标志与材质用 DWM 直接设好。
+        //    不能依赖下面的 ApplicationThemeManager.Apply——它内部会重建窗口
+        //    chrome，在本项目字典结构下可能抛 Freezable 异常；一旦抛出，
+        //    排在它后面的窗口设置就永远执行不到（表现为"切材质没反应"）。
         if (Application.Current?.MainWindow is FluentWindow fw)
         {
             SetImmersiveDarkMode(fw, dark);
-            if (fw.WindowBackdropType != backdrop)
-            {
-                fw.WindowBackdropType = backdrop;
-            }
+            ApplyBackdrop(fw, backdrop);
         }
 
+        // 2) 再切语义色字典（纯资源替换，不碰 chrome）
         ApplySemanticDictionary(dark);
+
+        // 3) 最后交给 WPF-UI 的应用级主题（失败只记日志，不影响上面的效果）
+        try
+        {
+            ApplicationThemeManager.Apply(
+                dark ? ApplicationTheme.Dark : ApplicationTheme.Light, backdrop);
+        }
+        catch (Exception ex)
+        {
+            Log("ApplicationThemeManager.Apply failed: " + ex.Message);
+        }
 
         _lastDark = dark;
         _lastBackdrop = backdrop;
@@ -192,6 +200,41 @@ public static class ThemeService
         }
     }
 
+    /// <summary>DWMWA_SYSTEMBACKDROP_TYPE：1=None 2=Mica 3=Acrylic 4=Tabbed。</summary>
+    private const int DwmBackdropAttr = 38;
+
+    /// <summary>直接通过 DWM 设置窗口材质。
+    /// **不走 WPF-UI 的 WindowBackdropType setter**——它内部会重建窗口 chrome，
+    /// 在本项目的资源字典结构下会抛 Freezable 上下文异常，
+    /// 表现为"设置页切了材质没反应"。</summary>
+    public static void ApplyBackdrop(Window window, WindowBackdropType backdrop)
+    {
+        var hwnd = new System.Windows.Interop.WindowInteropHelper(window).Handle;
+        if (hwnd == IntPtr.Zero)
+        {
+            Log("backdrop: hwnd=0（句柄未就绪）");
+            return;
+        }
+        var value = backdrop switch
+        {
+            WindowBackdropType.Mica => 2,
+            WindowBackdropType.Acrylic => 3,
+            WindowBackdropType.Tabbed => 4,
+            _ => 1,
+        };
+        var hr = DwmSetWindowAttribute(
+            hwnd, DwmBackdropAttr, ref value, sizeof(int));
+        // Mica 旧属性（Win10 21H2 / 早期 Win11）
+        if (backdrop == WindowBackdropType.Mica)
+        {
+            var on = 1;
+            DwmSetWindowAttribute(hwnd, 1029, ref on, sizeof(int));
+        }
+        var read = -1;
+        DwmGetWindowAttributeInt(hwnd, DwmBackdropAttr, ref read);
+        Log($"backdrop={backdrop} hr={hr} readback={read}");
+    }
+
     /// <summary>只处理窗口级主题（深色标志 + 材质），**不调用
     /// ApplicationThemeManager.Apply**：后者会重建窗口 chrome，
     /// 在句柄刚就绪时可能抛 Freezable 上下文异常并中断调用方（导航）。</summary>
@@ -213,10 +256,7 @@ public static class ThemeService
             IsDark = dark;
             var backdrop = ResolveBackdropType();
             SetImmersiveDarkMode(fw, dark);
-            if (fw.WindowBackdropType != backdrop)
-            {
-                fw.WindowBackdropType = backdrop;
-            }
+            ApplyBackdrop(fw, backdrop);
             _lastDark = dark;
             _lastBackdrop = backdrop;
             _themedWindow = new WeakReference<Window>(fw);
