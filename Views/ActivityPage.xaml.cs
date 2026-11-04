@@ -494,7 +494,7 @@ public partial class ActivityPage : UserControl
         {
             FosterCardIcon.Visibility = Visibility.Collapsed;
         }
-        FosterCardText.Text = cardName;
+        FosterCardText.Text = cardName.Replace("/", " · ");
         FosterCardBadge.Visibility = Visibility.Visible;
     }
 
