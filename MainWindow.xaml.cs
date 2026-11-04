@@ -492,6 +492,36 @@ public partial class MainWindow : FluentWindow
             AccountPopupPanel.Children.Add(btn);
         }
 
+        // 末尾：刷新账号列表（删掉数据后不必重启应用）
+        AccountPopupPanel.Children.Add(new System.Windows.Controls.Border
+        {
+            Height = 1,
+            Margin = new Thickness(4, 4, 4, 6),
+            Background = Application.Current.TryFindResource("OasBorderBrush")
+                         as System.Windows.Media.Brush
+                         ?? System.Windows.Media.Brushes.Gainsboro,
+        });
+        var refreshBtn = new Wpf.Ui.Controls.Button
+        {
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            HorizontalContentAlignment = HorizontalAlignment.Left,
+            Padding = new Thickness(10, 8, 10, 8),
+            Appearance = Wpf.Ui.Controls.ControlAppearance.Transparent,
+            Content = new System.Windows.Controls.TextBlock
+            {
+                Text = "刷新账号列表",
+                FontSize = 12,
+                Foreground = FindBrush("OasTextSecondaryBrush"),
+            },
+        };
+        refreshBtn.Click += async (_, _) =>
+        {
+            AccountPopup.IsOpen = false;
+            await GlobalAccountContext.Instance.LoadAccountsAsync();
+            LogNav("accounts reloaded from menu");
+        };
+        AccountPopupPanel.Children.Add(refreshBtn);
+
         // 后台刷新在线角色：本次先用缓存，下次打开菜单即可显示「在线」标注
         _ = RefreshLiveRoleAsync();
 
