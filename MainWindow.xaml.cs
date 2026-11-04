@@ -332,14 +332,24 @@ public partial class MainWindow : FluentWindow
     {
         var ctx = GlobalAccountContext.Instance;
         var options = ctx.BuildOptions();
+        LogNav($"account button clicked: options={options.Count} " +
+               $"loading={ctx.IsLoading} accounts={ctx.Accounts.Count}");
         if (options.Count == 0)
         {
+            // 没有账号时给出可见反馈，而不是静默无反应
+            AccountButtonText.Text = ctx.IsLoading ? "账号加载中…" : "未选择账号";
             return;
         }
         var menu = new System.Windows.Controls.ContextMenu
         {
             PlacementTarget = AccountButton,
             Placement = System.Windows.Controls.Primitives.PlacementMode.Top,
+            // 跟随主题，避免原生白底菜单与 Fluent 界面割裂
+            Background = Application.Current.TryFindResource("OasSurfaceBrush") as System.Windows.Media.Brush,
+            BorderBrush = Application.Current.TryFindResource("OasBorderBrush") as System.Windows.Media.Brush,
+            Foreground = Application.Current.TryFindResource("OasTextPrimaryBrush") as System.Windows.Media.Brush,
+            Padding = new Thickness(4),
+            HasDropShadow = true,
         };
         foreach (var opt in options)
         {
@@ -348,6 +358,7 @@ public partial class MainWindow : FluentWindow
                 Header = opt.Schedulers.Count > 1
                     ? $"{opt.Label}　（调度器：{opt.SchedulerText}）"
                     : opt.Label,
+                Padding = new Thickness(8, 6, 8, 6),
                 IsCheckable = true,
                 IsChecked = ctx.Current is { } cur
                             && cur.Config == opt.Entry.Config
@@ -366,7 +377,16 @@ public partial class MainWindow : FluentWindow
             };
             menu.Items.Add(item);
         }
-        menu.IsOpen = true;
+        // ⚠️ 不能在 Click 里直接 IsOpen=true：同一次左键抬起会被菜单当作
+        // "点击外部"而立刻关闭（表现为点了没反应）。延迟到输入队列之后再打开。
+        Dispatcher.BeginInvoke(
+            new Action(() =>
+            {
+                menu.IsOpen = true;
+                LogNav($"account menu opened: items={menu.Items.Count} " +
+                       $"placement={menu.Placement} isOpen={menu.IsOpen}");
+            }),
+            System.Windows.Threading.DispatcherPriority.Input);
     }
 
     private void WireNavigationParent()
