@@ -30,9 +30,18 @@ public static class ThemeService
         Apply(dark);
     }
 
-    /// <summary>应用指定深浅色（含语义色字典热切换与持久化触发方的偏好）。</summary>
+    /// <summary>应用指定深浅色（含语义色字典热切换与持久化触发方的偏好）。
+    /// **必须在 UI 线程执行**：SystemEvents 回调在后台线程，
+    /// 直接改 WPF 主题/字典会出现半更新（深浅色乱串的根因）。</summary>
     public static void Apply(bool dark)
     {
+        var app = Application.Current;
+        if (app is not null && !app.Dispatcher.CheckAccess())
+        {
+            app.Dispatcher.BeginInvoke(new Action(() => Apply(dark)));
+            return;
+        }
+
         IsDark = dark;
 
         var backdrop = ResolveBackdropType();
@@ -67,7 +76,13 @@ public static class ThemeService
         _watching = true;
         SystemEvents.UserPreferenceChanged += (_, args) =>
         {
-            if (args.Category != UserPreferenceCategory.General) return;
+            // 主题切换会同时触发 General 与 Color 两类通知，两个都接；
+            // 回调运行在后台线程 → Apply 内部会切回 UI 线程。
+            if (args.Category != UserPreferenceCategory.General &&
+                args.Category != UserPreferenceCategory.Color)
+            {
+                return;
+            }
             if (OasSettings.ThemeMode != "system") return;
             var dark = IsSystemDark();
             if (dark != IsDark)

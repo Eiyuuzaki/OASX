@@ -39,6 +39,11 @@ public partial class MainWindow : FluentWindow
             WireNavigationParent();
             InitAccountSwitcher();
 
+            // 窗口已创建：再应用一次主题——App.OnStartup 时 MainWindow 还不存在，
+            // 只有这里才能把窗口自身的主题/背景材质与语义色字典对齐
+            // （否则会出现部分区域仍是旧主题的"乱串"）。
+            ThemeService.Apply();
+
             // QA 钩子：--page=<仪表盘|工作台|统计|资产|绘卷|日志|设置|关于>
             // 启动直达指定页（自动化验收用，不影响正常启动）
             var pageArg = Environment.GetCommandLineArgs()

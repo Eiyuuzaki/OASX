@@ -15,4 +15,8 @@
     <SolidColorBrush x:Key="OasSuccessBrush" Color="#4CC38A" />
     <SolidColorBrush x:Key="OasWarningBrush" Color="#E5A84B" />
     <SolidColorBrush x:Key="OasDangerBrush" Color="#F07178" />
+    <!-- 窗口 chrome（标题栏/侧栏）主题底色：半透明，保留 Mica/Acrylic 透出，
+         同时避免壁纸颜色把 chrome 染成与内容相反的方向（深浅乱串） -->
+    <SolidColorBrush x:Key="OasChromeBrush" Color="#D91C1C1C" />
+
 </ResourceDictionary>
