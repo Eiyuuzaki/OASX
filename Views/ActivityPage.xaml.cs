@@ -104,22 +104,21 @@ public partial class ActivityPage : UserControl
     private bool _lastHasTasks;
     private readonly List<WeeklyItemVm> _weekly = [];
 
-    /// <summary>社区整理版周常清单（网易大神/NGA/知乎 多来源一致条目）。</summary>
+    /// <summary>周常清单（按用户意见精简）。
+    /// 可自动判定的三项（寮三十/狩猎战/逢魔）由每日任务与活动时段反推；
+    /// 御魂次数客户端无计数（只有体力/层数进度），保持手动。</summary>
     private static readonly (int Id, string Label, string Note)[] WeeklySeed =
     [
         (1, "花合战 100 活跃度", "周活跃度奖励"),
         (2, "每周秘闻副本", "通关；首次分享 +20 勾"),
-        (3, "斗技 / 协同斗技", "周结算 60-700 勾 / 60-300 勾"),
+        (3, "斗技", "周结算按段位给勾（上周段位见下）"),
         (4, "地域鬼王", "每日 20-60 勾；周首次分享 +20 勾"),
-        (5, "寮三十（寮集体任务）", "每日任务里有计数，可对照"),
+        (5, "寮三十（寮集体任务）", "自动：取每日任务「集体任务」进度"),
         (6, "寮资金 / 寮包领取", "寮界面领取"),
-        (7, "狩猎战 / 阴界之门", "按周/日时段开放"),
-        (8, "逢魔之时", "每日 19:00-21:00"),
-        (9, "御魂副本清次数", "周次数与体力规划"),
-        (10, "结界突破 / 寄养结界卡", "结界卡产出资源"),
-        (11, "道馆", "每日开放时段"),
-        (12, "大神 App 签到（周满勤）", "满勤给黑蛋碎片"),
-        (13, "功勋商店周礼包", "30 功勋 7 个/周；蓝票 120 功勋 1 张/周"),
+        (7, "狩猎战 / 阴界之门", "自动：取每日任务「狩猎战/阴界之门」"),
+        (8, "逢魔之时", "自动：看活动时段是否在开放中"),
+        (9, "御魂副本", "客户端无次数计数，手动记录"),
+        (10, "功勋商店周礼包", "30 功勋 7 个/周；蓝票 120 功勋 1 张/周"),
     ];
 
     public ActivityPage()
@@ -203,6 +202,17 @@ public partial class ActivityPage : UserControl
                             done.Add(id);
                         }
                     }
+                    if (root.TryGetProperty("manual", out var mm) &&
+                        mm.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (var item in mm.EnumerateArray())
+                        {
+                            if (item.TryGetInt32(out var mid))
+                            {
+                                _manualIds.Add(mid);
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -221,13 +231,27 @@ public partial class ActivityPage : UserControl
                 Note = note,
                 Done = done.Contains(id),
             };
-            vm.DoneChanged += SaveWeekly;
+            var id2 = id;
+            vm.DoneChanged += () =>
+            {
+                if (!_applyingSignals)
+                {
+                    _manualIds.Add(id2);
+                }
+                SaveWeekly();
+            };
             _weekly.Add(vm);
         }
         WeeklyList.ItemsSource = null;
         WeeklyList.ItemsSource = _weekly;
         UpdateWeeklySummary();
     }
+
+    /// <summary>用户手动勾/取消过的条目（自动判定不再覆盖）。</summary>
+    private readonly HashSet<int> _manualIds = [];
+
+    /// <summary>正在应用自动判定（此时不算用户手动操作）。</summary>
+    private bool _applyingSignals;
 
     private void SaveWeekly()
     {
@@ -237,6 +261,7 @@ public partial class ActivityPage : UserControl
             {
                 week = CurrentWeekKey(),
                 done = _weekly.Where(x => x.Done).Select(x => x.Id).ToArray(),
+                manual = _manualIds.ToArray(),
             }));
         }
         catch
@@ -246,14 +271,16 @@ public partial class ActivityPage : UserControl
         UpdateWeeklySummary();
     }
 
-    /// <summary>把客户端数据反推成周常依据（不自动勾选，只给出判断依据）。</summary>
-    private void ApplyWeeklySignals(OasActivityApi.WeeklySignals? sig)
+    /// <summary>把客户端数据反推成周常依据；可自动判定的三项直接打勾
+    /// （用户手动取消过的条目不再自动改，记录在 settings.manual 里）。</summary>
+    private void ApplyWeeklySignals(OasActivityApi.WeeklySignals? sig,
+        OasActivityApi.ActivityBoard? board)
     {
         foreach (var item in _weekly)
         {
             item.SignalText = "";
         }
-        if (sig is null)
+        if (sig is null && board is null)
         {
             return;
         }
@@ -261,26 +288,73 @@ public partial class ActivityPage : UserControl
         void Set(int id, string text)
         {
             var item = _weekly.FirstOrDefault(x => x.Id == id);
-            if (item is not null)
+            if (item is not null && !string.IsNullOrEmpty(text))
             {
                 item.SignalText = text;
             }
         }
 
-        // 花合战：各活动等级
-        if (sig.BattlepassLv is { Count: > 0 })
+        // 自动判定：从每日任务里找对应项
+        var daily = board?.Daily ?? [];
+        (bool Done, string Text) FromDaily(string keyword)
         {
-            var maxLv = sig.BattlepassLv.Values.Max();
-            Set(1, $"花合战等级 {maxLv}");
+            var hit = daily.FirstOrDefault(t =>
+                t.Name.Contains(keyword, StringComparison.Ordinal));
+            return hit is null
+                ? (false, "")
+                : (hit.Done, $"{hit.Name} {hit.ProgressText}");
         }
-        // 斗技 / 协同
-        Set(3, $"斗技 {sig.PvpScore} 分（上周段位 {sig.LastWeekPvpStage}）" +
-               $"　协同 {sig.CoopPlayTimes}/{sig.CoopJoinTimes} 次");
-        // 地域鬼王（无独立字段，用每日任务信号提示见下）
-        // 结界卡
-        Set(10, $"持有结界卡 {sig.JiejieCards}");
-        // 道馆
-        Set(11, $"道馆 胜 {sig.DojoWin} · 负 {sig.DojoLose}（积分 {sig.DojoScore}）");
+
+        // 花合战
+        if (sig?.BattlepassLv is { Count: > 0 })
+        {
+            Set(1, $"花合战等级 {sig.BattlepassLv.Values.Max()}");
+        }
+        // 斗技
+        if (sig is not null)
+        {
+            Set(3, $"积分 {sig.PvpScore}　上周段位 {sig.LastWeekPvpStage}");
+        }
+        // 寮三十（每日任务「集体任务」）
+        var guild = FromDaily("集体任务");
+        Set(5, guild.Text);
+        // 狩猎战 / 阴界之门
+        var hunt = FromDaily("狩猎战");
+        Set(7, hunt.Text);
+        // 御魂：用每日任务里「探索/御魂/觉醒」那条作参考
+        var yuhun = FromDaily("御魂");
+        Set(9, yuhun.Text);
+
+        // 逢魔之时：看活动时段是否在开放中
+        var now = DateTime.Now;
+        var peak = (board?.LiveWindows ?? [])
+            .FirstOrDefault(w => w.Key.Contains("dojo_peak_of_monsters",
+                StringComparison.Ordinal));
+        var peakLive = peak is not null;
+        Set(8, peakLive ? $"开放中，至 {peak!.EndText}" : "当前不在开放时段");
+
+        // 自动勾选：寮三十 / 狩猎战 / 逢魔（用户手动取消过的不覆盖）
+        AutoSet(5, guild.Done);
+        AutoSet(7, hunt.Done);
+        AutoSet(8, peakLive);
+
+        void AutoSet(int id, bool done)
+        {
+            var item = _weekly.FirstOrDefault(x => x.Id == id);
+            if (item is null || !done || _manualIds.Contains(id) || item.Done)
+            {
+                return;
+            }
+            _applyingSignals = true;
+            try
+            {
+                item.Done = true;
+            }
+            finally
+            {
+                _applyingSignals = false;
+            }
+        }
     }
 
     private void UpdateWeeklySummary()
@@ -391,7 +465,7 @@ public partial class ActivityPage : UserControl
                 .ToList();
 
             // 阴阳寮
-            ApplyWeeklySignals(board.WeeklySignals);
+            ApplyWeeklySignals(board.WeeklySignals, board);
 
             var g = board.Guild;
             GuildText.Text = g is null || string.IsNullOrEmpty(g.Name)
