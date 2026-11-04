@@ -61,8 +61,13 @@ public partial class DashboardPage : UserControl
         Loaded += (_, _) =>
         {
             _ = RefreshAllAsync();
-            _timer.Tick += async (_, _) => await RefreshEnvironmentAsync();
+            _timer.Tick += async (_, _) =>
+            {
+                await RefreshEnvironmentAsync();
+                await LoadFosterDashAsync();
+            };
             _timer.Start();
+            _ = LoadFosterDashAsync();
         };
         Unloaded += Page_Unloaded;
     }
@@ -122,6 +127,64 @@ public partial class DashboardPage : UserControl
     private async void OnAccountsReady()
     {
         await RefreshAllAsync();
+    }
+
+    // ==================== 结界寄养（Dashboard 精简卡） ====================
+
+    private async Task LoadFosterDashAsync()
+    {
+        try
+        {
+            var state = await OasNotifyApi.GetFosterAsync();
+            if (state is null || !state.Success)
+            {
+                FosterDashText.Text = "需要游戏运行";
+                FosterDashCountdown.Text = "";
+                FosterDashEnd.Text = "";
+                return;
+            }
+            var foster = state.Foster;
+            if (foster is null || foster.Active == false || foster.Remaining is null)
+            {
+                FosterDashText.Text = "当前未寄养";
+                FosterDashCountdown.Text = "";
+                FosterDashEnd.Text = "";
+                return;
+            }
+            var remain = foster.Remaining ?? 0;
+            var cardName = foster.CardName ?? "";
+            if (remain <= 0)
+            {
+                FosterDashText.Text = $"{cardName} 已成熟";
+                FosterDashCountdown.Text = "去收取";
+                FosterDashEnd.Text = "";
+                return;
+            }
+            var ts = TimeSpan.FromSeconds(remain);
+            FosterDashText.Text = cardName.Replace("/", " · ");
+            var iconKey = cardName.Contains("斗鱼") ? "realm_douyu"
+                : cardName.Contains("太鼓") ? "realm_taiko"
+                : cardName.Contains("太阴") ? "realm_taiyin"
+                : cardName.Contains("伞室内") ? "realm_sanshinei"
+                : "";
+            if (iconKey.Length > 0)
+            {
+                FosterDashIcon.Source = new System.Windows.Media.Imaging.BitmapImage(
+                    new Uri($"pack://application:,,,/Assets/Icons/{iconKey}.png"));
+            }
+            FosterDashCountdown.Text = $"{ts.Hours}小时{ts.Minutes:00}分";
+            FosterDashEnd.Text = $"{foster.EndText} 收取";
+        }
+        catch
+        {
+            // 游戏未运行等情况静默
+        }
+    }
+
+    /// <summary>点击寄养卡 → 跳转活动页。</summary>
+    private void FosterDash_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        ((MainWindow)Window.GetWindow(this)).RootNav.Navigate(typeof(ActivityPage));
     }
 
     private async Task RefreshAllAsync()
