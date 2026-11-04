@@ -59,19 +59,33 @@ public sealed class GlobalAccountContext
         var configs = await OasApi.GetConfigListAsync();
         var all = new List<AccountEntry>();
         var errors = new List<string>();
-        foreach (var config in configs)
+
+        // 并发拉取各配置的角色：串行时 4 个配置要 20~30 秒，
+        // 期间界面只能显示"账号加载中"，体验很差。
+        var results = await Task.WhenAll(configs.Select(async config =>
         {
             try
             {
                 var roles = await OasResourceApi.GetRolesAsync(config);
-                all.AddRange(roles.Select(r => new AccountEntry(
-                    config, r.RoleKey, r.Name, r.Level,
-                    r.ServerName, r.ShortId, r.Dates ?? [])));
+                return (Config: config, Roles: roles, Error: (string?)null);
             }
             catch (Exception ex)
             {
-                errors.Add($"{config}: {ex.Message}");
+                return (Config: config,
+                        Roles: (IReadOnlyList<OasResourceApi.RoleInfo>)[],
+                        Error: (string?)$"{config}: {ex.Message}");
             }
+        }));
+        foreach (var r in results)
+        {
+            if (r.Error is not null)
+            {
+                errors.Add(r.Error);
+                continue;
+            }
+            all.AddRange(r.Roles.Select(x => new AccountEntry(
+                r.Config, x.RoleKey, x.Name, x.Level,
+                x.ServerName, x.ShortId, x.Dates ?? [])));
         }
         _accounts = all;
         IsLoading = false;
@@ -120,12 +134,38 @@ public sealed class GlobalAccountContext
     }
 
     /// <summary>切换当前账号（同账号不重复触发事件）。</summary>
+    /// <summary>账号选择项（同名账号带调度器消歧）。
+    /// 标题栏与资产页共用同一份构造逻辑，避免两处标签不一致。</summary>
+    public sealed class AccountOption
+    {
+        public required AccountEntry Entry { get; init; }
+        public required string Label { get; init; }
+    }
+
+    /// <summary>构造下拉选项：同名账号追加 (调度器) 消歧。</summary>
+    public IReadOnlyList<AccountOption> BuildOptions()
+    {
+        var dupNames = _accounts
+            .GroupBy(a => a.DisplayName)
+            .Where(g => g.Count() > 1)
+            .Select(g => g.Key)
+            .ToHashSet();
+        return _accounts.Select(a => new AccountOption
+        {
+            Entry = a,
+            Label = dupNames.Contains(a.DisplayName)
+                ? $"{a.DisplayName}（{a.Config}）"
+                : a.DisplayName,
+        }).ToList();
+    }
+
     public void SetCurrent(AccountEntry? entry)
     {
         if (ReferenceEquals(Current, entry)) return;
         Current = entry;
         OasSettings.Set(CurrentAccountKey,
             entry is null ? "" : $"{entry.Config}|{entry.RoleKey}");
+        Diag($"SetCurrent -> {(entry is null ? "null" : entry.Config + "|" + entry.RoleKey)}");
         if (entry is not null)
         {
             try

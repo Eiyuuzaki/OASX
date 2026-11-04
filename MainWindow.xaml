@@ -50,6 +50,29 @@
                 <ui:NavigationViewItem Content="日志" TargetPageType="{x:Type views:LogPage}"
                                        Icon="{ui:SymbolIcon SlideText24}" />
             </ui:NavigationView.MenuItems>
+            <!-- 侧栏底部账号块：头像 + 名称，点击弹出账号列表 -->
+            <ui:NavigationView.PaneFooter>
+                <ui:Button x:Name="AccountButton" HorizontalAlignment="Stretch"
+                           Margin="4,4,4,6" Padding="8,6"
+                           Click="AccountButton_Click"
+                           ToolTip="切换账号（仪表盘/资产/统计/绘卷 全局生效）">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:SymbolIcon Grid.Column="0" Symbol="PersonAccounts24"
+                                       FontSize="17" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1" x:Name="AccountButtonText"
+                                   Text="未选择账号" FontSize="13" Margin="8,0,4,0"
+                                   VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" />
+                        <ui:SymbolIcon Grid.Column="2" Symbol="ChevronUp24"
+                                       FontSize="12" VerticalAlignment="Center" />
+                    </Grid>
+                </ui:Button>
+            </ui:NavigationView.PaneFooter>
             <ui:NavigationView.FooterMenuItems>
                 <ui:NavigationViewItem Content="设置" TargetPageType="{x:Type views:SettingsPage}"
                                        Icon="{ui:SymbolIcon Settings24}" />

@@ -107,19 +107,8 @@ public partial class ResourcePage : UserControl
             StatusText.Text = $"部分调度器账号读取失败：{ctx.Error}";
         }
 
-        // 同名账号可能出现在多个调度器下（多对多）——显示名带调度器消歧
-        var dupNames = ctx.Accounts
-            .GroupBy(a => a.DisplayName)
-            .Where(g => g.Count() > 1)
-            .Select(g => g.Key)
-            .ToHashSet();
-        AccountSelector.ItemsSource = ctx.Accounts.Select(a => new
-        {
-            Entry = a,
-            Label = dupNames.Contains(a.DisplayName)
-                ? $"{a.DisplayName}（{a.Config}）"
-                : a.DisplayName,
-        }).ToList();
+        // 选项构造与标题栏共用（GlobalAccountContext.BuildOptions），标签保持一致
+        AccountSelector.ItemsSource = ctx.BuildOptions();
         AccountSelector.DisplayMemberPath = "Label";
         _suppressAccountEvent = true;
         // 优先选中持久化的当前账号，其次首个
@@ -128,6 +117,10 @@ public partial class ResourcePage : UserControl
         AccountSelector.SelectedIndex = ctx.Accounts.Count == 0
             ? -1 : (idx >= 0 ? idx : 0);
         _suppressAccountEvent = false;
+
+        // 标题栏切账号 → 本页跟随
+        GlobalAccountContext.Instance.CurrentChanged -= OnGlobalAccountChanged;
+        GlobalAccountContext.Instance.CurrentChanged += OnGlobalAccountChanged;
 
         if (AccountSelector.SelectedItem is not null)
         {
@@ -144,6 +137,18 @@ public partial class ResourcePage : UserControl
         SelectionChangedEventArgs e)
     {
         if (_suppressAccountEvent) return;
+        await AccountSelectedAsync();
+    }
+
+    /// <summary>标题栏切了账号 → 同步本页下拉并重载（不二次写回上下文）。</summary>
+    private async void OnGlobalAccountChanged(AccountEntry? entry)
+    {
+        if (entry is null) return;
+        _suppressAccountEvent = true;
+        var options = AccountSelector.ItemsSource as IEnumerable<GlobalAccountContext.AccountOption>;
+        AccountSelector.SelectedItem = options?.FirstOrDefault(
+            o => o.Entry.Config == entry.Config && o.Entry.RoleKey == entry.RoleKey);
+        _suppressAccountEvent = false;
         await AccountSelectedAsync();
     }
 

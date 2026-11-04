@@ -3,6 +3,7 @@ using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Windows;
+using System.Windows.Controls;
 using OASX.Services;
 using OASX.Views;
 using Wpf.Ui.Controls;
@@ -36,6 +37,7 @@ public partial class MainWindow : FluentWindow
         Loaded += (_, _) =>
         {
             WireNavigationParent();
+            InitAccountSwitcher();
 
             // QA 钩子：--page=<仪表盘|工作台|统计|资产|绘卷|日志|设置|关于>
             // 启动直达指定页（自动化验收用，不影响正常启动）
@@ -205,6 +207,79 @@ public partial class MainWindow : FluentWindow
     /// 这里用反射取 internal 的 NavigationParentProperty，手动补挂到
     /// 每个条目上。（BGI 能工作是因为它的 DI/行为链间接触发了别的路径。）
     /// </summary>
+    // ==================== 全局账号切换（侧栏底部） ====================
+
+    private bool _suppressAccountSwitch;
+
+    /// <summary>账号块：订阅上下文，按钮文案与弹出列表随全局状态同步。</summary>
+    private void InitAccountSwitcher()
+    {
+        var ctx = GlobalAccountContext.Instance;
+        ctx.AccountsLoaded += RefreshAccountSwitcher;
+        ctx.CurrentChanged += _ => RefreshAccountSwitcher();
+        RefreshAccountSwitcher();
+    }
+
+    private void RefreshAccountSwitcher()
+    {
+        var ctx = GlobalAccountContext.Instance;
+        var cur = ctx.Current;
+        AccountButtonText.Text = cur?.DisplayName
+            ?? (ctx.IsLoading ? "账号加载中…" : "未选择账号");
+        try
+        {
+            System.IO.File.AppendAllText(
+                System.IO.Path.Combine(AppContext.BaseDirectory, "account_restore.log"),
+                $"{DateTime.Now:HH:mm:ss} switcher label='{AccountButtonText.Text}' " +
+                $"current={(cur is null ? "null" : cur.Config + "/" + cur.DisplayName)} " +
+                $"accounts={ctx.Accounts.Count}\n");
+        }
+        catch
+        {
+            // 日志失败不影响功能
+        }
+    }
+
+    /// <summary>点击账号块 → 弹出账号列表（WPF 原生 ContextMenu）。</summary>
+    private void AccountButton_Click(object sender, RoutedEventArgs e)
+    {
+        var ctx = GlobalAccountContext.Instance;
+        var options = ctx.BuildOptions();
+        if (options.Count == 0)
+        {
+            return;
+        }
+        var menu = new System.Windows.Controls.ContextMenu
+        {
+            PlacementTarget = AccountButton,
+            Placement = System.Windows.Controls.Primitives.PlacementMode.Top,
+        };
+        foreach (var opt in options)
+        {
+            var item = new System.Windows.Controls.MenuItem
+            {
+                Header = opt.Label,
+                IsCheckable = true,
+                IsChecked = ctx.Current is { } cur
+                            && cur.Config == opt.Entry.Config
+                            && cur.RoleKey == opt.Entry.RoleKey,
+                Tag = opt,
+            };
+            item.Click += (obj, _) =>
+            {
+                if (obj is System.Windows.Controls.MenuItem
+                    {
+                        Tag: GlobalAccountContext.AccountOption o
+                    })
+                {
+                    GlobalAccountContext.Instance.SetCurrent(o.Entry);
+                }
+            };
+            menu.Items.Add(item);
+        }
+        menu.IsOpen = true;
+    }
+
     private void WireNavigationParent()
     {
         var dpField = typeof(NavigationView).GetField(
