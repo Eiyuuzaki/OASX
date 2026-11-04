@@ -12,11 +12,17 @@ public static class OasNotifyApi
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
     };
 
+    public record FosterSlot(
+        bool? Active, long? T, string? StartText, string? EndText,
+        int? Hours, string? CardItem, string? CardName,
+        int? Remaining, bool? Empty, string? Error);
+
     public record FosterState(
-        bool Success, string ConfigName, long RewardT,
-        string RewardTimeText, string HarvestTimeText,
-        int RemainingSeconds, int CycleHours, bool NotifyEnabled,
-        string? CardType, string? Error);
+        bool Success, string ConfigName,
+        FosterSlot? Foster, FosterSlot? Own,
+        Dictionary<string, string>? CardNames,
+        bool NotifyEnabled, string? CardType,
+        string? CardTypeSource, string? Error);
 
     public record ProviderParam(string Name);
 

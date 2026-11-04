@@ -367,7 +367,7 @@ public partial class ActivityPage : UserControl
 
     // ==================== 结界寄养 ====================
 
-    /// <summary>读寄养倒计时（reward_t + 周期），到点显示收取提示。</summary>
+    /// <summary>读寄养/自结界卡双槽位（数据来自游戏内嵌解释器）。</summary>
     private async Task LoadFosterAsync()
     {
         try
@@ -377,47 +377,79 @@ public partial class ActivityPage : UserControl
             {
                 FosterText.Text = state?.Error ?? "读取失败";
                 FosterSubText.Text = "需要游戏运行且已进主界面";
+                FosterCardBadge.Visibility = Visibility.Collapsed;
                 return;
             }
-            var remain = state.RemainingSeconds;
-            if (remain <= 0)
+
+            // 寄养槽（寮结界，固定周期——周期来自游戏常量表）
+            var foster = state.Foster;
+            if (foster is null || foster.Active == false)
+            {
+                FosterText.Text = "寄养槽：当前未放置";
+                FosterSubText.Text = "游戏内寄养后这里会显示倒计时";
+                FosterCardBadge.Visibility = Visibility.Collapsed;
+            }
+            else if ((foster.Remaining ?? 0) <= 0)
             {
                 FosterText.Text = "✅ 寄养已成熟，快去收取！";
                 FosterText.Foreground = Brush("OasSuccessBrush",
                     System.Windows.Media.Color.FromRgb(0x16, 0xA3, 0x4A));
-                FosterSubText.Text = $"成熟时刻 {state.HarvestTimeText}" +
-                                     (state.NotifyEnabled ? " · 已推送通知" : "");
-                return;
-            }
-            FosterText.Foreground = Brush("OasTextPrimaryBrush",
-                System.Windows.Media.Color.FromRgb(0x1F, 0x1F, 0x1F));
-            var ts = TimeSpan.FromSeconds(remain);
-            FosterText.Text = $"⏳ 距离成熟还有 {ts.Hours}小时{ts.Minutes}分" +
-                              $"（{state.HarvestTimeText} 收取）";
-            FosterSubText.Text = $"上次寄养 {state.RewardTimeText} · 寄养周期固定 6 小时" +
-                                 (state.NotifyEnabled
-                                     ? " · 到点将推送通知"
-                                     : " · 通知未启用（设置页可开启）");
-            // 卡类型徽标：OAS 寄养只吃斗鱼/太鼓，显示当前配置的卡
-            var card = state.CardType ?? "";
-            if (card.Length > 0)
-            {
-                FosterCardText.Text = card == "斗鱼" ? "🐟 斗鱼" : "🥁 太鼓";
-                FosterCardBadge.Background = new System.Windows.Media.SolidColorBrush(
-                    card == "斗鱼"
-                        ? System.Windows.Media.Color.FromArgb(0x2E, 0x00, 0x7A, 0xCC)
-                        : System.Windows.Media.Color.FromArgb(0x2E, 0xC5, 0x4C, 0x1E));
-                FosterCardBadge.Visibility = Visibility.Visible;
+                FosterSubText.Text = $"成熟时刻 {foster.EndText}";
+                ShowCardBadge(foster.CardName);
             }
             else
             {
-                FosterCardBadge.Visibility = Visibility.Collapsed;
+                FosterText.Foreground = Brush("OasTextPrimaryBrush",
+                    System.Windows.Media.Color.FromRgb(0x1F, 0x1F, 0x1F));
+                var ts = TimeSpan.FromSeconds(foster.Remaining ?? 0);
+                FosterText.Text = $"⏳ 寄养距离成熟还有 {ts.Hours}小时{ts.Minutes}分" +
+                                  $"（{foster.EndText} 收取）";
+                FosterSubText.Text = $"开始 {foster.StartText} · 周期 {foster.Hours} 小时" +
+                                     (state.NotifyEnabled
+                                         ? " · 到点将推送通知"
+                                         : " · 通知未启用（设置页可开启）");
+                ShowCardBadge(foster.CardName);
+            }
+
+            // 自结界卡槽（每张卡时长不同）
+            var own = state.Own;
+            if (own is not null && (own.Error is not null || own.Empty == true))
+            {
+                FosterOwnText.Text = own.Error is not null
+                    ? $"自结界卡：读取失败（{own.Error}）"
+                    : "自结界卡槽：当前无卡";
+            }
+            else if (own is not null && own.Active != false)
+            {
+                var ts2 = TimeSpan.FromSeconds(own.Remaining ?? 0);
+                FosterOwnText.Text = $"自结界卡：{own.CardName ?? own.CardItem} " +
+                                     $"⏳ {ts2.Hours}小时{ts2.Minutes}分（{own.EndText} 收取）";
             }
         }
         catch (Exception ex)
         {
             FosterText.Text = $"读取失败：{ex.Message}";
         }
+    }
+
+    /// <summary>卡类型徽标：直接来自游戏内 card_item 映射（真实寄养的卡）。</summary>
+    private void ShowCardBadge(string? cardName)
+    {
+        if (string.IsNullOrEmpty(cardName))
+        {
+            FosterCardBadge.Visibility = Visibility.Collapsed;
+            return;
+        }
+        FosterCardText.Text = cardName.Contains("斗鱼") ? "🐟 " + cardName
+            : cardName.Contains("太鼓") ? "🥁 " + cardName
+            : cardName;
+        FosterCardBadge.Background = new System.Windows.Media.SolidColorBrush(
+            cardName.Contains("斗鱼")
+                ? System.Windows.Media.Color.FromArgb(0x2E, 0x00, 0x7A, 0xCC)
+                : cardName.Contains("太鼓")
+                    ? System.Windows.Media.Color.FromArgb(0x2E, 0xC5, 0x4C, 0x1E)
+                    : System.Windows.Media.Color.FromArgb(0x2E, 0x6B, 0x21, 0xA8));
+        FosterCardBadge.Visibility = Visibility.Visible;
     }
 
     private async Task LoadAsync(bool force = false)

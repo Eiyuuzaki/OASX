@@ -198,6 +198,9 @@
                     </Grid>
                     <TextBlock x:Name="FosterSubText" Text="" FontSize="11" Margin="0,4,0,0"
                                Foreground="{DynamicResource OasTextTertiaryBrush}" />
+                    <TextBlock x:Name="FosterOwnText" Text="" FontSize="12" Margin="0,6,0,0"
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource OasTextSecondaryBrush}" />
                 </StackPanel>
             </Border>
 
