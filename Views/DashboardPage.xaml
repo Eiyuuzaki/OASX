@@ -54,7 +54,7 @@
                             BorderBrush="{DynamicResource OasBorderBrush}" BorderThickness="1">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="绘卷" FontSize="11" VerticalAlignment="Center"
+                                <TextBlock Text="总分" FontSize="11" VerticalAlignment="Center"
                                            Foreground="{DynamicResource OasTextSecondaryBrush}" />
                                 <TextBlock x:Name="ScrollTotalText" Text="—" FontSize="20"
                                            FontWeight="SemiBold" VerticalAlignment="Center"
@@ -68,12 +68,21 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <StackPanel Orientation="Horizontal" Margin="0,1">
-                                            <TextBlock Text="{Binding Label}" FontSize="11" MinWidth="60"
-                                                       Foreground="{DynamicResource OasTextSecondaryBrush}" />
+                                            <!-- 图标代替文字（小/中/大），无图标回退短文本 -->
+                                            <Image Width="22" Height="22" Margin="0,0,6,0"
+                                                   Stretch="Uniform" VerticalAlignment="Center"
+                                                   Source="{Binding IconImage}"
+                                                   Visibility="{Binding IconVisibility}" />
+                                            <TextBlock Text="{Binding Label}" FontSize="11" MinWidth="44"
+                                                       VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource OasTextSecondaryBrush}"
+                                                       Visibility="{Binding LabelVisibility}" />
                                             <TextBlock Text="{Binding CountText}" FontSize="12"
                                                        FontWeight="SemiBold" MinWidth="44"
+                                                       VerticalAlignment="Center"
                                                        Foreground="{DynamicResource OasTextPrimaryBrush}" />
                                             <TextBlock Text="{Binding DeltaText}" FontSize="11"
+                                                       VerticalAlignment="Center"
                                                        Foreground="{Binding DeltaBrush}" />
                                         </StackPanel>
                                     </DataTemplate>

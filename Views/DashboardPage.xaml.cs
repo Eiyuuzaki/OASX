@@ -107,10 +107,13 @@ public partial class DashboardPage : UserControl
         await RefreshTodayStatsAsync(entry.Config);
     }
 
-    /// <summary>绘卷分项行（小/中/大 或 积分）。</summary>
+    /// <summary>绘卷分项行：图标优先（小/中/大有本地图标），无图标回退短文本。</summary>
     public sealed class ScrollPartVm
     {
+        public ImageSource? IconImage { get; init; }
+        public Visibility IconVisibility { get; init; } = Visibility.Collapsed;
         public string Label { get; init; } = "";
+        public Visibility LabelVisibility { get; init; } = Visibility.Visible;
         public string CountText { get; init; } = "";
         public string DeltaText { get; init; } = "";
         public Brush DeltaBrush { get; init; } = Brushes.Transparent;
@@ -148,24 +151,37 @@ public partial class DashboardPage : UserControl
 
             // 分项行：按名称聚合（绘卷碎片·小/中/大 或 绘卷积分），
             // 短标签取 · 后缀（无 · 用原名），每行 数量 + 今日增量
-            ScrollParts.ItemsSource = scrollItems
+            var groups = scrollItems
                 .GroupBy(i => i.Name)
-                .Select(g =>
+                .Select(g => new
                 {
-                    var count = g.Sum(x => x.Count);
-                    var d = g.Sum(x => x.Delta ?? 0);
-                    return new ScrollPartVm
-                    {
-                        Label = ShortLabel(g.Key),
-                        CountText = FormatCount(count),
-                        DeltaText = d == 0 ? "" : FormatDelta(d),
-                        DeltaBrush = new SolidColorBrush(d >= 0
-                            ? Color.FromRgb(0x16, 0xA3, 0x4A)
-                            : Color.FromRgb(0xDC, 0x45, 0x45)),
-                    };
+                    Name = g.Key,
+                    Icon = LoadIcon(g.First().Icon),
+                    Count = g.Sum(x => x.Count),
+                    Delta = g.Sum(x => x.Delta ?? 0),
                 })
-                .OrderByDescending(x => x.CountText)
+                .OrderByDescending(x => x.Count)
                 .ToList();
+
+            ScrollParts.ItemsSource = groups.Select(g =>
+            {
+                var hasIcon = g.Icon is not null;
+                return new ScrollPartVm
+                {
+                    IconImage = g.Icon,
+                    IconVisibility = hasIcon ? Visibility.Visible : Visibility.Collapsed,
+                    Label = ShortLabel(g.Name),
+                    LabelVisibility = hasIcon ? Visibility.Collapsed : Visibility.Visible,
+                    CountText = FormatCount(g.Count),
+                    DeltaText = g.Delta == 0 ? "" : FormatDelta(g.Delta),
+                    DeltaBrush = new SolidColorBrush(g.Delta >= 0
+                        ? Color.FromRgb(0x16, 0xA3, 0x4A)
+                        : Color.FromRgb(0xDC, 0x45, 0x45)),
+                };
+            }).ToList();
+
+            // 仅一个分项时总分与分项重复——隐藏分项区
+            ScrollParts.Visibility = groups.Count >= 2 ? Visibility.Visible : Visibility.Collapsed;
             ScrollBadge.Visibility = Visibility.Visible;
         }
         catch
