@@ -69,6 +69,12 @@ public partial class DashboardPage : UserControl
             await ctx.LoadAccountsAsync();
         }
 
+        // demo 模式：假数据渲染不依赖账号状态
+        if (demoMode)
+        {
+            RenderScrollDemo();
+        }
+
         var entry = ctx.Current;
         if (entry is null)
         {
@@ -125,10 +131,9 @@ public partial class DashboardPage : UserControl
     /// 非活动期（最新采样非今日 / 无绘卷项）自动隐藏。</summary>
     private async Task LoadScrollBadgeAsync(AccountEntry entry)
     {
-        const bool demoMode = true;   // TODO: 假数据预览开关，验收后删除
         try
         {
-            if (demoMode)
+            if (ScrollBadgeDemo)
             {
                 RenderScrollDemo();
                 return;
