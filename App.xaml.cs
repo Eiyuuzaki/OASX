@@ -32,6 +32,38 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        // 兜底：UI 线程以外的未处理异常（DispatcherUnhandledException 抓不到）
+        // 也落盘，否则进程静默退出时完全没有线索
+        AppDomain.CurrentDomain.UnhandledException += (_, args) =>
+        {
+            try
+            {
+                var ex = args.ExceptionObject as Exception;
+                System.IO.File.AppendAllText(
+                    System.IO.Path.Combine(AppContext.BaseDirectory, "crash.log"),
+                    $"=== {DateTime.Now:yyyy-MM-dd HH:mm:ss} AppDomain " +
+                    $"(terminating={args.IsTerminating}) ===\n{ex}\n\n");
+            }
+            catch
+            {
+                // 兜底日志失败无从处理
+            }
+        };
+        TaskScheduler.UnobservedTaskException += (_, args) =>
+        {
+            try
+            {
+                System.IO.File.AppendAllText(
+                    System.IO.Path.Combine(AppContext.BaseDirectory, "crash.log"),
+                    $"=== {DateTime.Now:yyyy-MM-dd HH:mm:ss} unobserved task ===\n" +
+                    $"{args.Exception}\n\n");
+            }
+            catch
+            {
+                // 同上
+            }
+        };
+
         ThemeService.WatchSystem();
         ThemeService.Apply();
 

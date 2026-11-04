@@ -98,7 +98,10 @@ public partial class ResourcePage : UserControl
         EmptyText.Visibility = Visibility.Collapsed;
         AssetCards.ItemsSource = null;
         var ctx = GlobalAccountContext.Instance;
-        if (ctx.Accounts.Count == 0 && !ctx.IsLoading)
+        // 启动时的账号加载可能仍在进行：订阅完成后补载（否则页面停在空态）
+        ctx.AccountsLoaded -= OnAccountsLoadedRefresh;
+        ctx.AccountsLoaded += OnAccountsLoadedRefresh;
+        if (ctx.Accounts.Count == 0)
         {
             await ctx.LoadAccountsAsync();
         }
@@ -139,6 +142,9 @@ public partial class ResourcePage : UserControl
         if (_suppressAccountEvent) return;
         await AccountSelectedAsync();
     }
+
+    /// <summary>账号列表加载完成 → 重新填充（解决启动竞态导致的空态）。</summary>
+    private async void OnAccountsLoadedRefresh() => await LoadAccountsAsync();
 
     /// <summary>标题栏切了账号 → 同步本页下拉并重载（不二次写回上下文）。</summary>
     private async void OnGlobalAccountChanged(AccountEntry? entry)
@@ -321,6 +327,16 @@ public partial class ResourcePage : UserControl
                 };
             }).ToList();
             StatusText.Text = $"{date} · {visible.Count} 项资产";
+
+            // QA 自检：--share-test 数据就绪后自动跑一次真实分享链路（只跑一次）
+            if (Environment.GetCommandLineArgs().Contains("--share-test") && !_shareTestDone)
+            {
+                _shareTestDone = true;
+                ShareLog("auto share test trigger");
+                Dispatcher.BeginInvoke(new Action(() =>
+                    Share_Click(this, new RoutedEventArgs())),
+                    System.Windows.Threading.DispatcherPriority.Background);
+            }
         }
         catch (Exception ex)
         {
@@ -329,20 +345,50 @@ public partial class ResourcePage : UserControl
     }
 
     /// <summary>生成资产分享图（纯前端渲染，保存到「图片\OASX」）。</summary>
+    /// <summary>分享链路日志（排障用）。</summary>
+    private static void ShareLog(string msg)
+    {
+        try
+        {
+            System.IO.File.AppendAllText(
+                System.IO.Path.Combine(AppContext.BaseDirectory, "share.log"),
+                $"{DateTime.Now:HH:mm:ss.fff} {msg}" + Environment.NewLine);
+        }
+        catch
+        {
+            // 日志失败不影响功能
+        }
+    }
+
+    private DateTime _lastShareAt = DateTime.MinValue;
+    private bool _shareTestDone;
+
     private void Share_Click(object sender, RoutedEventArgs e)
     {
+        ShareLog("enter");
+        // 防抖：1.5s 内重复点击（含自动化误触）直接忽略，
+        // 避免连续渲染 + 连续弹出资源管理器
+        if ((DateTime.Now - _lastShareAt).TotalMilliseconds < 1500)
+        {
+            ShareLog("debounced");
+            return;
+        }
+        _lastShareAt = DateTime.Now;
         try
         {
             if (AssetCards.ItemsSource is not IEnumerable<AssetCardVm> cards)
             {
+                ShareLog("early: no items source");
                 StatusText.Text = "没有可分享的资产数据";
                 return;
             }
             if ((AccountSelector.SelectedItem as dynamic)?.Entry is not AccountEntry entry)
             {
+                ShareLog("early: no account");
                 StatusText.Text = "先选择账号";
                 return;
             }
+            ShareLog($"account={entry.Config}|{entry.RoleKey}");
             var date = CurrentDate ?? DateTime.Today.ToString("yyyy-MM-dd");
             var items = cards.Select(c => (
                 Name: c.Name,
@@ -354,17 +400,57 @@ public partial class ResourcePage : UserControl
                 StatusText.Text = "没有可分享的资产数据";
                 return;
             }
+            ShareLog($"items={items.Count} date={date} render start");
             var path = ShareImageRenderer.RenderAssets(
                 entry.Name, $"Lv{entry.Level} · {entry.ServerName}",
                 date, items);
+            ShareLog($"render done: {path}");
             StatusText.Text = $"分享图已保存：{path}";
-            Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{path}\"")
+            // 路径入剪贴板：无论能否拉起资源管理器，用户都能直接粘贴定位
+            // 剪贴板可能被其他程序占用（CLIPBRD_E_CANT_OPEN）：重试几次
+            for (var attempt = 1; attempt <= 3; attempt++)
             {
-                UseShellExecute = true,
-            });
+                try
+                {
+                    Clipboard.SetText(path);
+                    ShareLog("path copied to clipboard");
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    ShareLog($"clipboard failed ({attempt}/3): {ex.Message}");
+                    if (attempt < 3)
+                    {
+                        System.Threading.Thread.Sleep(120);
+                    }
+                }
+            }
+
+            // 打开目录：**不用 UseShellExecute**——经 ShellExecute 拉起 explorer
+            // 在受限环境会触发系统级"应用程序无法正常启动(0xc0000142)"错误框
+            // （看起来像 OASX 崩溃）。直接 CreateProcess 失败只会抛异常，
+            // 由外层 catch 记录，不弹系统框。
+            try
+            {
+                ShareLog("opening explorer (direct)");
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = $"/select,\"{path}\"",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                });
+                ShareLog("explorer started");
+            }
+            catch (Exception ex)
+            {
+                ShareLog("explorer failed: " + ex.Message);
+                StatusText.Text = $"分享图已保存（路径已复制）：{path}";
+            }
         }
         catch (Exception ex)
         {
+            ShareLog("EXCEPTION: " + ex);
             StatusText.Text = $"分享图生成失败：{ex.Message}";
         }
     }

@@ -56,7 +56,16 @@ public partial class MainWindow : FluentWindow
                     "关于" or "about" => typeof(AboutPage),
                     _ => typeof(DashboardPage),
                 };
+            LogNav($"target={target.Name} arg={pageArg}");
             RootNavigation.Navigate(target);
+            Dispatcher.BeginInvoke(
+                new Action(() => LogNav(
+                    $"after navigate: selected={RootNavigation.SelectedItem switch
+                    {
+                        Wpf.Ui.Controls.NavigationViewItem nvi => nvi.TargetPageType?.Name,
+                        _ => "null",
+                    }}")),
+                System.Windows.Threading.DispatcherPriority.Background);
         };
 
         RestoreWindowBounds();
@@ -212,6 +221,20 @@ public partial class MainWindow : FluentWindow
     private bool _suppressAccountSwitch;
 
     /// <summary>账号块：订阅上下文，按钮文案与弹出列表随全局状态同步。</summary>
+    private static void LogNav(string msg)
+    {
+        try
+        {
+            System.IO.File.AppendAllText(
+                System.IO.Path.Combine(AppContext.BaseDirectory, "nav.log"),
+                $"{DateTime.Now:HH:mm:ss} {msg}" + Environment.NewLine);
+        }
+        catch
+        {
+            // 日志失败不影响功能
+        }
+    }
+
     private void InitAccountSwitcher()
     {
         var ctx = GlobalAccountContext.Instance;
