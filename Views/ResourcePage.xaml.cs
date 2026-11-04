@@ -121,7 +121,11 @@ public partial class ResourcePage : UserControl
         }).ToList();
         AccountSelector.DisplayMemberPath = "Label";
         _suppressAccountEvent = true;
-        AccountSelector.SelectedIndex = ctx.Accounts.Count > 0 ? 0 : -1;
+        // 优先选中持久化的当前账号，其次首个
+        var target = ctx.Current;
+        var idx = target is null ? -1 : ctx.Accounts.ToList().IndexOf(target);
+        AccountSelector.SelectedIndex = ctx.Accounts.Count == 0
+            ? -1 : (idx >= 0 ? idx : 0);
         _suppressAccountEvent = false;
 
         if (AccountSelector.SelectedItem is not null)

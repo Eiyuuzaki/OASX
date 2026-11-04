@@ -24,6 +24,9 @@ public sealed class GlobalAccountContext
 {
     public static GlobalAccountContext Instance { get; } = new();
 
+    /// <summary>当前账号持久化键：'config|roleKey'。</summary>
+    private const string CurrentAccountKey = "currentAccount";
+
     /// <summary>全部账号（跨调度器扁平化）。</summary>
     public IReadOnlyList<AccountEntry> Accounts => _accounts;
     private List<AccountEntry> _accounts = [];
@@ -72,6 +75,20 @@ public sealed class GlobalAccountContext
         _accounts = all;
         IsLoading = false;
         Error = errors.Count > 0 ? string.Join("; ", errors) : null;
+
+        // 恢复上次选中的账号（跨重启保留）
+        if (Current is null)
+        {
+            var saved = OasSettings.Get(CurrentAccountKey, "");
+            if (saved.Length > 0)
+            {
+                var parts = saved.Split('|');
+                if (parts.Length == 2 && Find(parts[0], parts[1]) is { } restored)
+                {
+                    Current = restored;
+                }
+            }
+        }
         AccountsLoaded?.Invoke();
     }
 
@@ -80,6 +97,8 @@ public sealed class GlobalAccountContext
     {
         if (ReferenceEquals(Current, entry)) return;
         Current = entry;
+        OasSettings.Set(CurrentAccountKey,
+            entry is null ? "" : $"{entry.Config}|{entry.RoleKey}");
         CurrentChanged?.Invoke(entry);
     }
 
