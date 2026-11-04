@@ -104,6 +104,39 @@ public partial class MainWindow : FluentWindow
             // 窗口级主题（材质 + 深色标志）：不重建 chrome，避免异常中断导航
             ThemeService.ApplyWindowChromeOnly();
 
+            // QA：--switch-account-test 账号加载完成后自动切到"另一个"账号，
+            // 用于验证各页面是否即时跟随（不需要切 tab）
+            if (Environment.GetCommandLineArgs().Contains("--switch-account-test"))
+            {
+                // 延迟 8 秒：确保目标页面已加载并订阅（模拟用户在看到页面后切换）
+                var sw = new System.Windows.Threading.DispatcherTimer
+                {
+                    Interval = TimeSpan.FromSeconds(8),
+                };
+                sw.Tick += (_, _) =>
+                {
+                    sw.Stop();
+                    Once();
+                };
+                sw.Start();
+
+                void Once()
+                {
+                    var opts = GlobalAccountContext.Instance.BuildOptions();
+                    if (opts.Count < 2)
+                    {
+                        LogNav($"switch-account-test: only {opts.Count} account(s)");
+                        return;
+                    }
+                    var target = opts.First(o =>
+                        GlobalAccountContext.Instance.Current is not { } c
+                        || o.Entry.Config != c.Config
+                        || o.Entry.RoleKey != c.RoleKey);
+                    GlobalAccountContext.Instance.SetCurrent(target.Entry);
+                    LogNav($"switch-account-test -> {target.Entry.Config}/{target.Entry.RoleKey}");
+                }
+            }
+
             // QA 钩子：--page=<仪表盘|工作台|统计|资产|绘卷|日志|设置|关于>
             // 启动直达指定页（自动化验收用，不影响正常启动）
             var pageArg = Environment.GetCommandLineArgs()

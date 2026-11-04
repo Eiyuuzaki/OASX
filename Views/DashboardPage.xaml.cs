@@ -42,6 +42,24 @@ public partial class DashboardPage : UserControl
         InitializeComponent();
         Loaded += (_, _) =>
         {
+            // 账号切换 → 立即重载（此前只在 30s 定时器里刷新，
+            // 表现为"切了账号仪表盘还是旧角色，要切 tab 才变"）
+            var ctx = GlobalAccountContext.Instance;
+            ctx.CurrentChanged -= OnAccountSwitched;
+            ctx.CurrentChanged += OnAccountSwitched;
+            ctx.AccountsLoaded -= OnAccountsReady;
+            ctx.AccountsLoaded += OnAccountsReady;
+        };
+
+        Unloaded += (_, _) =>
+        {
+            var ctx = GlobalAccountContext.Instance;
+            ctx.CurrentChanged -= OnAccountSwitched;
+            ctx.AccountsLoaded -= OnAccountsReady;
+        };
+
+        Loaded += (_, _) =>
+        {
             _ = RefreshAllAsync();
             _timer.Tick += async (_, _) => await RefreshEnvironmentAsync();
             _timer.Start();
@@ -61,6 +79,50 @@ public partial class DashboardPage : UserControl
 
     private async void Refresh_Click(object sender, RoutedEventArgs e) =>
         await RefreshAllAsync();
+
+    /// <summary>账号切换 → 立即刷新本页（无需切 tab）。</summary>
+    private async void OnAccountSwitched(AccountEntry? entry)
+    {
+        try
+        {
+            System.IO.File.AppendAllText(
+                System.IO.Path.Combine(AppContext.BaseDirectory, "nav.log"),
+                $"{DateTime.Now:HH:mm:ss} dashboard OnAccountSwitched entry " +
+                $"{entry?.Config}/{entry?.DisplayName}" + Environment.NewLine);
+            await RefreshAllAsync();
+            try
+            {
+                System.IO.File.AppendAllText(
+                    System.IO.Path.Combine(AppContext.BaseDirectory, "nav.log"),
+                    $"{DateTime.Now:HH:mm:ss} dashboard refreshed for " +
+                    $"{entry?.Config}/{entry?.DisplayName}" + Environment.NewLine);
+            }
+            catch
+            {
+                // 日志失败忽略
+            }
+        }
+        catch (Exception ex)
+        {
+            try
+            {
+                System.IO.File.AppendAllText(
+                    System.IO.Path.Combine(AppContext.BaseDirectory, "nav.log"),
+                    $"{DateTime.Now:HH:mm:ss} dashboard account refresh failed: {ex.Message}" +
+                    Environment.NewLine);
+            }
+            catch
+            {
+                // 日志失败忽略
+            }
+        }
+    }
+
+    /// <summary>账号列表首次加载完成 → 补刷新一次。</summary>
+    private async void OnAccountsReady()
+    {
+        await RefreshAllAsync();
+    }
 
     private async Task RefreshAllAsync()
     {

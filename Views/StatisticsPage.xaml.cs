@@ -36,7 +36,20 @@ public partial class StatisticsPage : UserControl
     public StatisticsPage()
     {
         InitializeComponent();
+        Loaded += (_, _) =>
+        {
+            GlobalAccountContext.Instance.CurrentChanged -= OnAccountSwitched;
+            GlobalAccountContext.Instance.CurrentChanged += OnAccountSwitched;
+        };
+        Unloaded += (_, _) =>
+            GlobalAccountContext.Instance.CurrentChanged -= OnAccountSwitched;
         _ = LoadAsync();
+    }
+
+    /// <summary>账号切换 → 立即重载统计（此前需切 tab 才刷新）。</summary>
+    private async void OnAccountSwitched(AccountEntry? entry)
+    {
+        await LoadAsync();
     }
 
     private async Task LoadAsync()
