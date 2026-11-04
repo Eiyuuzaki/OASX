@@ -9,7 +9,6 @@
                  Title="OASX"
                  Width="1050" Height="700"
                  ExtendsContentIntoTitleBar="True"
-                 WindowBackdropType="Mica"
                  WindowStartupLocation="CenterScreen"
                  UseLayoutRounding="True"
                  SnapsToDevicePixels="True"

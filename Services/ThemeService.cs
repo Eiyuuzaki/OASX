@@ -35,17 +35,29 @@ public static class ThemeService
     {
         IsDark = dark;
 
-        var backdrop = OasSettings.BackdropMode switch
+        var backdrop = ResolveBackdropType();
+        ApplicationThemeManager.Apply(
+            dark ? ApplicationTheme.Dark : ApplicationTheme.Light, backdrop);
+
+        // ⚠️ 直接把背景材质写到主窗口 DP：MainWindow.xaml 不再硬编码
+        // WindowBackdropType，否则 XAML 的 Mica 会在 SourceInitialized 时
+        // 覆盖掉这里应用的 Acrylic（设置页标签 acrylic、实际 Mica 的根因）。
+        if (Application.Current?.MainWindow is FluentWindow fw)
+        {
+            fw.WindowBackdropType = backdrop;
+        }
+
+        ApplySemanticDictionary(dark);
+    }
+
+    /// <summary>设置项 → 窗口背景材质类型。</summary>
+    public static WindowBackdropType ResolveBackdropType() =>
+        OasSettings.BackdropMode switch
         {
             "acrylic" => WindowBackdropType.Acrylic,
             "none" => WindowBackdropType.None,
             _ => WindowBackdropType.Mica,
         };
-        ApplicationThemeManager.Apply(
-            dark ? ApplicationTheme.Dark : ApplicationTheme.Light, backdrop);
-
-        ApplySemanticDictionary(dark);
-    }
 
     /// <summary>监听 Windows 系统主题变化（仅 system 模式跟随）。
     /// 进程内挂一次；SystemEvents 是全局静态，App 退出自动释放。</summary>

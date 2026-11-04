@@ -24,6 +24,9 @@ public partial class MainWindow : FluentWindow
     {
         InitializeComponent();
 
+        // 背景材质由 ThemeService 统一决议（XAML 不硬编码，避免覆盖设置）
+        WindowBackdropType = ThemeService.ResolveBackdropType();
+
         // BGI 同款：页面服务 + TargetPageType，导航全部由 NavigationView
         // 内部接管（点击 → 内部 Navigate → 页面服务出实例）。
         RootNavigation.SetPageProviderService(new PageService());
