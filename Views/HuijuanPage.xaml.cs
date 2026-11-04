@@ -126,10 +126,17 @@ public partial class HuijuanPage : UserControl
 
         var self = JsonDocument.Parse(
             "{\"score\": 4286, \"rank\": 1204}").RootElement.Clone();
+        var frags = new List<OasHuijuanApi.FragmentEntry>
+        {
+            new("绘卷碎片·小", 38, "pic_suipian"),
+            new("绘卷碎片·中", 12, "pic_suipian2"),
+            new("绘卷碎片·大", 3, "pic_suipian3"),
+        };
         return new OasHuijuanApi.HuijuanBoard(
             Success: true, ConfigName: "demo", Issue: 85, Threshold: threshold,
-            Active: true, Scrolls: scrolls, SelfTotal: 4286, Self: self,
-            Rank: [], Error: null, Hint: null);
+            Active: true, Scrolls: scrolls, SelfTotal: 4286, BestRank: 412,
+            BestRankScroll: "双生纪元", Fragments: frags,
+            Self: self, Rank: [], Error: null, Hint: null);
     }
 
     private async void Refresh_Click(object sender, RoutedEventArgs e) =>
@@ -240,24 +247,55 @@ public partial class HuijuanPage : UserControl
     private void RenderSelf(OasHuijuanApi.HuijuanBoard board)
     {
         SelfCard.Visibility = Visibility.Visible;
-        var score = board.SelfTotal;
-        var joined = board.Scrolls?.Count(x => x.SelfScore > 0) ?? 0;
-        SelfScoreText.Text = score > 0 ? score.ToString("N0") : "—";
-        SelfRankText.Text = joined > 0 ? $"{joined} / {board.Scrolls?.Count ?? 0}" : "—";
-        SelfRankLabel.Text = "参与卷";
 
-        if (score > 0)
+        // 总积分：本期各卷积分之和
+        var score = board.SelfTotal;
+        SelfScoreText.Text = score > 0 ? score.ToString("N0") : "—";
+
+        // 最佳排名：各卷独立榜里名次最好的那一卷
+        var best = board.BestRank;
+        SelfRankText.Text = best is > 0
+            ? $"{best.Value:N0}" + (string.IsNullOrEmpty(board.BestRankScroll)
+                ? "" : $"（{board.BestRankScroll}）")
+            : "—";
+
+        // 参与卷 / 剩余碎片
+        var joined = board.Scrolls?.Count(x => x.SelfScore > 0) ?? 0;
+        var total = board.Scrolls?.Count ?? 0;
+        JoinText.Text = joined > 0 ? $"{joined} / {total}" : "—";
+        FragmentsText.Text = BuildFragmentsText(board.Fragments);
+
+        SelfHintText.Text = score > 0
+            ? "本期参与数据"
+            : board.Active
+                ? "本期尚未参与（各卷积分均为 0）"
+                : "本期已结束，无参与数据";
+    }
+
+    /// <summary>剩余碎片文案：小 12 · 中 8 · 大 2（无则显示 —）。</summary>
+    private static string BuildFragmentsText(List<OasHuijuanApi.FragmentEntry>? items)
+    {
+        if (items is null || items.Count == 0)
         {
-            SelfHintText.Text = "本期参与数据（排名见各卷）";
+            return "—";
         }
-        else if (board.Active)
+        static string Short(string name)
         {
-            SelfHintText.Text = "本期尚未参与（各卷积分均为 0）";
+            var idx = name.IndexOf('·');
+            if (idx >= 0 && idx + 1 < name.Length)
+            {
+                return name[(idx + 1)..];
+            }
+            return name.Replace("绘卷", "").Replace("碎片", "").Trim();
         }
-        else
-        {
-            SelfHintText.Text = "本期已结束，无参与数据";
-        }
+        // 固定小 → 中 → 大 的顺序（按名称排序会得到 大/小/中）
+        static int Weight(string name) => name.Contains('小') ? 0
+            : name.Contains('中') ? 1
+            : name.Contains('大') ? 2 : 3;
+        return string.Join("  ·  ", items
+            .OrderBy(x => Weight(x.Name))
+            .ThenBy(x => x.Name)
+            .Select(x => $"{Short(x.Name)} {x.Count:N0}"));
     }
 
     /// <summary>数字压缩：≥1 万用"万"（20,700,000 → 2070万）。</summary>

@@ -19,10 +19,14 @@ public static class OasHuijuanApi
         string BeginText, string EndText, long SelfScore, int? SelfRank,
         long Remain);
 
+    public record FragmentEntry(string Name, long Count, string Icon);
+
     public record HuijuanBoard(
         bool Success, string ConfigName, int Issue, long Threshold, bool Active,
-        List<ScrollEntry> Scrolls, long SelfTotal, JsonElement? Self,
-        List<JsonElement> Rank, string? Error, string? Hint);
+        List<ScrollEntry> Scrolls, long SelfTotal, long? BestRank,
+        string BestRankScroll, List<FragmentEntry> Fragments,
+        JsonElement? Self, List<JsonElement> Rank,
+        string? Error, string? Hint);
 
     /// <summary>GET /huijuan/{config}?force= → 棋盘（后端 20s 缓存）。</summary>
     public static async Task<HuijuanBoard?> GetBoardAsync(
