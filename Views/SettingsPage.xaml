@@ -137,6 +137,48 @@
                     BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                     BorderThickness="1">
                 <StackPanel>
+                    <!-- 自动拉起后端 -->
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:SymbolIcon Grid.Column="0" Symbol="Server24" FontSize="20"
+                                       VerticalAlignment="Center" Margin="0,0,14,0" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="启动时自动拉起后端" FontSize="14" />
+                            <TextBlock Text="OASX 启动时若后端未运行，自动执行 server.py" FontSize="12"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                        <ui:ToggleSwitch Grid.Column="2" x:Name="AutoStartBackendToggle"
+                                         VerticalAlignment="Center"
+                                         Checked="AutoStartBackend_Toggled"
+                                         Unchecked="AutoStartBackend_Toggled" />
+                    </Grid>
+                    <!-- OAS 目录 -->
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:SymbolIcon Grid.Column="0" Symbol="Folder24" FontSize="20"
+                                       VerticalAlignment="Center" Margin="0,0,14,0" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="OAS 目录" FontSize="14" />
+                            <TextBlock Text="含 server.py 与 toolkit\python.exe" FontSize="12"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                            <ui:TextBox x:Name="OasWorkDirBox" MinWidth="240" MinHeight="32"
+                                        Margin="0,0,8,0" />
+                            <ui:Button Content="保存" MinWidth="72" MinHeight="32"
+                                       Appearance="{x:Static ui:ControlAppearance.Primary}"
+                                       Click="SaveWorkDir_Click" />
+                        </StackPanel>
+                    </Grid>
+                    <!-- 退出时停止后端 -->
                     <Grid Margin="0,0,0,16">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />

@@ -33,6 +33,9 @@ public partial class App : Application
         base.OnStartup(e);
         ThemeService.WatchSystem();
         ThemeService.Apply();
+
+        // 自动拉起后端（设置项，失败不阻塞 UI）
+        _ = OasBackendLauncher.EnsureRunningAsync();
     }
 
     /// <summary>把持久化的主题应用到全局（设置页切换时也会调用）。</summary>

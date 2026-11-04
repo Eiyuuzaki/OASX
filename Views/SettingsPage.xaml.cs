@@ -42,6 +42,8 @@ public partial class SettingsPage : UserControl
         StopBackendToggle.IsChecked =
             OasSettings.Get("stopBackendOnExit", "false") == "true";
         LaunchAtStartupToggle.IsChecked = IsStartupRegistered();
+        AutoStartBackendToggle.IsChecked = OasBackendLauncher.Enabled;
+        OasWorkDirBox.Text = OasBackendLauncher.WorkDir;
         VersionText.Text = $"v{Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "??"}";
         _initializing = false;
     }
@@ -113,6 +115,21 @@ public partial class SettingsPage : UserControl
 
     private static string RunKeyPath =>
         @"Software\Microsoft\Windows\CurrentVersion\Run";
+
+    private void AutoStartBackend_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_initializing) return;
+        OasSettings.Set("autoStartBackend",
+            AutoStartBackendToggle.IsChecked == true ? "true" : "false");
+    }
+
+    private void SaveWorkDir_Click(object sender, RoutedEventArgs e)
+    {
+        var dir = OasWorkDirBox.Text.Trim();
+        if (string.IsNullOrEmpty(dir)) return;
+        OasSettings.Set("oasWorkDir", dir);
+        OasWorkDirBox.Text = dir;
+    }
 
     private static bool IsStartupRegistered()
     {
