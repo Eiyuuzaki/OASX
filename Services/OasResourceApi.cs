@@ -49,7 +49,27 @@ public static class OasResourceApi
                   (q.Count > 0 ? "?" + string.Join("&", q) : "");
         return await OasApi.Http.GetFromJsonAsync<ResourceDay>(url, JsonOptions, cts.Token);
     }
+    public record HistoryPoint(string Date, long Count);
+
+    public record HistoryResponse(
+        string ConfigName, string RoleKey, string ItemId,
+        List<HistoryPoint> Points);
+
+    /// <summary>GET /resource/{config}/history?item_name=&amp;role_key=&amp;days=
+    /// 单项资源历史（按名称跨期聚合，绘卷碎片这类每期换 ID 的项必需）。</summary>
+    public static async Task<List<HistoryPoint>> GetHistoryAsync(
+        string config, string roleKey, string itemName, int days = 60)
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(12));
+        var url = $"/resource/{Uri.EscapeDataString(config)}/history" +
+                  $"?item_name={Uri.EscapeDataString(itemName)}" +
+                  $"&role_key={Uri.EscapeDataString(roleKey)}&days={days}";
+        var res = await OasApi.Http.GetFromJsonAsync<HistoryResponse>(
+            url, JsonOptions, cts.Token);
+        return res?.Points ?? [];
+    }
 }
+
 
 /// <summary>图标白名单：Assets/currency/ 下的 basename（与 Flutter 版
 /// IconRegistry 同源——只展示本地有图标的资源，190+ 项 → 十几项）。</summary>

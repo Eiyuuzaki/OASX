@@ -48,6 +48,9 @@
                             <Border Width="{Binding CardWidth, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     Height="{StaticResource CardHeight}" Margin="0,0,8,8" Padding="12"
                                     CornerRadius="{StaticResource RadiusCard}"
+                                    Cursor="Hand"
+                                    MouseLeftButtonUp="AssetCard_Click"
+                                    Tag="{Binding Name}"
                                     Background="{DynamicResource OasSurfaceBrush}">
                                 <Border.Style>
                                     <Style TargetType="Border">

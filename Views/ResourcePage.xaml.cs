@@ -322,6 +322,27 @@ public partial class ResourcePage : UserControl
         }
     }
 
+    /// <summary>点卡片 → 涨势图弹窗（后端按名称跨期聚合）。</summary>
+    private async void AssetCard_Click(object sender,
+        System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (sender is not Border { Tag: string itemName }) return;
+        if ((AccountSelector.SelectedItem as dynamic)?.Entry is not AccountEntry entry)
+        {
+            return;
+        }
+        try
+        {
+            var points = await OasResourceApi.GetHistoryAsync(
+                entry.Config, entry.RoleKey, itemName);
+            ResourceHistoryDialog.Show(Window.GetWindow(this), itemName, points);
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"历史数据加载失败：{ex.Message}";
+        }
+    }
+
     /// <summary>图钉切换：更新置顶集合并重排。</summary>
     private void PinButton_Click(object sender, RoutedEventArgs e)
     {
