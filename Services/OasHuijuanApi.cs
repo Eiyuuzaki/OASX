@@ -16,12 +16,12 @@ public static class OasHuijuanApi
     public record ScrollEntry(
         string Id, long Score, double Percent, bool Finished,
         string FinishTimeText, string Name, int? HeroId, string Img,
-        string BeginText, string EndText);
+        string BeginText, string EndText, long SelfScore);
 
     public record HuijuanBoard(
         bool Success, string ConfigName, int Issue, long Threshold, bool Active,
-        List<ScrollEntry> Scrolls, JsonElement? Self, List<JsonElement> Rank,
-        string? Error, string? Hint);
+        List<ScrollEntry> Scrolls, long SelfTotal, JsonElement? Self,
+        List<JsonElement> Rank, string? Error, string? Hint);
 
     /// <summary>GET /huijuan/{config}?force= → 棋盘（后端 20s 缓存）。</summary>
     public static async Task<HuijuanBoard?> GetBoardAsync(

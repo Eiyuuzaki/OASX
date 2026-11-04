@@ -147,8 +147,14 @@
                                              Value="{Binding Percent, Mode=OneWay}"
                                              Foreground="{DynamicResource OasAccentBrush}"
                                              Background="{DynamicResource OasSurfaceSecondaryBrush}" />
-                                <TextBlock Text="{Binding ScoreText}" FontSize="12"
-                                           Foreground="{DynamicResource OasTextSecondaryBrush}" />
+                                <Grid>
+                                    <TextBlock Text="{Binding ScoreText}" FontSize="12"
+                                               Foreground="{DynamicResource OasTextSecondaryBrush}" />
+                                    <TextBlock Text="{Binding SelfText}" HorizontalAlignment="Right"
+                                               FontSize="12" FontWeight="SemiBold"
+                                               Visibility="{Binding SelfVisibility}"
+                                               Foreground="{DynamicResource OasAccentBrush}" />
+                                </Grid>
                                 <TextBlock Text="{Binding WindowText}" FontSize="11"
                                            Margin="0,2,0,0" TextWrapping="Wrap"
                                            Foreground="{DynamicResource OasTextTertiaryBrush}" />
