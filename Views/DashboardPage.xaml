@@ -48,21 +48,37 @@
                     <!-- 绘卷积分徽标：活动期账号核心资源（积分→排名→式神碎片），
                          无绘卷数据时自动隐藏 -->
                     <Border Grid.Column="1" x:Name="ScrollBadge" Visibility="Collapsed"
-                            CornerRadius="6" Padding="12,6" Margin="0,0,16,0"
+                            CornerRadius="6" Padding="12,8" Margin="0,0,16,0"
                             VerticalAlignment="Center"
                             Background="{DynamicResource OasSurfaceSecondaryBrush}"
                             BorderBrush="{DynamicResource OasBorderBrush}" BorderThickness="1">
                         <StackPanel>
-                            <TextBlock Text="绘卷积分" FontSize="11"
-                                       Foreground="{DynamicResource OasTextSecondaryBrush}" />
                             <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="绘卷" FontSize="11" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource OasTextSecondaryBrush}" />
                                 <TextBlock x:Name="ScrollTotalText" Text="—" FontSize="20"
                                            FontWeight="SemiBold" VerticalAlignment="Center"
+                                           Margin="8,0,0,0"
                                            FontFamily="{StaticResource AppFontFamily}"
                                            Foreground="{DynamicResource OasAccentBrush}" />
                                 <TextBlock x:Name="ScrollDeltaText" FontSize="12"
-                                           VerticalAlignment="Bottom" Margin="8,0,0,3" />
+                                           VerticalAlignment="Bottom" Margin="8,0,0,2" />
                             </StackPanel>
+                            <ItemsControl x:Name="ScrollParts" Margin="0,4,0,0">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" Margin="0,1">
+                                            <TextBlock Text="{Binding Label}" FontSize="11" MinWidth="60"
+                                                       Foreground="{DynamicResource OasTextSecondaryBrush}" />
+                                            <TextBlock Text="{Binding CountText}" FontSize="12"
+                                                       FontWeight="SemiBold" MinWidth="44"
+                                                       Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                                            <TextBlock Text="{Binding DeltaText}" FontSize="11"
+                                                       Foreground="{Binding DeltaBrush}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                         </StackPanel>
                     </Border>
                     <!-- 运行状态（状态圆点 + 文字，不做大统计卡） -->

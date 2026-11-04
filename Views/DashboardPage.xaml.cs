@@ -107,6 +107,15 @@ public partial class DashboardPage : UserControl
         await RefreshTodayStatsAsync(entry.Config);
     }
 
+    /// <summary>绘卷分项行（小/中/大 或 积分）。</summary>
+    public sealed class ScrollPartVm
+    {
+        public string Label { get; init; } = "";
+        public string CountText { get; init; } = "";
+        public string DeltaText { get; init; } = "";
+        public Brush DeltaBrush { get; init; } = Brushes.Transparent;
+    }
+
     /// <summary>绘卷积分徽标：账号最新一天中名称含"绘卷"的项按名称聚合
     /// （每期活动换新 ID，同名求和）。无数据时隐藏徽标。</summary>
     private async Task LoadScrollBadgeAsync(AccountEntry entry)
@@ -136,6 +145,27 @@ public partial class DashboardPage : UserControl
             ScrollDeltaText.Foreground = new SolidColorBrush(delta >= 0
                 ? Color.FromRgb(0x16, 0xA3, 0x4A)
                 : Color.FromRgb(0xDC, 0x45, 0x45));
+
+            // 分项行：按名称聚合（绘卷碎片·小/中/大 或 绘卷积分），
+            // 短标签取 · 后缀（无 · 用原名），每行 数量 + 今日增量
+            ScrollParts.ItemsSource = scrollItems
+                .GroupBy(i => i.Name)
+                .Select(g =>
+                {
+                    var count = g.Sum(x => x.Count);
+                    var d = g.Sum(x => x.Delta ?? 0);
+                    return new ScrollPartVm
+                    {
+                        Label = ShortLabel(g.Key),
+                        CountText = FormatCount(count),
+                        DeltaText = d == 0 ? "" : FormatDelta(d),
+                        DeltaBrush = new SolidColorBrush(d >= 0
+                            ? Color.FromRgb(0x16, 0xA3, 0x4A)
+                            : Color.FromRgb(0xDC, 0x45, 0x45)),
+                    };
+                })
+                .OrderByDescending(x => x.CountText)
+                .ToList();
             ScrollBadge.Visibility = Visibility.Visible;
         }
         catch
@@ -381,6 +411,20 @@ public partial class DashboardPage : UserControl
             _ => Math.Abs(d).ToString("N0"),
         };
         return $"{sign}{v}";
+    }
+
+    /// <summary>绘卷项短标签：'绘卷碎片·小' → '小'，'绘卷积分' → '积分'。</summary>
+    private static string ShortLabel(string name)
+    {
+        if (name.Contains('·', StringComparison.Ordinal))
+        {
+            return name[(name.LastIndexOf('·') + 1)..];
+        }
+        if (name.StartsWith("绘卷", StringComparison.Ordinal) && name.Length > 2)
+        {
+            return name[2..];
+        }
+        return name;
     }
 
     private static string ShortTime(string raw)
