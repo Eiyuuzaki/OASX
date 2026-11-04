@@ -31,6 +31,7 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0" Orientation="Horizontal">
                         <ui:SymbolIcon Symbol="PersonAccounts24" FontSize="30"
@@ -44,6 +45,26 @@
                                        Foreground="{DynamicResource OasTextSecondaryBrush}" />
                         </StackPanel>
                     </StackPanel>
+                    <!-- 绘卷积分徽标：活动期账号核心资源（积分→排名→式神碎片），
+                         无绘卷数据时自动隐藏 -->
+                    <Border Grid.Column="1" x:Name="ScrollBadge" Visibility="Collapsed"
+                            CornerRadius="6" Padding="12,6" Margin="0,0,16,0"
+                            VerticalAlignment="Center"
+                            Background="{DynamicResource OasSurfaceSecondaryBrush}"
+                            BorderBrush="{DynamicResource OasBorderBrush}" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock Text="绘卷积分" FontSize="11"
+                                       Foreground="{DynamicResource OasTextSecondaryBrush}" />
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock x:Name="ScrollTotalText" Text="—" FontSize="20"
+                                           FontWeight="SemiBold" VerticalAlignment="Center"
+                                           FontFamily="{StaticResource AppFontFamily}"
+                                           Foreground="{DynamicResource OasAccentBrush}" />
+                                <TextBlock x:Name="ScrollDeltaText" FontSize="12"
+                                           VerticalAlignment="Bottom" Margin="8,0,0,3" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
                     <!-- 运行状态（状态圆点 + 文字，不做大统计卡） -->
                     <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="16,0,0,0">
                         <StackPanel Orientation="Horizontal" Margin="0,2">
