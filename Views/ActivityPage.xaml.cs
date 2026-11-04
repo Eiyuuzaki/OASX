@@ -404,7 +404,9 @@ public partial class ActivityPage : UserControl
                 var ts = TimeSpan.FromSeconds(foster.Remaining ?? 0);
                 FosterText.Text = $"⏳ 寄养距离成熟还有 {ts.Hours}小时{ts.Minutes}分" +
                                   $"（{foster.EndText} 收取）";
+                var liveDesc = DescribeLiveRole(state.LiveRole);
                 FosterSubText.Text = $"开始 {foster.StartText} · 周期 {foster.Hours} 小时" +
+                                     (string.IsNullOrEmpty(liveDesc) ? "" : $" · {liveDesc}") +
                                      (state.NotifyEnabled
                                          ? " · 到点将推送通知"
                                          : " · 通知未启用（设置页可开启）");
@@ -433,6 +435,44 @@ public partial class ActivityPage : UserControl
     }
 
     /// <summary>卡类型徽标：直接来自游戏内 card_item 映射（真实寄养的卡）。</summary>
+    /// <summary>描述游戏内登录角色与所选账号的关系。</summary>
+    private string DescribeLiveRole(OasActivityApi.LiveRole? live)
+    {
+        var ctx = GlobalAccountContext.Instance;
+        var selectedAvatar = ctx.Current?.RoleKey?.Split('@').FirstOrDefault() ?? "";
+        if (live is null || string.IsNullOrEmpty(live.AvatarId))
+        {
+            return "";
+        }
+        var text = $"游戏内角色 {live.Name} Lv{live.Level}·{live.ServerShowName}";
+        if (string.IsNullOrEmpty(selectedAvatar))
+        {
+            return text;
+        }
+        return live.AvatarId == selectedAvatar ? $"{text}（与所选一致）" : $"{text}（≠ 所选账号）";
+    }
+
+    /// <summary>概览卡下方的归属提示（账号不一致时醒目提示）。</summary>
+    private void UpdateLiveRoleBanner(OasActivityApi.LiveRole? live)
+    {
+        if (live is null || string.IsNullOrEmpty(live.AvatarId))
+        {
+            LiveRoleText.Text = "";
+            return;
+        }
+        var ctx = GlobalAccountContext.Instance;
+        var selectedAvatar = ctx.Current?.RoleKey?.Split('@').FirstOrDefault() ?? "";
+        var text = $"游戏内登录：{live.Name} Lv{live.Level} · {live.ServerShowName}";
+        if (string.IsNullOrEmpty(selectedAvatar))
+        {
+            LiveRoleText.Text = text;
+            return;
+        }
+        LiveRoleText.Text = live.AvatarId == selectedAvatar
+            ? $"✓ {text}（与所选账号一致）"
+            : $"⚠️ {text} —— 与所选账号不符，以上数据属于游戏内角色";
+    }
+
     private void ShowCardBadge(string? cardName)
     {
         if (string.IsNullOrEmpty(cardName))
@@ -491,6 +531,7 @@ public partial class ActivityPage : UserControl
             }
 
             _lastHasTasks = (board.Daily?.Count ?? 0) > 0;
+            UpdateLiveRoleBanner(board.LiveRole);
             SubtitleText.Text = board.ServerWeekDay > 0
                 ? $"每日/每周任务 · 完成状态自动判定（服务器时间 {board.ServerTimeText}）"
                 : "每日/每周任务 · 完成状态自动判定";

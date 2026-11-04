@@ -58,6 +58,9 @@
                     </StackPanel>
                 </Grid>
             </Border>
+            <TextBlock x:Name="LiveRoleText" Text="" FontSize="12" Margin="0,0,0,8"
+                       TextWrapping="Wrap"
+                       Foreground="{DynamicResource OasTextSecondaryBrush}" />
 
             <!-- 每日任务 -->
             <TextBlock Text="每日任务" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,6"

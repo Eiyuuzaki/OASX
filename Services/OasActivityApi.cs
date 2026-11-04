@@ -29,6 +29,11 @@ public static class OasActivityApi
         int DojoWin, int DojoLose, int DojoScore,
         Dictionary<string, int>? BattlepassLv, int JiejieCards);
 
+    /// <summary>游戏内当前登录角色（活动数据的真实归属者）。</summary>
+    public record LiveRole(
+        string AvatarId, string ServerId, string Name, int Level,
+        string ServerShowName, string RoleKey);
+
     public record ActivityBoard(
         bool Success, string ConfigName,
         List<DailyTask> Daily, int DailyDone, int DailyTotal,
@@ -36,6 +41,7 @@ public static class OasActivityApi
         List<string> Activity, bool ActivityAvailable,
         List<CurrentActivity> CurrentActivities,
         List<LiveWindow> LiveWindows, WeeklySignals? WeeklySignals,
+        LiveRole? LiveRole,
         int ServerWeekDay, string ServerTimeText,
         string? Error, string? Hint);
 

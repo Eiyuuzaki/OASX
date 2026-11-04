@@ -22,7 +22,7 @@ public static class OasNotifyApi
         FosterSlot? Foster, FosterSlot? Own,
         Dictionary<string, string>? CardNames,
         bool NotifyEnabled, string? CardType,
-        string? CardTypeSource, string? Error);
+        string? CardTypeSource, OasActivityApi.LiveRole? LiveRole, string? Error);
 
     public record ProviderParam(string Name);
 
