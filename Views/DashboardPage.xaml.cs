@@ -167,7 +167,7 @@ public partial class DashboardPage : UserControl
             {
                 var dev = await OasDeviceApi.GetCurrentAsync(entry.Config);
                 SetDevice(dev);
-                UpdateReminders(entry.Config, schedulerRunning: SchedulerDot.Fill == FindBrush("OasSuccessBrush"), dev);
+                UpdateReminders(entry.Config, _schedulerRunning, dev);
             }
             catch
             {
