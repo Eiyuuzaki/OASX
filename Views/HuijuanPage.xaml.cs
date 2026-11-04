@@ -89,7 +89,7 @@ public partial class HuijuanPage : UserControl
     private void OnAutoRefreshTick(object? sender, EventArgs e)
     {
         // 仅活动期自动刷新（活动外数据不变，刷了也没意义，还会白白连桥）
-        if (_lastActive && !DemoActive && GlobalAccountContext.Instance.Current is not null)
+        if (_lastActive && GlobalAccountContext.Instance.Current is not null)
         {
             _ = LoadAsync(force: true);
         }
@@ -102,52 +102,6 @@ public partial class HuijuanPage : UserControl
         // 页面无后台任务；预留
     }
 
-    /// <summary>活动期 UI 预览（--demo 启动参数；验收后删）。</summary>
-    private static bool DemoActive =>
-        Environment.GetCommandLineArgs().Contains("--demo");
-
-    /// <summary>造一套"进行中"的棋盘：前两卷已满、其余在填，含个人积分排名。</summary>
-    private static OasHuijuanApi.HuijuanBoard BuildDemoBoard()
-    {
-        const long threshold = 20700000;
-        (string Name, long Score, bool Finished, string FinishTime, long Mine, int? MyRank)[] rows =
-        {
-            ("双生纪元", 20701340, true, "2026-11-12 09:41:22", 1860, 412),
-            ("神未曾应", 20700210, true, "2026-11-14 21:03:47", 1120, 903),
-            ("交汇之迹", 16228000, false, "", 906, 1204),
-            ("一生一刹", 8940600, false, "", 300, 2891),
-            ("长夜亘古", 2401500, false, "", 100, 5017),
-            ("生之颂祝", 294500, false, "", 0, null),
-        };
-        var scrolls = rows.Select((r, i) => new OasHuijuanApi.ScrollEntry(
-            Id: (627 + i).ToString(),
-            Score: r.Score,
-            Percent: Math.Round(r.Score * 100.0 / threshold, 2),
-            Finished: r.Finished,
-            FinishTimeText: r.FinishTime,
-            Name: r.Name,
-            HeroId: 609,
-            Img: "pic_ssr_xy_01",
-            BeginText: "2026-11-10 08:00",
-            EndText: "2026-11-30 23:59",
-            SelfScore: r.Mine,
-            SelfRank: r.MyRank,
-            Remain: Math.Max(0, threshold - r.Score))).ToList();
-
-        var self = JsonDocument.Parse(
-            "{\"score\": 4286, \"rank\": 1204}").RootElement.Clone();
-        var frags = new List<OasHuijuanApi.FragmentEntry>
-        {
-            new("绘卷碎片·小", 38, "pic_suipian"),
-            new("绘卷碎片·中", 12, "pic_suipian2"),
-            new("绘卷碎片·大", 3, "pic_suipian3"),
-        };
-        return new OasHuijuanApi.HuijuanBoard(
-            Success: true, ConfigName: "demo", Issue: 85, Threshold: threshold,
-            Active: true, Scrolls: scrolls, SelfTotal: 4286, BestRank: 412,
-            BestRankScroll: "双生纪元", BestRankIndex: 1, Fragments: frags,
-            Self: self, Rank: [], Error: null, Hint: null);
-    }
 
     private async void Refresh_Click(object sender, RoutedEventArgs e) =>
         await LoadAsync(force: true);
@@ -179,9 +133,7 @@ public partial class HuijuanPage : UserControl
 
         try
         {
-            var board = DemoActive
-                ? BuildDemoBoard()
-                : await OasHuijuanApi.GetBoardAsync(entry.Config, force);
+            var board = await OasHuijuanApi.GetBoardAsync(entry.Config, force);
             if (board is null || !board.Success)
             {
                 SetBadge("读取失败", Brushes.Gray);
@@ -201,11 +153,9 @@ public partial class HuijuanPage : UserControl
             WindowText.Text = win is null || string.IsNullOrEmpty(win.BeginText)
                 ? ""
                 : $"{win.BeginText[5..]} → {win.EndText[5..]}";
-            SubtitleText.Text = DemoActive
-                ? "演示数据（活动期 UI 预览，非真实采集）"
-                : board.Active
-                    ? "本期绘卷进行中——数据来自运行中的游戏客户端（20 秒缓存）"
-                    : "本期已结束——显示上一期最终结果";
+            SubtitleText.Text = board.Active
+                ? "本期绘卷进行中——数据来自运行中的游戏客户端（20 秒缓存）"
+                : "本期已结束——显示上一期最终结果";
 
             SetBadge(board.Active ? "进行中" : "已结束",
                 board.Active ? Brush("OasSuccessBrush", Color.FromRgb(0x16, 0xA3, 0x4A))
