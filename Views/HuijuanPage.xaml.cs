@@ -21,6 +21,11 @@ public sealed class ScrollCardVm
     /// <summary>我在该卷的积分（getSelfTotalScore(卷ID)）；0 时隐藏。</summary>
     public string SelfText { get; init; } = "";
     public System.Windows.Visibility SelfVisibility { get; init; } = System.Windows.Visibility.Collapsed;
+
+    /// <summary>我在该卷的排名（每卷独立榜）；无数据时隐藏。</summary>
+    public string SelfRankText { get; init; } = "";
+    public System.Windows.Visibility SelfRankVisibility { get; init; } =
+        System.Windows.Visibility.Collapsed;
     public string WindowText { get; init; } = "";
     public string StateText { get; init; } = "";
     public Brush StateBrush { get; init; } = Brushes.Gray;
@@ -70,14 +75,14 @@ public partial class HuijuanPage : UserControl
     private static OasHuijuanApi.HuijuanBoard BuildDemoBoard()
     {
         const long threshold = 20700000;
-        (string Name, long Score, bool Finished, string FinishTime, long Mine)[] rows =
+        (string Name, long Score, bool Finished, string FinishTime, long Mine, int? MyRank)[] rows =
         {
-            ("双生纪元", 20701340, true, "2026-11-12 09:41:22", 1860),
-            ("神未曾应", 20700210, true, "2026-11-14 21:03:47", 1120),
-            ("交汇之迹", 16228000, false, "", 906),
-            ("一生一刹", 8940600, false, "", 300),
-            ("长夜亘古", 2401500, false, "", 100),
-            ("生之颂祝", 294500, false, "", 0),
+            ("双生纪元", 20701340, true, "2026-11-12 09:41:22", 1860, 412),
+            ("神未曾应", 20700210, true, "2026-11-14 21:03:47", 1120, 903),
+            ("交汇之迹", 16228000, false, "", 906, 1204),
+            ("一生一刹", 8940600, false, "", 300, 2891),
+            ("长夜亘古", 2401500, false, "", 100, 5017),
+            ("生之颂祝", 294500, false, "", 0, null),
         };
         var scrolls = rows.Select((r, i) => new OasHuijuanApi.ScrollEntry(
             Id: (627 + i).ToString(),
@@ -90,7 +95,8 @@ public partial class HuijuanPage : UserControl
             Img: "pic_ssr_xy_01",
             BeginText: "2026-11-10 08:00",
             EndText: "2026-11-30 23:59",
-            SelfScore: r.Mine)).ToList();
+            SelfScore: r.Mine,
+            SelfRank: r.MyRank)).ToList();
 
         var self = JsonDocument.Parse(
             "{\"score\": 4286, \"rank\": 1204}").RootElement.Clone();
@@ -170,9 +176,13 @@ public partial class HuijuanPage : UserControl
                 PercentText = $"{s.Percent:0.##}%",
                 ScoreText = $"区服总分 {s.Score:N0} / {board.Threshold:N0}",
                 SelfText = $"我的积分 {s.SelfScore:N0}",
-                SelfVisibility = s.SelfScore > 0
+                SelfVisibility = s.SelfScore > 0 || s.SelfRank is not null
                     ? System.Windows.Visibility.Visible
                     : System.Windows.Visibility.Collapsed,
+                SelfRankText = s.SelfRank is null ? "" : $"排名 {s.SelfRank.Value:N0}",
+                SelfRankVisibility = s.SelfRank is null || s.SelfRank <= 0
+                    ? System.Windows.Visibility.Collapsed
+                    : System.Windows.Visibility.Visible,
                 WindowText = string.IsNullOrEmpty(s.BeginText)
                     ? (s.Finished ? $"满卷于 {s.FinishTimeText}" : "")
                     : $"{s.BeginText} → {s.EndText}" +
@@ -200,13 +210,14 @@ public partial class HuijuanPage : UserControl
     {
         SelfCard.Visibility = Visibility.Visible;
         var score = board.SelfTotal;
-        var rank = ExtractRank(board);
+        var joined = board.Scrolls?.Count(x => x.SelfScore > 0) ?? 0;
         SelfScoreText.Text = score > 0 ? score.ToString("N0") : "—";
-        SelfRankText.Text = rank.Length > 0 ? rank : "—";
+        SelfRankText.Text = joined > 0 ? $"{joined} / {board.Scrolls?.Count ?? 0}" : "—";
+        SelfRankLabel.Text = "参与卷";
 
         if (score > 0)
         {
-            SelfHintText.Text = "本期参与数据（各卷积分求和）";
+            SelfHintText.Text = "本期参与数据（各卷积分求和；排名为每卷独立榜，见下方各卷）";
         }
         else if (board.Active)
         {
@@ -216,41 +227,6 @@ public partial class HuijuanPage : UserControl
         {
             SelfHintText.Text = "本期已结束，无参与数据";
         }
-    }
-
-    /// <summary>从 rankInfo/selfInfo 里取排名（字段名随服务端返回而异，容错读取）。</summary>
-    private static string ExtractRank(OasHuijuanApi.HuijuanBoard board)
-    {
-        static string FromElement(JsonElement el)
-        {
-            if (el.ValueKind != JsonValueKind.Object)
-            {
-                return "";
-            }
-            foreach (var p in el.EnumerateObject())
-            {
-                if (p.Name.Contains("rank", StringComparison.OrdinalIgnoreCase))
-                {
-                    return p.Value.ValueKind == JsonValueKind.Number
-                        ? p.Value.GetInt64().ToString("N0")
-                        : p.Value.ToString();
-                }
-            }
-            return "";
-        }
-
-        if (board.Self is { } s && FromElement(s) is { Length: > 0 } r1)
-        {
-            return r1;
-        }
-        foreach (var item in board.Rank ?? [])
-        {
-            if (FromElement(item) is { Length: > 0 } r2)
-            {
-                return r2;
-            }
-        }
-        return "";
     }
 
     private void SetBadge(string text, Brush brush)
