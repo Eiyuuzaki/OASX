@@ -107,19 +107,9 @@ public partial class DashboardPage : UserControl
                 // 日志失败忽略
             }
         }
-        catch (Exception ex)
+        catch
         {
-            try
-            {
-                System.IO.File.AppendAllText(
-                    System.IO.Path.Combine(AppContext.BaseDirectory, "nav.log"),
-                    $"{DateTime.Now:HH:mm:ss} dashboard account refresh failed: {ex.Message}" +
-                    Environment.NewLine);
-            }
-            catch
-            {
-                // 日志失败忽略
-            }
+            // 游戏未运行等情况静默
         }
     }
 
@@ -129,7 +119,7 @@ public partial class DashboardPage : UserControl
         await RefreshAllAsync();
     }
 
-    // ==================== 结界寄养（Dashboard 精简卡） ====================
+    // ==================== 结界寄养（自结界卡 + 寄养 双卡，圆环进度） ====================
 
     private async Task LoadFosterDashAsync()
     {
@@ -138,44 +128,66 @@ public partial class DashboardPage : UserControl
             var state = await OasNotifyApi.GetFosterAsync();
             if (state is null || !state.Success)
             {
-                FosterDashText.Text = "需要游戏运行";
-                FosterDashCountdown.Text = "";
-                FosterDashEnd.Text = "";
-                FosterDashOwnText.Text = "";
+                FillDashCard(FosterCardName, FosterCountdown, FosterEnd, FosterRemain,
+                    FosterIcon, FosterRing, "当前未寄养", "", null, 0, null, false);
+                FillDashCard(OwnCardName, OwnCountdown, OwnEnd, OwnRemain,
+                    OwnIcon, OwnRing, "需要游戏运行", "", null, 0, null, false);
                 return;
             }
+
+            // ---- 寄养 ----
             var foster = state.Foster;
             if (foster is null || foster.Active == false || foster.Remaining is null)
             {
-                FosterDashText.Text = "当前未寄养";
-                FosterDashCountdown.Text = "";
-                FosterDashEnd.Text = "";
-                return;
+                FillDashCard(FosterCardName, FosterCountdown, FosterEnd, FosterRemain,
+                    FosterIcon, FosterRing, "当前未寄养", "", null, 0, null, false);
             }
-            var remain = foster.Remaining ?? 0;
-            var cardName = foster.CardName ?? "";
-            FosterDashOwnText.Text = OwnDashText(state);
-            if (remain <= 0)
+            else
             {
-                FosterDashText.Text = $"{cardName} 已成熟";
-                FosterDashCountdown.Text = "去收取";
-                FosterDashEnd.Text = "";
-                return;
+                var remain = foster.Remaining ?? 0;
+                var total = (foster.Hours ?? 6) * 3600.0;
+                var name = (foster.CardName ?? "").Replace("/", " · ");
+                var matured = remain <= 0;
+                var ts = TimeSpan.FromSeconds(remain);
+                FillDashCard(FosterCardName, FosterCountdown, FosterEnd, FosterRemain,
+                    FosterIcon, FosterRing,
+                    name,
+                    matured ? "去收取" : $"{ts.Hours}小时{ts.Minutes:00}分",
+                    matured ? null : $"{foster.EndText} 收取",
+                    Math.Clamp(1 - remain / total, 0, 1),
+                    IconKeyOf(foster.CardName), !matured);
             }
-            var ts = TimeSpan.FromSeconds(remain);
-            FosterDashText.Text = cardName.Replace("/", " · ");
-            var iconKey = cardName.Contains("斗鱼") ? "realm_douyu"
-                : cardName.Contains("太鼓") ? "realm_taiko"
-                : cardName.Contains("太阴") ? "realm_taiyin"
-                : cardName.Contains("伞室内") ? "realm_sanshinei"
-                : "";
-            if (iconKey.Length > 0)
+
+            // ---- 自结界卡 ----
+            var own = state.Own;
+            if (own is null || own.Unknown == true)
             {
-                FosterDashIcon.Source = new System.Windows.Media.Imaging.BitmapImage(
-                    new Uri($"pack://application:,,,/Assets/Icons/{iconKey}.png"));
+                FillDashCard(OwnCardName, OwnCountdown, OwnEnd, OwnRemain,
+                    OwnIcon, OwnRing, "未读取", "", "打开一次结界页后显示", 0, null, false);
             }
-            FosterDashCountdown.Text = $"{ts.Hours}小时{ts.Minutes:00}分";
-            FosterDashEnd.Text = $"{foster.EndText} 收取";
+            else if (own.Error is not null)
+            {
+                FillDashCard(OwnCardName, OwnCountdown, OwnEnd, OwnRemain,
+                    OwnIcon, OwnRing, "读取失败", "", null, 0, null, false);
+            }
+            else if (own.Empty == true)
+            {
+                FillDashCard(OwnCardName, OwnCountdown, OwnEnd, OwnRemain,
+                    OwnIcon, OwnRing, "空", "", "自己放卡后会显示倒计时", 0, null, false);
+            }
+            else
+            {
+                var nameO = (own.CardName ?? own.CardItem ?? "").Replace("/", " · ");
+                var maturedO = (own.Remaining ?? 0) <= 0;
+                var tsO = TimeSpan.FromSeconds(own.Remaining ?? 0);
+                FillDashCard(OwnCardName, OwnCountdown, OwnEnd, OwnRemain,
+                    OwnIcon, OwnRing,
+                    nameO,
+                    maturedO ? "去收取" : $"{tsO.Hours}小时{tsO.Minutes:00}分",
+                    maturedO ? null : $"{own.EndText} 收取",
+                    Math.Clamp(1 - (own.Remaining ?? 0) / ((own.Hours ?? 6) * 3600.0), 0, 1),
+                    IconKeyOf(own.CardName), !maturedO);
+            }
         }
         catch
         {
@@ -183,28 +195,75 @@ public partial class DashboardPage : UserControl
         }
     }
 
-    /// <summary>自结界卡槽状态行（空/未读取/倒计时）。</summary>
-    private static string OwnDashText(OasNotifyApi.FosterState state)
+    /// <summary>填充双卡之一；fraction 驱动圆环，iconKey 为空时隐藏卡图。</summary>
+    private void FillDashCard(System.Windows.Controls.TextBlock nameTb,
+        System.Windows.Controls.TextBlock cdTb, System.Windows.Controls.TextBlock endTb,
+        System.Windows.Controls.TextBlock remainTb, System.Windows.Controls.Image icon,
+        System.Windows.Shapes.Ellipse ring,
+        string name, string countdown, string? endText, double fraction,
+        string? iconKey, bool running)
     {
-        var own = state.Own;
-        if (own is null || own.Unknown == true)
+        nameTb.Text = name;
+        cdTb.Text = countdown;
+        endTb.Text = endText ?? "";
+        remainTb.Text = "";
+        SetRing(ring, fraction);
+        if (iconKey is not null && iconKey.Length > 0)
         {
-            return "";
+            icon.Source = new System.Windows.Media.Imaging.BitmapImage(
+                new Uri($"pack://application:,,,/Assets/Icons/{iconKey}.png"));
+            icon.Visibility = Visibility.Visible;
         }
-        if (own.Error is not null)
+        else
         {
-            return "自结界卡槽：读取失败";
+            icon.Source = null;
+            icon.Visibility = Visibility.Collapsed;
         }
-        if (own.Empty == true)
+        cdTb.Foreground = new System.Windows.Media.SolidColorBrush(running
+            ? System.Windows.Media.Color.FromRgb(0x25, 0x63, 0xEB)
+            : System.Windows.Media.Color.FromRgb(0x16, 0xA3, 0x4A));
+    }
+
+    /// <summary>卡名 → 内置图标 key（无对应图标返回 null）。</summary>
+    private static string? IconKeyOf(string? cardName)
+    {
+        if (string.IsNullOrEmpty(cardName))
         {
-            return "自结界卡槽：空";
+            return null;
         }
-        if ((own.Remaining ?? 0) <= 0)
+        if (cardName.Contains("斗鱼"))
         {
-            return "自结界卡：已成熟可收取";
+            return "realm_douyu";
         }
-        var ts = TimeSpan.FromSeconds(own.Remaining ?? 0);
-        return $"自结界卡：{own.CardName ?? own.CardItem} ⏳ {ts.Hours}小时{ts.Minutes:00}分";
+        if (cardName.Contains("太鼓"))
+        {
+            return "realm_taiko";
+        }
+        if (cardName.Contains("太阴"))
+        {
+            return "realm_taiyin";
+        }
+        if (cardName.Contains("伞室内"))
+        {
+            return "realm_sanshinei";
+        }
+        return null;
+    }
+
+    /// <summary>圆环进度：fraction 0..1，从 12 点方向顺时针（Ellipse + DashArray）。</summary>
+    private static void SetRing(System.Windows.Shapes.Ellipse ring, double fraction)
+    {
+        var t = ring.StrokeThickness;
+        var c = 2 * Math.PI * (ring.Width - t) / 2;
+        var dash = c / t;
+        var f = Math.Clamp(fraction, 0, 1);
+        // 满环时略超出以闭合圆周（Round 端帽下不露缺口）
+        ring.StrokeDashArray = new System.Windows.Media.DoubleCollection
+        {
+            f <= 0.001 ? 0 : dash * (f >= 0.999 ? 1.02 : f),
+            dash
+        };
+        ring.Opacity = f <= 0.001 ? 0 : 1;
     }
 
     /// <summary>点击寄养卡 → 跳转活动页。</summary>

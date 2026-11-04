@@ -62,7 +62,7 @@
                        TextWrapping="Wrap"
                        Foreground="{DynamicResource OasTextSecondaryBrush}" />
 
-            <!-- 结界寄养（6h 一收，到点推送提醒） -->
+            <!-- 结界寄养：自结界卡 + 寄养 双卡并排（圆环进度，6h 一收，到点推送） -->
             <Grid Margin="0,10,0,6">
                 <TextBlock Text="结界寄养" FontSize="14" FontWeight="SemiBold"
                            Foreground="{DynamicResource OasTextPrimaryBrush}" />
@@ -70,67 +70,104 @@
                            HorizontalAlignment="Right" VerticalAlignment="Center"
                            Foreground="{DynamicResource OasTextSecondaryBrush}" />
             </Grid>
-            <Border CornerRadius="{StaticResource RadiusCard}" Padding="18,16,18,16" Margin="0,0,0,6"
-                    Background="{DynamicResource OasSurfaceBrush}"
-                    BorderBrush="{DynamicResource OasBorderBrush}" BorderThickness="1">
-                <StackPanel>
-                    <!-- 空态 -->
-                    <TextBlock x:Name="FosterEmptyText"
-                               Text="游戏内打开一次结界页并寄养后，这里会显示倒计时"
-                               FontSize="13" TextWrapping="Wrap"
-                               Foreground="{DynamicResource OasTextTertiaryBrush}" />
-                    <!-- 主内容 -->
-                    <Grid x:Name="FosterMainGrid" Visibility="Collapsed">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <!-- 卡图 -->
-                        <Border CornerRadius="10" Width="62" Height="62"
-                                Background="{DynamicResource OasSubtleBrush}">
-                            <Image x:Name="FosterCardIcon" Width="58" Height="58" />
-                        </Border>
-                        <!-- 名称 + 归属 -->
-                        <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
-                            <TextBlock x:Name="FosterCardText" Text="" FontSize="16"
-                                       FontWeight="SemiBold"
-                                       FontFamily="{StaticResource AppFontFamily}"
-                                       Foreground="{DynamicResource OasTextPrimaryBrush}" />
-                            <TextBlock x:Name="FosterLiveText" Text="" FontSize="11"
-                                       Margin="0,4,0,0" TextWrapping="Wrap"
-                                       Foreground="{DynamicResource OasTextSecondaryBrush}" />
-                            <TextBlock x:Name="FosterNotifyChip" Text="" FontSize="11"
-                                       Margin="0,3,0,0"
-                                       Foreground="{DynamicResource OasTextTertiaryBrush}" />
-                        </StackPanel>
-                        <!-- 倒计时 -->
-                        <StackPanel Grid.Column="2" VerticalAlignment="Center"
-                                    HorizontalAlignment="Right">
-                            <TextBlock x:Name="FosterCountdown" Text="" FontSize="19"
-                                       FontWeight="SemiBold" HorizontalAlignment="Right"
-                                       FontFamily="{StaticResource AppFontFamily}"
-                                       Foreground="{DynamicResource OasAccentBrush}" />
-                            <TextBlock x:Name="FosterEndTime" Text="" FontSize="11"
-                                       Margin="0,3,0,0" HorizontalAlignment="Right"
-                                       Foreground="{DynamicResource OasTextTertiaryBrush}" />
-                        </StackPanel>
-                    </Grid>
-                    <!-- 周期进度条 -->
-                    <ProgressBar x:Name="FosterProgress" Height="5" Margin="0,12,0,4"
-                                 Minimum="0" Maximum="1" Visibility="Collapsed"
-                                 Foreground="{DynamicResource OasAccentBrush}"
-                                 Background="{DynamicResource OasBorderBrush}" />
-                    <!-- 自结界卡槽 -->
-                    <TextBlock x:Name="FosterOwnText" Text="" FontSize="12" Margin="0,8,0,0"
-                               TextWrapping="Wrap"
-                               Foreground="{DynamicResource OasTextSecondaryBrush}" />
-                    <!-- 兼容旧引用 -->
-                    <TextBlock x:Name="FosterText" Text="" Visibility="Collapsed" />
-                    <TextBlock x:Name="FosterSubText" Text="" Visibility="Collapsed" />
-                    <Border x:Name="FosterCardBadge" Visibility="Collapsed" />
-                </StackPanel>
-            </Border>
+            <Grid Margin="0,0,0,14">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="14" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- 自结界卡 -->
+                <Border CornerRadius="{StaticResource RadiusCard}" Padding="16,14"
+                        Background="{DynamicResource OasSurfaceBrush}"
+                        BorderBrush="{DynamicResource OasBorderBrush}" BorderThickness="1">
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid Width="52" Height="52" VerticalAlignment="Top">
+                                <Ellipse x:Name="ActOwnRingTrack" Width="52" Height="52"
+                                         Stroke="{DynamicResource OasBorderBrush}" StrokeThickness="4" />
+                                <Ellipse x:Name="ActOwnRing" Width="52" Height="52"
+                                         Stroke="{DynamicResource OasAccentBrush}" StrokeThickness="4"
+                                         StrokeDashCap="Round">
+                                    <Ellipse.RenderTransform>
+                                        <RotateTransform Angle="-90" CenterX="26" CenterY="26" />
+                                    </Ellipse.RenderTransform>
+                                </Ellipse>
+                                <Image x:Name="ActOwnIcon" Width="32" Height="32"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Grid>
+                            <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                                <TextBlock Text="自结界卡" FontSize="12"
+                                           Foreground="{DynamicResource OasTextTertiaryBrush}" />
+                                <TextBlock x:Name="ActOwnName" Text="—" FontSize="15" FontWeight="SemiBold"
+                                           Margin="0,2,0,0"
+                                           FontFamily="{StaticResource AppFontFamily}"
+                                           Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                                <TextBlock x:Name="ActOwnNote" Text="" FontSize="11" Margin="0,2,0,0"
+                                           TextWrapping="Wrap"
+                                           Foreground="{DynamicResource OasTextSecondaryBrush}" />
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock x:Name="ActOwnCountdown" Text="" FontSize="20" FontWeight="SemiBold"
+                                   Margin="0,10,0,0"
+                                   FontFamily="{StaticResource AppFontFamily}"
+                                   Foreground="{DynamicResource OasAccentBrush}" />
+                        <TextBlock x:Name="ActOwnEnd" Text="" FontSize="11" Margin="0,2,0,0"
+                                   Foreground="{DynamicResource OasTextTertiaryBrush}" />
+                    </StackPanel>
+                </Border>
+
+                <!-- 寄养 -->
+                <Border Grid.Column="2" CornerRadius="{StaticResource RadiusCard}" Padding="16,14"
+                        Background="{DynamicResource OasSurfaceBrush}"
+                        BorderBrush="{DynamicResource OasBorderBrush}" BorderThickness="1">
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid Width="52" Height="52" VerticalAlignment="Top">
+                                <Ellipse x:Name="ActFosterRingTrack" Width="52" Height="52"
+                                         Stroke="{DynamicResource OasBorderBrush}" StrokeThickness="4" />
+                                <Ellipse x:Name="ActFosterRing" Width="52" Height="52"
+                                         Stroke="{DynamicResource OasAccentBrush}" StrokeThickness="4"
+                                         StrokeDashCap="Round">
+                                    <Ellipse.RenderTransform>
+                                        <RotateTransform Angle="-90" CenterX="26" CenterY="26" />
+                                    </Ellipse.RenderTransform>
+                                </Ellipse>
+                                <Image x:Name="ActFosterIcon" Width="32" Height="32"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Grid>
+                            <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                                <TextBlock Text="寄养" FontSize="12"
+                                           Foreground="{DynamicResource OasTextTertiaryBrush}" />
+                                <TextBlock x:Name="ActFosterName" Text="—" FontSize="15" FontWeight="SemiBold"
+                                           Margin="0,2,0,0"
+                                           FontFamily="{StaticResource AppFontFamily}"
+                                           Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                                <TextBlock x:Name="ActFosterLive" Text="" FontSize="11" Margin="0,2,0,0"
+                                           TextWrapping="Wrap"
+                                           Foreground="{DynamicResource OasTextSecondaryBrush}" />
+                                <TextBlock x:Name="ActFosterNotify" Text="" FontSize="11" Margin="0,2,0,0"
+                                           Foreground="{DynamicResource OasTextTertiaryBrush}" />
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock x:Name="ActFosterCountdown" Text="" FontSize="20" FontWeight="SemiBold"
+                                   Margin="0,10,0,0"
+                                   FontFamily="{StaticResource AppFontFamily}"
+                                   Foreground="{DynamicResource OasAccentBrush}" />
+                        <TextBlock x:Name="ActFosterEnd" Text="" FontSize="11" Margin="0,2,0,0"
+                                   Foreground="{DynamicResource OasTextTertiaryBrush}" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+
 
             <!-- 每日任务 -->
             <TextBlock Text="每日任务" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,6"

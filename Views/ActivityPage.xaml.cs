@@ -368,6 +368,7 @@ public partial class ActivityPage : UserControl
     // ==================== 结界寄养 ====================
 
     /// <summary>读寄养/自结界卡双槽位（数据来自游戏内嵌解释器）。</summary>
+    /// <summary>读寄养/自结界卡双槽位（游戏内嵌解释器），填充两张圆环卡。</summary>
     private async Task LoadFosterAsync()
     {
         try
@@ -375,101 +376,157 @@ public partial class ActivityPage : UserControl
             var state = await OasNotifyApi.GetFosterAsync();
             if (state is null || !state.Success)
             {
-                FosterEmptyText.Text = state?.Error ?? "读取失败";
-                FosterEmptyText.Visibility = Visibility.Visible;
-                FosterMainGrid.Visibility = Visibility.Collapsed;
-                FosterProgress.Visibility = Visibility.Collapsed;
-                FosterOwnText.Text = "";
-                return;
-            }
-
-            var foster = state.Foster;
-            if (foster is null || foster.Active == false || foster.Remaining is null)
-            {
-                FosterEmptyText.Text = "寄养槽：当前未放置——游戏内寄养后这里会显示倒计时";
-                FosterEmptyText.Visibility = Visibility.Visible;
-                FosterMainGrid.Visibility = Visibility.Collapsed;
-                FosterProgress.Visibility = Visibility.Collapsed;
-                FosterOwnText.Text = OwnSlotText(state);
+                FillFosterCard("需要游戏运行", "", "", "", 0, null, false);
+                FillOwnCard("需要游戏运行", "", "", 0, null, false);
                 FosterNotifyText.Text = "";
                 return;
             }
 
-            // 主内容
-            FosterEmptyText.Visibility = Visibility.Collapsed;
-            FosterMainGrid.Visibility = Visibility.Visible;
+            var liveDesc = DescribeLiveRole(state.LiveRole);
+            FosterNotifyText.Text = state.NotifyEnabled ? "通知已启用" : "通知未启用";
 
-            var cardName = foster.CardName ?? "";
-            ShowCardBadge(cardName, foster.CardItem);
-
-            var remain = foster.Remaining ?? 0;
-            if (remain <= 0)
+            // ---- 寄养 ----
+            var foster = state.Foster;
+            if (foster is null || foster.Active == false || foster.Remaining is null)
             {
-                FosterCountdown.Text = "已成熟";
-                FosterCountdown.Foreground = Brush("OasSuccessBrush",
-                    System.Windows.Media.Color.FromRgb(0x16, 0xA3, 0x4A));
-                FosterEndTime.Text = $"{foster.EndText} 可收取";
-                FosterProgress.Value = 1;
+                FillFosterCard("当前未寄养", liveDesc,
+                    state.NotifyEnabled ? "到点将推送通知" : "通知未启用（设置页可开启）",
+                    "", 0, null, false);
             }
             else
             {
-                var ts = TimeSpan.FromSeconds(remain);
-                FosterCountdown.Text = $"{ts.Hours}小时{ts.Minutes:00}分";
-                FosterCountdown.Foreground = Brush("OasAccentBrush",
-                    System.Windows.Media.Color.FromRgb(0x25, 0x63, 0xEB));
-                FosterEndTime.Text = $"{foster.EndText} 收取";
+                var remain = foster.Remaining ?? 0;
                 var total = (foster.Hours ?? 6) * 3600.0;
-                FosterProgress.Value = Math.Clamp(1 - remain / total, 0, 1);
+                var name = (foster.CardName ?? "").Replace("/", " · ");
+                var matured = remain <= 0;
+                var ts = TimeSpan.FromSeconds(remain);
+                FillFosterCard(name, liveDesc,
+                    state.NotifyEnabled ? "到点将推送通知" : "通知未启用（设置页可开启）",
+                    matured ? $"{foster.EndText} 可收取" : $"{foster.EndText} 收取",
+                    Math.Clamp(1 - remain / total, 0, 1),
+                    IconKeyOf(foster.CardName), !matured,
+                    matured ? "已成熟" : $"{ts.Hours}小时{ts.Minutes:00}分");
             }
-            FosterProgress.Visibility = Visibility.Visible;
 
-            // 归属 + 通知（分层小字）
-            var liveDesc = DescribeLiveRole(state.LiveRole);
-            FosterLiveText.Text = liveDesc;
-            FosterNotifyChip.Text = state.NotifyEnabled
-                ? "到点将推送通知"
-                : "通知未启用（设置页可开启）";
-            FosterNotifyChip.Foreground = state.NotifyEnabled
-                ? Brush("OasSuccessBrush", System.Windows.Media.Color.FromRgb(0x16, 0xA3, 0x4A))
-                : Brush("OasTextTertiaryBrush", System.Windows.Media.Color.FromRgb(0x9B, 0x9B, 0x9B));
-
-            // 自结界卡槽
-            FosterOwnText.Text = OwnSlotText(state);
+            // ---- 自结界卡 ----
+            var own = state.Own;
+            if (own is null || own.Unknown == true)
+            {
+                FillOwnCard("未读取", "", "打开一次结界页后可显示", 0, null, false);
+            }
+            else if (own.Error is not null)
+            {
+                FillOwnCard("读取失败", "", "", 0, null, false);
+            }
+            else if (own.Empty == true)
+            {
+                FillOwnCard("空", "", "自己放卡后会显示倒计时", 0, null, false);
+            }
+            else
+            {
+                var nameO = (own.CardName ?? own.CardItem ?? "").Replace("/", " · ");
+                var maturedO = (own.Remaining ?? 0) <= 0;
+                var tsO = TimeSpan.FromSeconds(own.Remaining ?? 0);
+                FillOwnCard(nameO, maturedO ? "可收取" : $"{tsO.Hours}小时{tsO.Minutes:00}分后成熟",
+                    maturedO ? $"{own.EndText} 可收取" : $"{own.EndText} 收取",
+                    Math.Clamp(1 - (own.Remaining ?? 0) / ((own.Hours ?? 6) * 3600.0), 0, 1),
+                    IconKeyOf(own.CardName), !maturedO);
+            }
         }
         catch (Exception ex)
         {
-            FosterEmptyText.Text = $"读取失败：{ex.Message}";
-            FosterEmptyText.Visibility = Visibility.Visible;
-            FosterMainGrid.Visibility = Visibility.Collapsed;
+            FosterNotifyText.Text = $"读取失败：{ex.Message}";
         }
     }
 
-    /// <summary>自结界卡槽的展示文本。</summary>
-    private static string OwnSlotText(OasNotifyApi.FosterState state)
+    /// <summary>寄养卡填充。</summary>
+    private void FillFosterCard(string name, string liveText, string notifyText,
+        string endText, double fraction, string? iconKey, bool running, string countdown = "")
     {
-        var own = state.Own;
-        if (own is null)
-        {
-            return "";
-        }
-        if (own.Error is not null)
-        {
-            return $"自结界卡槽：读取失败（{own.Error}）";
-        }
-        if (own.Empty == true)
-        {
-            return "自结界卡槽：空（自己放卡后会在这里显示倒计时）";
-        }
-        if (own.Unknown == true)
-        {
-            return "自结界卡槽：未读取（游戏内打开一次结界页后可显示）";
-        }
-        var ts = TimeSpan.FromSeconds(own.Remaining ?? 0);
-        return $"自结界卡：{own.CardName ?? own.CardItem} " +
-               $"⏳ {ts.Hours}小时{ts.Minutes:00}分（{own.EndText} 收取）";
+        ActFosterName.Text = name;
+        ActFosterLive.Text = liveText;
+        ActFosterNotify.Text = notifyText;
+        ActFosterCountdown.Text = countdown;
+        ActFosterEnd.Text = endText;
+        SetRing(ActFosterRing, fraction);
+        SetCardIcon(ActFosterIcon, iconKey);
+        ActFosterCountdown.Foreground = new System.Windows.Media.SolidColorBrush(running
+            ? System.Windows.Media.Color.FromRgb(0x25, 0x63, 0xEB)
+            : System.Windows.Media.Color.FromRgb(0x16, 0xA3, 0x4A));
     }
 
-    /// <summary>描述游戏内登录角色与所选账号的关系。</summary>
+    /// <summary>自结界卡填充。</summary>
+    private void FillOwnCard(string name, string countdown, string note,
+        double fraction, string? iconKey, bool running)
+    {
+        ActOwnName.Text = name;
+        ActOwnNote.Text = note;
+        ActOwnCountdown.Text = countdown;
+        ActOwnEnd.Text = "";
+        SetRing(ActOwnRing, fraction);
+        SetCardIcon(ActOwnIcon, iconKey);
+        ActOwnCountdown.Foreground = new System.Windows.Media.SolidColorBrush(running
+            ? System.Windows.Media.Color.FromRgb(0x25, 0x63, 0xEB)
+            : System.Windows.Media.Color.FromRgb(0x16, 0xA3, 0x4A));
+    }
+
+    /// <summary>卡名 → 内置图标 key。</summary>
+    private static string? IconKeyOf(string? cardName)
+    {
+        if (string.IsNullOrEmpty(cardName))
+        {
+            return null;
+        }
+        if (cardName.Contains("斗鱼"))
+        {
+            return "realm_douyu";
+        }
+        if (cardName.Contains("太鼓"))
+        {
+            return "realm_taiko";
+        }
+        if (cardName.Contains("太阴"))
+        {
+            return "realm_taiyin";
+        }
+        if (cardName.Contains("伞室内"))
+        {
+            return "realm_sanshinei";
+        }
+        return null;
+    }
+
+    private static void SetCardIcon(System.Windows.Controls.Image icon, string? iconKey)
+    {
+        if (iconKey is not null && iconKey.Length > 0)
+        {
+            icon.Source = new System.Windows.Media.Imaging.BitmapImage(
+                new Uri($"pack://application:,,,/Assets/Icons/{iconKey}.png"));
+            icon.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            icon.Source = null;
+            icon.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    /// <summary>圆环进度：fraction 0..1，从 12 点顺时针。</summary>
+    private static void SetRing(System.Windows.Shapes.Ellipse ring, double fraction)
+    {
+        var t = ring.StrokeThickness;
+        var c = 2 * Math.PI * (ring.Width - t) / 2;
+        var dash = c / t;
+        var f = Math.Clamp(fraction, 0, 1);
+        ring.StrokeDashArray = new System.Windows.Media.DoubleCollection
+        {
+            f <= 0.001 ? 0 : dash * (f >= 0.999 ? 1.02 : f),
+            dash
+        };
+        ring.Opacity = f <= 0.001 ? 0 : 1;
+    }
+
+
     private string DescribeLiveRole(OasActivityApi.LiveRole? live)
     {
         var ctx = GlobalAccountContext.Instance;
@@ -507,32 +564,6 @@ public partial class ActivityPage : UserControl
             : $"⚠️ {text} —— 与所选账号不符，以上数据属于游戏内角色";
     }
 
-    /// <summary>卡类型徽标：图标取游戏内素材（Assets/Icons），名字取 card_item 映射。</summary>
-    private void ShowCardBadge(string? cardName, string? cardItem = null)
-    {
-        if (string.IsNullOrEmpty(cardName))
-        {
-            FosterCardBadge.Visibility = Visibility.Collapsed;
-            return;
-        }
-        var iconKey = cardName.Contains("斗鱼") ? "realm_douyu"
-            : cardName.Contains("太鼓") ? "realm_taiko"
-            : cardName.Contains("太阴") ? "realm_taiyin"
-            : cardName.Contains("伞室内") ? "realm_sanshinei"
-            : "";
-        if (iconKey.Length > 0)
-        {
-            FosterCardIcon.Source = new System.Windows.Media.Imaging.BitmapImage(
-                new Uri($"pack://application:,,,/Assets/Icons/{iconKey}.png"));
-            FosterCardIcon.Visibility = Visibility.Visible;
-        }
-        else
-        {
-            FosterCardIcon.Visibility = Visibility.Collapsed;
-        }
-        FosterCardText.Text = cardName.Replace("/", " · ");
-        FosterCardBadge.Visibility = Visibility.Visible;
-    }
 
     private async Task LoadAsync(bool force = false)
     {
