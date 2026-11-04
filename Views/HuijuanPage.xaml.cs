@@ -14,29 +14,25 @@ public sealed class ScrollCardVm
     public string IndexText { get; init; } = "";
 
     public string Name { get; init; } = "";
+
     public double Percent { get; init; }
     public string PercentText { get; init; } = "";
-    public string ScoreText { get; init; } = "";
 
-    /// <summary>我在该卷的积分（getSelfTotalScore(卷ID)）；0 时隐藏。</summary>
-    public string SelfText { get; init; } = "";
-    public System.Windows.Visibility SelfVisibility { get; init; } = System.Windows.Visibility.Collapsed;
-
-    /// <summary>我在该卷的排名（每卷独立榜）；无数据时隐藏。</summary>
-    public string SelfRankText { get; init; } = "";
-
-    /// <summary>当前排名所处奖励档（如 "300–500 名档"）；无数据隐藏。</summary>
-    public string TierText { get; init; } = "";
-    public System.Windows.Visibility TierVisibility { get; init; } =
+    /// <summary>排名 + 档位，如 "排名 412 · 第5档"；无数据时为空。</summary>
+    public string RankText { get; init; } = "";
+    public System.Windows.Visibility RankVisibility { get; init; } =
         System.Windows.Visibility.Collapsed;
 
-    /// <summary>距满卷还差多少分（未满时显示）。</summary>
+    /// <summary>我在该卷的积分，如 "积分 1,860"；0 时隐藏。</summary>
+    public string ScoreText { get; init; } = "";
+    public System.Windows.Visibility ScoreVisibility { get; init; } =
+        System.Windows.Visibility.Collapsed;
+
+    /// <summary>未满卷时的差距，如 "还差 447万"（仅未满时出现）。</summary>
     public string RemainText { get; init; } = "";
     public System.Windows.Visibility RemainVisibility { get; init; } =
         System.Windows.Visibility.Collapsed;
-    public System.Windows.Visibility SelfRankVisibility { get; init; } =
-        System.Windows.Visibility.Collapsed;
-    public string WindowText { get; init; } = "";
+
     public string StateText { get; init; } = "";
     public Brush StateBrush { get; init; } = Brushes.Gray;
 }
@@ -185,7 +181,11 @@ public partial class HuijuanPage : UserControl
 
             _lastActive = board.Active;
             IssueText.Text = board.Issue.ToString(CultureInfo.InvariantCulture);
-            ThresholdText.Text = board.Threshold.ToString("N0");
+            ThresholdText.Text = Compact(board.Threshold);
+            var win = board.Scrolls?.FirstOrDefault();
+            WindowText.Text = win is null || string.IsNullOrEmpty(win.BeginText)
+                ? ""
+                : $"{win.BeginText[5..]} → {win.EndText[5..]}";
             SubtitleText.Text = DemoActive
                 ? "演示数据（活动期 UI 预览，非真实采集）"
                 : board.Active
@@ -201,37 +201,32 @@ public partial class HuijuanPage : UserControl
             EmptyText.Visibility = scrolls.Count == 0
                 ? Visibility.Visible : Visibility.Collapsed;
 
-            ScrollList.ItemsSource = scrolls.Select((s, i) => new ScrollCardVm
+            ScrollList.ItemsSource = scrolls.Select((s, i) =>
             {
-                IndexText = (i + 1).ToString("00"),
-                Name = s.Name,
-                Percent = Math.Clamp(s.Percent, 0, 100),
-                PercentText = $"{s.Percent:0.##}%",
-                ScoreText = $"区服总分 {s.Score:N0} / {board.Threshold:N0}",
-                SelfText = $"我的积分 {s.SelfScore:N0}",
-                SelfVisibility = s.SelfScore > 0 || s.SelfRank is not null
-                    ? System.Windows.Visibility.Visible
-                    : System.Windows.Visibility.Collapsed,
-                SelfRankText = s.SelfRank is null ? "" : $"排名 {s.SelfRank.Value:N0}",
-                SelfRankVisibility = s.SelfRank is null || s.SelfRank <= 0
-                    ? System.Windows.Visibility.Collapsed
-                    : System.Windows.Visibility.Visible,
-                TierText = TierLabel(s.SelfRank, s.RankLevels),
-                TierVisibility = TierLabel(s.SelfRank, s.RankLevels).Length > 0
-                    ? System.Windows.Visibility.Visible
-                    : System.Windows.Visibility.Collapsed,
-                RemainText = s.Remain > 0 ? $"距满卷还差 {s.Remain:N0}" : "",
-                RemainVisibility = s.Remain > 0
-                    ? System.Windows.Visibility.Visible
-                    : System.Windows.Visibility.Collapsed,
-                WindowText = string.IsNullOrEmpty(s.BeginText)
-                    ? (s.Finished ? $"满卷于 {s.FinishTimeText}" : "")
-                    : $"{s.BeginText} → {s.EndText}" +
-                      (s.Finished ? $"　满卷 {s.FinishTimeText}" : ""),
-                StateText = s.Finished ? "已满卷" : (board.Active ? "进行中" : "未满"),
-                StateBrush = s.Finished
-                    ? Brush("OasSuccessBrush", Color.FromRgb(0x16, 0xA3, 0x4A))
-                    : Brush("OasWarningBrush", Color.FromRgb(0xD9, 0x77, 0x06)),
+                var rank = TierLabel(s.SelfRank, s.RankLevels);
+                var rankText = s.SelfRank is > 0
+                    ? $"排名 {s.SelfRank.Value:N0}" + (rank.Length > 0 ? $" · {rank}" : "")
+                    : "";
+                return new ScrollCardVm
+                {
+                    IndexText = (i + 1).ToString("00"),
+                    Name = s.Name,
+                    Percent = Math.Clamp(s.Percent, 0, 100),
+                    PercentText = $"{s.Percent:0.##}%",
+                    RankText = rankText,
+                    RankVisibility = rankText.Length > 0
+                        ? Visibility.Visible : Visibility.Collapsed,
+                    ScoreText = s.SelfScore > 0 ? $"积分 {s.SelfScore:N0}" : "",
+                    ScoreVisibility = s.SelfScore > 0
+                        ? Visibility.Visible : Visibility.Collapsed,
+                    RemainText = s.Remain > 0 ? $"还差 {Compact(s.Remain)}" : "",
+                    RemainVisibility = s.Remain > 0 && board.Active
+                        ? Visibility.Visible : Visibility.Collapsed,
+                    StateText = s.Finished ? "已满卷" : (board.Active ? "进行中" : "未满"),
+                    StateBrush = s.Finished
+                        ? Brush("OasSuccessBrush", Color.FromRgb(0x16, 0xA3, 0x4A))
+                        : Brush("OasWarningBrush", Color.FromRgb(0xD9, 0x77, 0x06)),
+                };
             }).ToList();
 
             RenderSelf(board);
@@ -258,7 +253,7 @@ public partial class HuijuanPage : UserControl
 
         if (score > 0)
         {
-            SelfHintText.Text = "本期参与数据（各卷积分求和；排名为每卷独立榜，见下方各卷）";
+            SelfHintText.Text = "本期参与数据（排名见各卷）";
         }
         else if (board.Active)
         {
@@ -270,9 +265,7 @@ public partial class HuijuanPage : UserControl
         }
     }
 
-    /// <summary>用真实档位配置换算"我的排名属于哪一档"。
-    /// rank_levels 形如 [0,20,100,200,300,500,1000,99999999]：第 i 档为
-    /// [levels[i], levels[i+1])，档位数 = levels.Count-1。</summary>
+    /// <summary>用真实档位配置换算"我的排名属于第几档"（只显示档位号，降噪）。</summary>
     private static string TierLabel(int? rank, List<int>? levels)
     {
         if (rank is null || rank <= 0 || levels is null || levels.Count < 2)
@@ -281,19 +274,23 @@ public partial class HuijuanPage : UserControl
         }
         for (var i = 0; i < levels.Count - 1; i++)
         {
-            var lo = levels[i];
-            var hi = levels[i + 1];
-            if (rank >= lo && rank < hi)
+            if (rank >= levels[i] && rank < levels[i + 1])
             {
-                var total = levels.Count - 1;
-                var hiText = hi >= 99_999_999 ? "∞" : (hi - 1).ToString("N0");
-                var loText = lo == 0 ? "1" : (lo + 1).ToString("N0");
-                return lo == 0
-                    ? $"第 {i + 1}/{total} 档（{loText}–{hiText}）"
-                    : $"第 {i + 1}/{total} 档（{loText}–{hiText}）";
+                return $"第{i + 1}档";
             }
         }
         return "";
+    }
+
+    /// <summary>数字压缩：≥1 万用"万"（20,700,000 → 2070万）。</summary>
+    private static string Compact(long value)
+    {
+        if (value >= 10_000)
+        {
+            var w = value / 10_000.0;
+            return w >= 100 ? $"{w:0}万" : $"{w:0.#}万";
+        }
+        return value.ToString("N0");
     }
 
     private void SetBadge(string text, Brush brush)

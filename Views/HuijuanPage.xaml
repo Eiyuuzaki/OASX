@@ -65,6 +65,9 @@
                                    Margin="8,0,0,0" VerticalAlignment="Center"
                                    FontFamily="{StaticResource AppFontFamily}"
                                    Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                        <TextBlock x:Name="WindowText" Text="" FontSize="11"
+                                   Margin="14,0,0,0" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource OasTextTertiaryBrush}" />
                     </StackPanel>
                 </Grid>
             </Border>
@@ -117,7 +120,7 @@
                                 BorderBrush="{DynamicResource OasBorderBrush}"
                                 BorderThickness="1">
                             <StackPanel>
-                                <!-- 卷名 + 状态 ｜ 百分比 -->
+                                <!-- 一行：序号 + 卷名 + 状态 ｜ 百分比 -->
                                 <Grid>
                                     <StackPanel Orientation="Horizontal">
                                         <Border CornerRadius="4" Padding="5,1" Margin="0,2,8,0"
@@ -144,39 +147,27 @@
                                                FontFamily="{StaticResource AppFontFamily}"
                                                Foreground="{DynamicResource OasAccentBrush}" />
                                 </Grid>
-                                <ProgressBar Height="5" Margin="0,5,0,5" Minimum="0" Maximum="100"
+                                <ProgressBar Height="5" Margin="0,7,0,7" Minimum="0" Maximum="100"
                                              Value="{Binding Percent, Mode=OneWay}"
                                              Foreground="{DynamicResource OasAccentBrush}"
                                              Background="{DynamicResource OasSurfaceSecondaryBrush}" />
+                                <!-- 一行：我的排名档位 ｜ 我的积分 ｜ 还差 -->
                                 <Grid>
-                                    <TextBlock Text="{Binding ScoreText}" FontSize="12"
-                                               Foreground="{DynamicResource OasTextSecondaryBrush}" />
-                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                        <TextBlock Text="{Binding SelfText}" FontSize="12"
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding RankText}" FontSize="12"
                                                    FontWeight="SemiBold"
-                                                   Visibility="{Binding SelfVisibility}"
-                                                   Foreground="{DynamicResource OasAccentBrush}" />
-                                        <TextBlock Text="{Binding SelfRankText}" FontSize="12"
-                                                   FontWeight="SemiBold" Margin="10,0,0,0"
-                                                   Visibility="{Binding SelfRankVisibility}"
+                                                   Visibility="{Binding RankVisibility}"
                                                    Foreground="{DynamicResource OasWarningBrush}" />
+                                        <TextBlock Text="{Binding ScoreText}" FontSize="12"
+                                                   Margin="12,0,0,0"
+                                                   Visibility="{Binding ScoreVisibility}"
+                                                   Foreground="{DynamicResource OasTextSecondaryBrush}" />
                                     </StackPanel>
+                                    <TextBlock Text="{Binding RemainText}" HorizontalAlignment="Right"
+                                               FontSize="12" FontWeight="SemiBold"
+                                               Visibility="{Binding RemainVisibility}"
+                                               Foreground="{DynamicResource OasTextPrimaryBrush}" />
                                 </Grid>
-                                <Grid Margin="0,2,0,0">
-                                    <TextBlock Text="{Binding WindowText}" FontSize="11"
-                                               TextWrapping="Wrap"
-                                               Foreground="{DynamicResource OasTextTertiaryBrush}" />
-                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                        <TextBlock Text="{Binding RemainText}" FontSize="11"
-                                                   FontWeight="SemiBold"
-                                                   Visibility="{Binding RemainVisibility}"
-                                                   Foreground="{DynamicResource OasWarningBrush}" />
-                                    </StackPanel>
-                                </Grid>
-                                <TextBlock Text="{Binding TierText}" FontSize="11"
-                                           Margin="0,1,0,0"
-                                           Visibility="{Binding TierVisibility}"
-                                           Foreground="{DynamicResource OasTextSecondaryBrush}" />
                             </StackPanel>
                         </Border>
                     </DataTemplate>
