@@ -76,9 +76,9 @@ public partial class ArgsPage : Page
 
         return new Border
         {
-            CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(16, 12, 16, 12),
-            Margin = new Thickness(0, 0, 0, 12),
+            CornerRadius = new CornerRadius(10),
+            Padding = new Thickness(20, 16, 20, 16),
+            Margin = new Thickness(0, 0, 0, 16),
             Background = FindBrush("OasSurfaceBrush"),
             BorderBrush = FindBrush("OasBorderBrush"),
             BorderThickness = new Thickness(1),
@@ -95,7 +95,7 @@ public partial class ArgsPage : Page
                         FontFamily = (FontFamily)Application.Current
                             .FindResource("AppFontFamily"),
                         Foreground = FindBrush("OasTextPrimaryBrush"),
-                        Margin = new Thickness(0, 0, 0, 10),
+                        Margin = new Thickness(0, 0, 0, 14),
                     },
                     stack,
                 },
@@ -121,7 +121,7 @@ public partial class ArgsPage : Page
                 Foreground = FindBrush("OasTextPrimaryBrush"),
             };
             box.VerticalAlignment = VerticalAlignment.Center;
-            box.Margin = new Thickness(0, 6, 0, 6);
+            box.Margin = new Thickness(0, 10, 0, 10);
             if (!string.IsNullOrEmpty(desc) && desc != title)
             {
                 box.ToolTip = desc;
@@ -154,13 +154,13 @@ public partial class ArgsPage : Page
             "date_time" => BuildTextEditor(value, multiline: false, hint: "格式 yyyy-MM-dd HH:mm:ss"),
             _ => BuildTextEditor(value, multiline: false),
         };
-        editor.Margin = new Thickness(0, 2, 0, 2);
+        editor.Margin = new Thickness(0, 0, 0, 0);
         editor.MinWidth = 0;
         editor.HorizontalAlignment = HorizontalAlignment.Stretch;
 
         _saveMap[editor] = (group, name, type);
 
-        var grid = new Grid { Margin = new Thickness(0, 3, 0, 3) };
+        var grid = new Grid { Margin = new Thickness(0, 8, 0, 8) };
         grid.ColumnDefinitions.Add(new ColumnDefinition
         {
             Width = new GridLength(0.42, GridUnitType.Star),
