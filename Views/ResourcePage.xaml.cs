@@ -407,7 +407,8 @@ public partial class ResourcePage : UserControl
             ShareLog($"render done: {path}");
             StatusText.Text = $"分享图已保存：{path}";
             // 路径入剪贴板：无论能否拉起资源管理器，用户都能直接粘贴定位
-            // 剪贴板可能被其他程序占用（CLIPBRD_E_CANT_OPEN）：重试几次
+            // 路径入剪贴板：无论能否打开目录，用户都能直接粘贴定位
+            // （剪贴板可能被其他程序占用 CLIPBRD_E_CANT_OPEN → 重试）
             for (var attempt = 1; attempt <= 3; attempt++)
             {
                 try
@@ -426,27 +427,12 @@ public partial class ResourcePage : UserControl
                 }
             }
 
-            // 打开目录：**不用 UseShellExecute**——经 ShellExecute 拉起 explorer
-            // 在受限环境会触发系统级"应用程序无法正常启动(0xc0000142)"错误框
-            // （看起来像 OASX 崩溃）。直接 CreateProcess 失败只会抛异常，
-            // 由外层 catch 记录，不弹系统框。
-            try
-            {
-                ShareLog("opening explorer (direct)");
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = "explorer.exe",
-                    Arguments = $"/select,\"{path}\"",
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                });
-                ShareLog("explorer started");
-            }
-            catch (Exception ex)
-            {
-                ShareLog("explorer failed: " + ex.Message);
-                StatusText.Text = $"分享图已保存（路径已复制）：{path}";
-            }
+            // 预览弹窗：**不启动 explorer**——它在本机受限环境下以 0xc0000142
+            // 初始化失败，Windows 会给崩掉的子进程弹系统错误框，
+            // 被误认为 OASX 崩溃。改为应用内预览 + 复制路径。
+            ShareLog("showing preview dialog");
+            SharePreviewDialog.Show(Window.GetWindow(this), path);
+            ShareLog("preview closed");
         }
         catch (Exception ex)
         {
