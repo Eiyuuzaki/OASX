@@ -38,11 +38,9 @@ public partial class AboutPage : UserControl
             ("Server24", "OAS（OnmyojiAutoScript）",
                 "后端脚本引擎与调度器 · 由 runhey 及社区开发"),
             ("PaintBrush24", "MiSans",
-                "界面字体 · 小米发布，免费商用（与 BetterGenshinImpact 同款）"),
+                "界面字体 · 小米发布，免费商用"),
             ("Info24", "WPF-UI 4.3.0",
                 "Fluent 控件与主题 · lepoco（MIT）"),
-            ("Color24", "BetterGenshinImpact",
-                "导航与页面架构、视觉风格参考（BGI）"),
             ("TasksApp24", "WPF / .NET 8",
                 "桌面应用框架（Microsoft，MIT）"),
         };
