@@ -19,6 +19,8 @@ public sealed class DailyTaskVm
 /// <summary>进行中时段行（游戏内部 key + 结束时间）。</summary>
 public sealed class LiveWindowVm
 {
+    /// <summary>游戏内部 key（重命名以它为键）。</summary>
+    public string Key { get; init; } = "";
     public string Label { get; init; } = "";
     public string EndText { get; init; } = "";
 }
@@ -650,11 +652,13 @@ public partial class ActivityPage : UserControl
             }).ToList();
 
             // 进行中的活动时段（只有内部 key，客户端无中文名）
+            var aliases = LoadLiveNames();
             var live = (board.LiveWindows ?? [])
                 .OrderBy(w => w.End)
                 .Select(w => new LiveWindowVm
                 {
-                    Label = w.Key,
+                    Key = w.Key,
+                    Label = aliases.TryGetValue(w.Key, out var alias) ? alias : w.Key,
                     EndText = $"至 {w.EndText}",
                 })
                 .ToList();
@@ -662,9 +666,13 @@ public partial class ActivityPage : UserControl
             LiveEmptyText.Visibility = live.Count == 0
                 ? Visibility.Visible : Visibility.Collapsed;
 
-            // 当前活动（名称来自客户端活动表）
+            // 当前活动（名称来自客户端活动表）：过滤已过期（end 早于今天），
+            // 按截止日期升序——此前会把二月/九月截止的历史活动一直挂在列表里。
+            var today = DateTime.Today;
             ActivityList.ItemsSource = (board.CurrentActivities ?? [])
                 .Where(a => !string.IsNullOrWhiteSpace(a.Name))
+                .Where(a => EndDate(a.End) is not { } end || end >= today)
+                .OrderBy(a => EndDate(a.End) ?? DateTime.MaxValue)
                 .Select(a => new CurrentActivityVm
                 {
                     Name = a.Name,
@@ -689,6 +697,115 @@ public partial class ActivityPage : UserControl
     }
 
     /// <summary>"(2026, 11, 8, 0, 0, 0, 0, 0, -1)" → "11-08 截止"。</summary>
+    /// <summary>本地时段别名（游戏内部 key → 中文名），存设置键 liveWindowNames。</summary>
+    private static Dictionary<string, string> LoadLiveNames()
+    {
+        var raw = OasSettings.Get("liveWindowNames", "");
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            // 内置：已确认的映射（其余留空由用户自己起名）
+            return new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["evening_event"] = "逢魔之时",
+            };
+        }
+        try
+        {
+            var map = System.Text.Json.JsonSerializer
+                .Deserialize<Dictionary<string, string>>(raw);
+            if (map is null)
+            {
+                return [];
+            }
+            map["evening_event"] ??= "逢魔之时";
+            return map;
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
+    private static void SaveLiveNames(Dictionary<string, string> map) =>
+        OasSettings.Set("liveWindowNames",
+            System.Text.Json.JsonSerializer.Serialize(map));
+
+    /// <summary>双击时段行 → 起中文名（本地保存，下次刷新沿用）。</summary>
+    private async void LiveRow_DoubleClick(object sender,
+        System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (e.ClickCount != 2) return;
+        if (sender is not FrameworkElement { DataContext: LiveWindowVm vm }) return;
+        var input = await PromptTextAsync("给这个时段起个名字",
+            $"内部 key：{vm.Key}", vm.Label == vm.Key ? "" : vm.Label);
+        if (input is null) return;
+        var map = LoadLiveNames();
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            map.Remove(vm.Key);
+        }
+        else
+        {
+            map[vm.Key] = input.Trim();
+        }
+        SaveLiveNames(map);
+        await LoadAsync();
+    }
+
+    /// <summary>Fluent 输入对话框（与工作台同款）。</summary>
+    private async Task<string?> PromptTextAsync(string title, string hint, string initial)
+    {
+        var host = (Window.GetWindow(this) as MainWindow)?.DialogHost;
+        if (host is null)
+        {
+            return null;
+        }
+        var tb = new Wpf.Ui.Controls.TextBox
+        {
+            Text = initial,
+            MinWidth = 320,
+            PlaceholderText = hint,
+        };
+        var panel = new StackPanel { Margin = new Thickness(0, 12, 0, 8) };
+        panel.Children.Add(tb);
+        var dialog = new Wpf.Ui.Controls.ContentDialog(host)
+        {
+            Title = title,
+            Content = panel,
+            PrimaryButtonText = "保存",
+            CloseButtonText = "取消",
+            DefaultButton = Wpf.Ui.Controls.ContentDialogButton.Primary,
+        };
+        var result = await dialog.ShowAsync();
+        return result == Wpf.Ui.Controls.ContentDialogResult.Primary ? tb.Text : null;
+    }
+
+    /// <summary>解析客户端 end 元组 "(2026,2,3)" → 日期；失败/缺字段返回 null。</summary>
+    private static DateTime? EndDate(string raw)
+    {
+        if (string.IsNullOrEmpty(raw))
+        {
+            return null;
+        }
+        var digits = raw.Trim('(', ')').Split(',')
+            .Select(x => x.Trim())
+            .Where(x => int.TryParse(x, out _))
+            .Select(int.Parse)
+            .ToArray();
+        if (digits.Length < 3)
+        {
+            return null;
+        }
+        try
+        {
+            return new DateTime(digits[0], digits[1], digits[2]);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     private static string FormatEnd(string raw)
     {
         if (string.IsNullOrEmpty(raw))

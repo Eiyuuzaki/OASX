@@ -86,16 +86,7 @@ public partial class MainWindow : FluentWindow
                     "关于" or "about" => typeof(AboutPage),
                     _ => typeof(DashboardPage),
                 };
-            LogNav($"target={target.Name} arg={pageArg}");
             RootNavigation.Navigate(target);
-            Dispatcher.BeginInvoke(
-                new Action(() => LogNav(
-                    $"after navigate: selected={RootNavigation.SelectedItem switch
-                    {
-                        Wpf.Ui.Controls.NavigationViewItem nvi => nvi.TargetPageType?.Name,
-                        _ => "null",
-                    }}")),
-                System.Windows.Threading.DispatcherPriority.Background);
         };
 
         RestoreWindowBounds();
@@ -251,20 +242,6 @@ public partial class MainWindow : FluentWindow
     private bool _suppressAccountSwitch;
 
     /// <summary>账号块：订阅上下文，按钮文案与弹出列表随全局状态同步。</summary>
-    private static void LogNav(string msg)
-    {
-        try
-        {
-            System.IO.File.AppendAllText(
-                System.IO.Path.Combine(AppContext.BaseDirectory, "nav.log"),
-                $"{DateTime.Now:HH:mm:ss} {msg}" + Environment.NewLine);
-        }
-        catch
-        {
-            // 日志失败不影响功能
-        }
-    }
-
     private void InitAccountSwitcher()
     {
         var ctx = GlobalAccountContext.Instance;
@@ -304,8 +281,6 @@ public partial class MainWindow : FluentWindow
     {
         var ctx = GlobalAccountContext.Instance;
         var options = ctx.BuildOptions();
-        LogNav($"account button clicked: options={options.Count} " +
-               $"loading={ctx.IsLoading} accounts={ctx.Accounts.Count}");
         if (options.Count == 0)
         {
             AccountButtonText.Text = ctx.IsLoading ? "账号加载中…" : "未选择账号";
@@ -416,7 +391,6 @@ public partial class MainWindow : FluentWindow
                     })
                 {
                     GlobalAccountContext.Instance.SetCurrent(o.Entry);
-                    LogNav($"account switched -> {o.Entry.Config}/{o.Entry.RoleKey}");
                 }
                 AccountPopup.IsOpen = false;
             };
@@ -449,7 +423,6 @@ public partial class MainWindow : FluentWindow
         {
             AccountPopup.IsOpen = false;
             await GlobalAccountContext.Instance.LoadAccountsAsync();
-            LogNav("accounts reloaded from menu");
         };
         AccountPopupPanel.Children.Add(refreshBtn);
 
@@ -463,8 +436,6 @@ public partial class MainWindow : FluentWindow
             new Action(() =>
             {
                 AccountPopup.IsOpen = true;
-                LogNav($"account popup opened: items={AccountPopupPanel.Children.Count} " +
-                       $"isOpen={AccountPopup.IsOpen}");
             }),
             System.Windows.Threading.DispatcherPriority.Input);
     }
@@ -481,8 +452,6 @@ public partial class MainWindow : FluentWindow
         var role = await OasRoleApi.GetLiveAsync(config);
         if (role is { Success: true })
         {
-            LogNav($"live role: {role.Name} Lv{role.Level} {role.ServerShowName} " +
-                   $"({role.AvatarId}@{role.ServerId})");
         }
     }
 
@@ -496,7 +465,6 @@ public partial class MainWindow : FluentWindow
             "NavigationParentProperty", BindingFlags.NonPublic | BindingFlags.Static);
         if (dpField?.GetValue(null) is not DependencyProperty dp)
         {
-            File.AppendAllText("nav.log", "WARN: NavigationParentProperty not found\n");
             return;
         }
 

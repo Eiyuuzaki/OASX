@@ -303,7 +303,9 @@
                     <ItemsControl x:Name="LiveList">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Grid Margin="0,3">
+                                <Grid Margin="0,3" Background="Transparent"
+                                      Cursor="Hand" ToolTip="双击给这个时段起个中文名"
+                                      MouseLeftButtonDown="LiveRow_DoubleClick">
                                     <TextBlock Text="{Binding Label}" FontSize="13"
                                                Foreground="{DynamicResource OasTextPrimaryBrush}" />
                                     <TextBlock Text="{Binding EndText}" HorizontalAlignment="Right"
@@ -314,7 +316,7 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
-                    <TextBlock Text="注：时段标识为游戏内部 key（客户端无中文名映射）"
+                    <TextBlock Text="注：客户端只给内部 key；双击任意行可起中文名（本地保存）"
                                FontSize="11" Margin="0,6,0,0"
                                Foreground="{DynamicResource OasTextTertiaryBrush}" />
                 </StackPanel>

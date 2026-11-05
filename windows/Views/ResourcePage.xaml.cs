@@ -421,9 +421,7 @@ public partial class ResourcePage : UserControl
     {
         try
         {
-            System.IO.File.AppendAllText(
-                System.IO.Path.Combine(AppContext.BaseDirectory, "share.log"),
-                $"{DateTime.Now:HH:mm:ss.fff} {msg}" + Environment.NewLine);
+            LogPaths.Append("share.log", $"{DateTime.Now:HH:mm:ss.fff} {msg}");
         }
         catch
         {

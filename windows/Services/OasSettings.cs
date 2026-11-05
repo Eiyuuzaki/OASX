@@ -74,9 +74,8 @@ public static class OasSettings
                 }
                 try
                 {
-                    File.AppendAllText(Path.Combine(AppContext.BaseDirectory,
-                            "settings_path.log"),
-                        $"{DateTime.Now:HH:mm:ss} OK   {c}{Environment.NewLine}");
+                    LogPaths.Append("settings_path.log",
+                        $"{DateTime.Now:HH:mm:ss} OK   {c}");
                 }
                 catch
                 {
@@ -90,10 +89,9 @@ public static class OasSettings
                 // 导致"设置存到 exe 旁、换构建就丢"很久没被发现）
                 try
                 {
-                    File.AppendAllText(Path.Combine(AppContext.BaseDirectory,
-                            "settings_path.log"),
+                    LogPaths.Append("settings_path.log",
                         $"{DateTime.Now:HH:mm:ss} FAIL {c} :: {ex.GetType().Name}: " +
-                        $"{ex.Message}{Environment.NewLine}");
+                        $"{ex.Message}");
                 }
                 catch
                 {
@@ -128,8 +126,7 @@ public static class OasSettings
     }
 
     /// <summary>保存失败诊断日志（exe 同目录）——不再静默吞异常。</summary>
-    private static readonly string ErrorLogPath = Path.Combine(
-        AppContext.BaseDirectory, "settings_error.log");
+    private static string ErrorLogPath => LogPaths.File("settings_error.log");
 
     private static void Save()
     {

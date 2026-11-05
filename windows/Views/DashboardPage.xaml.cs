@@ -90,22 +90,7 @@ public partial class DashboardPage : UserControl
     {
         try
         {
-            System.IO.File.AppendAllText(
-                System.IO.Path.Combine(AppContext.BaseDirectory, "nav.log"),
-                $"{DateTime.Now:HH:mm:ss} dashboard OnAccountSwitched entry " +
-                $"{entry?.Config}/{entry?.DisplayName}" + Environment.NewLine);
             await RefreshAllAsync();
-            try
-            {
-                System.IO.File.AppendAllText(
-                    System.IO.Path.Combine(AppContext.BaseDirectory, "nav.log"),
-                    $"{DateTime.Now:HH:mm:ss} dashboard refreshed for " +
-                    $"{entry?.Config}/{entry?.DisplayName}" + Environment.NewLine);
-            }
-            catch
-            {
-                // 日志失败忽略
-            }
         }
         catch
         {

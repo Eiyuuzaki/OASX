@@ -40,7 +40,7 @@ public static class OasNotifyApi
     /// <summary>POST /notify/foster/refresh → 当前寄养倒计时。</summary>
     public static async Task<FosterState?> GetFosterAsync()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
         var resp = await OasApi.Http.PostAsync("notify/foster/refresh", null, cts.Token);
         var text = await resp.Content.ReadAsStringAsync(cts.Token);
         return JsonSerializer.Deserialize<FosterState>(text, JsonOptions);

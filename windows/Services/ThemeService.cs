@@ -214,9 +214,7 @@ public static class ThemeService
     {
         try
         {
-            System.IO.File.AppendAllText(
-                System.IO.Path.Combine(AppContext.BaseDirectory, "theme.log"),
-                $"{DateTime.Now:HH:mm:ss.fff} {msg}" + Environment.NewLine);
+            LogPaths.Append("theme.log", $"{DateTime.Now:HH:mm:ss.fff} {msg}");
         }
         catch
         {
