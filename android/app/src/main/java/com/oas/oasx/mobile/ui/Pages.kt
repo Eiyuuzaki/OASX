@@ -1,5 +1,6 @@
 package com.oas.oasx.mobile.ui
 
+import android.content.SharedPreferences
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,6 +12,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -24,7 +28,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import android.content.SharedPreferences
 import com.oas.oasx.mobile.net.Api
 import com.oas.oasx.mobile.net.ActivityBoard
 import com.oas.oasx.mobile.net.FosterResp
@@ -92,83 +95,155 @@ fun firstConfig(): String {
     return list.firstOrNull() ?: throw RuntimeException("后端无配置")
 }
 
-/// 仪表盘：每日/悬赏进度 + 寄养双卡。
+/// 配置选择下拉（数据来自 /config_list）。
+@Composable
+fun ConfigPicker(
+    configs: List<String>,
+    selected: String,
+    onSelect: (String) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+    ) {
+        OutlinedTextField(
+            value = selected,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("配置") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier.menuAnchor().fillMaxWidth(),
+            singleLine = true,
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            configs.forEach { c ->
+                DropdownMenuItem(
+                    text = { Text(c) },
+                    onClick = { onSelect(c); expanded = false },
+                )
+            }
+        }
+    }
+}
+
+/// 仪表盘：配置选择 + 每日/悬赏 + 寄养双卡。
 @Composable
 fun DashboardPage(backend: String) {
-    AsyncView(key = "dash:$backend", fetch = {
-        val config = firstConfig()
-        val board = Api.getJsonOrThrow<ActivityBoard>("/activity/$config?force=1")
-        val foster = Api.getJsonOrThrow<FosterResp>("/notify/foster/refresh")
-        Triple(config, board, foster)
-    }) { (config, board, foster) ->
-        LazyColumn(
-            Modifier.fillMaxSize().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            item { PageTitle("仪表盘") }
-            item {
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text("每日任务", fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("${board.dailyDone} / ${board.dailyTotal}", fontSize = 30.sp)
-                        Text(
-                            "悬赏封印  ${board.monsterDone} / ${board.monster.size}",
-                            fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
+    var configs by remember { mutableStateOf<List<String>?>(null) }
+    var config by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(backend) {
+        val list = withContext(Dispatchers.IO) {
+            try {
+                Api.configList()
+            } catch (e: Exception) {
+                emptyList()
             }
-            item {
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text("寄养", fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        val f = foster.foster
-                        when {
-                            f == null || f.active == false ->
-                                Text("当前未寄养", fontSize = 20.sp)
-                            (f.remaining ?: 0) <= 0 ->
-                                Text("已成熟，去收取", fontSize = 20.sp,
-                                    color = MaterialTheme.colorScheme.primary)
-                            else -> {
-                                val r = (f.remaining ?: 0) / 60
-                                Text("${r / 60}小时${r % 60}分后成熟", fontSize = 20.sp)
-                                Text(
-                                    "${f.cardName ?: f.cardItem} · ${f.endText} 收取",
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
+        }
+        configs = list
+        if (config == null) config = list.firstOrNull()
+    }
+
+    val cfg = config
+    when {
+        configs == null -> Column(
+            Modifier.fillMaxSize().padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) { CircularProgressIndicator() }
+        cfg == null -> ErrorView("后端无配置")
+        else -> Column(Modifier.fillMaxSize().padding(16.dp)) {
+            ConfigPicker(configs, cfg) { config = it }
+            AsyncView(key = "dash:$backend:$cfg", fetch = {
+                val board = Api.getJsonOrThrow<ActivityBoard>("/activity/$cfg?force=1")
+                val foster = Api.getJsonOrThrow<FosterResp>("/notify/foster/refresh")
+                board to foster
+            }) { (board, foster) ->
+                LazyColumn(
+                    Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    // 后端错误如实上浮（模拟器离线/游戏未开），不再显示 0/0
+                    if (!board.success) {
+                        item { ErrorView(board.error ?: "读取失败") }
+                    } else {
+                        item {
+                            Card(Modifier.fillMaxWidth()) {
+                                Column(Modifier.padding(16.dp)) {
+                                    Text("每日任务", fontSize = 13.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("${board.dailyDone} / ${board.dailyTotal}",
+                                        fontSize = 30.sp)
+                                    Text(
+                                        "悬赏封印  ${board.monsterDone} / ${board.monster.size}",
+                                        fontSize = 13.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    item {
+                        Card(Modifier.fillMaxWidth()) {
+                            Column(Modifier.padding(16.dp)) {
+                                Text("寄养", fontSize = 13.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                when {
+                                    !foster.success -> Text(
+                                        foster.error ?: "读取失败",
+                                        fontSize = 15.sp,
+                                        color = MaterialTheme.colorScheme.error,
+                                    )
+                                    else -> {
+                                        val f = foster.foster
+                                        when {
+                                            f == null || f.active == false ->
+                                                Text("当前未寄养", fontSize = 20.sp)
+                                            (f.remaining ?: 0) <= 0 ->
+                                                Text("已成熟，去收取", fontSize = 20.sp,
+                                                    color = MaterialTheme.colorScheme.primary)
+                                            else -> {
+                                                val r = (f.remaining ?: 0) / 60
+                                                Text("${r / 60}小时${r % 60}分后成熟",
+                                                    fontSize = 20.sp)
+                                                Text(
+                                                    "${f.cardName ?: f.cardItem} · ${f.endText} 收取",
+                                                    fontSize = 12.sp,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    item {
+                        Card(Modifier.fillMaxWidth()) {
+                            Column(Modifier.padding(16.dp)) {
+                                Text("自结界卡", fontSize = 13.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                val o = foster.own
+                                when {
+                                    o == null || o.unknown == true ->
+                                        Text("未读取", fontSize = 18.sp)
+                                    o.empty == true -> Text("空", fontSize = 18.sp)
+                                    (o.remaining ?: 0) <= 0 ->
+                                        Text("已成熟，去收取", fontSize = 20.sp,
+                                            color = MaterialTheme.colorScheme.primary)
+                                    else -> {
+                                        val r = (o.remaining ?: 0) / 60
+                                        Text("${o.cardName ?: o.cardItem} ${r / 60}小时${r % 60}分",
+                                            fontSize = 20.sp)
+                                    }
+                                }
                             }
                         }
                     }
                 }
-            }
-            item {
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text("自结界卡", fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        val o = foster.own
-                        when {
-                            o == null || o.unknown == true -> Text("未读取", fontSize = 18.sp)
-                            o.empty == true -> Text("空", fontSize = 18.sp)
-                            (o.remaining ?: 0) <= 0 ->
-                                Text("已成熟，去收取", fontSize = 20.sp,
-                                    color = MaterialTheme.colorScheme.primary)
-                            else -> {
-                                val r = (o.remaining ?: 0) / 60
-                                Text("${o.cardName ?: o.cardItem} ${r / 60}小时${r % 60}分",
-                                    fontSize = 20.sp)
-                            }
-                        }
-                    }
-                }
-            }
-            item {
-                Text("配置 $config", fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
@@ -177,37 +252,60 @@ fun DashboardPage(backend: String) {
 /// 活动：当前活动 + 进行中时段。
 @Composable
 fun ActivityPage(backend: String) {
-    AsyncView(key = "act:$backend", fetch = {
-        val config = firstConfig()
-        Api.getJsonOrThrow<ActivityBoard>("/activity/$config") to config
-    }) { (board, config) ->
-        LazyColumn(
-            Modifier.fillMaxSize().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            item { PageTitle("活动") }
-            item { SectionTitle("当前活动") }
-            items(board.activities.filter { it.name.isNotBlank() }) { a ->
-                Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                    Text(a.name, Modifier.weight(1f), fontSize = 14.sp)
-                    Text(
-                        a.end.takeIf { it.isNotBlank() }?.let { "截止 $it" } ?: "",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+    var configs by remember { mutableStateOf<List<String>?>(null) }
+    var config by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(backend) {
+        val list = withContext(Dispatchers.IO) {
+            try {
+                Api.configList()
+            } catch (e: Exception) {
+                emptyList()
             }
-            item { SectionTitle("进行中时段") }
-            items(board.live) { w ->
-                Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                    Text(w.key, Modifier.weight(1f), fontSize = 14.sp)
-                    Text("至 ${w.endText}", fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        configs = list
+        if (config == null) config = list.firstOrNull()
+    }
+
+    val cfg = config
+    when {
+        configs == null || cfg == null -> Column(
+            Modifier.fillMaxSize().padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) { CircularProgressIndicator() }
+        else -> Column(Modifier.fillMaxSize().padding(16.dp)) {
+            ConfigPicker(configs, cfg) { config = it }
+            AsyncView(key = "act:$backend:$cfg", fetch = {
+                Api.getJsonOrThrow<ActivityBoard>("/activity/$cfg")
+            }) { board ->
+                LazyColumn(
+                    Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    if (!board.success) {
+                        item { ErrorView(board.error ?: "读取失败") }
+                    } else {
+                        item { SectionTitle("当前活动") }
+                        items(board.activities.filter { it.name.isNotBlank() }) { a ->
+                            Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                                Text(a.name, Modifier.weight(1f), fontSize = 14.sp)
+                                Text(
+                                    a.end.takeIf { it.isNotBlank() }?.let { "截止 $it" } ?: "",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                        item { SectionTitle("进行中时段") }
+                        items(board.live) { w ->
+                            Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                                Text(w.key, Modifier.weight(1f), fontSize = 14.sp)
+                                Text("至 ${w.endText}", fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
                 }
-            }
-            item {
-                Text("配置 $config", fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
@@ -216,47 +314,67 @@ fun ActivityPage(backend: String) {
 /// 资产：近 7 天账本。
 @Composable
 fun AssetsPage(backend: String) {
-    AsyncView(key = "ledger:$backend", fetch = {
-        val config = firstConfig()
-        Api.getJsonOrThrow<LedgerResp>("/resource/$config/ledger?days=7") to config
-    }) { (ledger, config) ->
-        LazyColumn(
-            Modifier.fillMaxSize().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            item { PageTitle("资产 · 近 7 天") }
-            item {
-                Text(
-                    "基线 ${ledger.baseDate.ifBlank { "缺失" }} → ${ledger.lastDate}",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+    var configs by remember { mutableStateOf<List<String>?>(null) }
+    var config by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(backend) {
+        val list = withContext(Dispatchers.IO) {
+            try {
+                Api.configList()
+            } catch (e: Exception) {
+                emptyList()
             }
-            items(ledger.items.filter { it.delta != null }.take(30)) { item ->
-                val d = item.delta ?: 0L
-                Row(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-                    Column(Modifier.weight(1f)) {
-                        Text(item.name, fontSize = 14.sp)
+        }
+        configs = list
+        if (config == null) config = list.firstOrNull()
+    }
+
+    val cfg = config
+    when {
+        configs == null || cfg == null -> Column(
+            Modifier.fillMaxSize().padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) { CircularProgressIndicator() }
+        else -> Column(Modifier.fillMaxSize().padding(16.dp)) {
+            ConfigPicker(configs, cfg) { config = it }
+            AsyncView(key = "ledger:$backend:$cfg", fetch = {
+                Api.getJsonOrThrow<LedgerResp>("/resource/$cfg/ledger?days=7")
+            }) { ledger ->
+                LazyColumn(
+                    Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    item { PageTitle("资产 · 近 7 天") }
+                    item {
                         Text(
-                            "起 ${fmt(item.count - d)}",
-                            fontSize = 11.sp,
+                            "基线 ${ledger.baseDate.ifBlank { "缺失" }} → ${ledger.lastDate}",
+                            fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text(fmt(item.count), fontSize = 16.sp)
-                        Text(
-                            if (d == 0L) "持平" else (if (d > 0L) "+" else "") + fmt(d),
-                            fontSize = 13.sp,
-                            color = if (d >= 0L) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.error,
-                        )
+                    items(ledger.items.filter { it.delta != null }.take(30)) { item ->
+                        val d = item.delta ?: 0L
+                        Row(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+                            Column(Modifier.weight(1f)) {
+                                Text(item.name, fontSize = 14.sp)
+                                Text(
+                                    "起 ${fmt(item.count - d)}",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text(fmt(item.count), fontSize = 16.sp)
+                                Text(
+                                    if (d == 0L) "持平" else (if (d > 0L) "+" else "") + fmt(d),
+                                    fontSize = 13.sp,
+                                    color = if (d >= 0L) MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.error,
+                                )
+                            }
+                        }
                     }
                 }
-            }
-            item {
-                Text("配置 $config", fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
