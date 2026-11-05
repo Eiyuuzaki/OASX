@@ -55,6 +55,10 @@
                             </Ellipse>
                             <Image x:Name="OwnIcon" Width="34" Height="34"
                                    HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <ui:SymbolIcon x:Name="OwnPlaceholder" Symbol="Add24" FontSize="22"
+                                           Foreground="{DynamicResource OasTextTertiaryBrush}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           Visibility="Collapsed" />
                         </Grid>
                         <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
                             <TextBlock Text="自结界卡" FontSize="12"
@@ -101,6 +105,10 @@
                             </Ellipse>
                             <Image x:Name="FosterIcon" Width="34" Height="34"
                                    HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <ui:SymbolIcon x:Name="FosterPlaceholder" Symbol="Add24" FontSize="22"
+                                           Foreground="{DynamicResource OasTextTertiaryBrush}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           Visibility="Collapsed" />
                         </Grid>
                         <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
                             <TextBlock Text="寄养" FontSize="12"

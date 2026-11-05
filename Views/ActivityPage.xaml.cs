@@ -449,7 +449,7 @@ public partial class ActivityPage : UserControl
         ActFosterCountdown.Text = countdown;
         ActFosterEnd.Text = endText;
         SetRing(ActFosterRing, fraction);
-        SetCardIcon(ActFosterIcon, iconKey);
+        SetCardIcon(ActFosterIcon, ActFosterPlaceholder, iconKey);
         ActFosterCountdown.Foreground = new System.Windows.Media.SolidColorBrush(running
             ? System.Windows.Media.Color.FromRgb(0x25, 0x63, 0xEB)
             : System.Windows.Media.Color.FromRgb(0x16, 0xA3, 0x4A));
@@ -464,7 +464,7 @@ public partial class ActivityPage : UserControl
         ActOwnCountdown.Text = countdown;
         ActOwnEnd.Text = "";
         SetRing(ActOwnRing, fraction);
-        SetCardIcon(ActOwnIcon, iconKey);
+        SetCardIcon(ActOwnIcon, ActOwnPlaceholder, iconKey);
         ActOwnCountdown.Foreground = new System.Windows.Media.SolidColorBrush(running
             ? System.Windows.Media.Color.FromRgb(0x25, 0x63, 0xEB)
             : System.Windows.Media.Color.FromRgb(0x16, 0xA3, 0x4A));
@@ -496,18 +496,21 @@ public partial class ActivityPage : UserControl
         return null;
     }
 
-    private static void SetCardIcon(System.Windows.Controls.Image icon, string? iconKey)
+    private static void SetCardIcon(System.Windows.Controls.Image icon,
+        System.Windows.UIElement? placeholder, string? iconKey)
     {
         if (iconKey is not null && iconKey.Length > 0)
         {
             icon.Source = new System.Windows.Media.Imaging.BitmapImage(
                 new Uri($"pack://application:,,,/Assets/Icons/{iconKey}.png"));
             icon.Visibility = Visibility.Visible;
+            if (placeholder is not null) placeholder.Visibility = Visibility.Collapsed;
         }
         else
         {
             icon.Source = null;
             icon.Visibility = Visibility.Collapsed;
+            if (placeholder is not null) placeholder.Visibility = Visibility.Visible;
         }
     }
 

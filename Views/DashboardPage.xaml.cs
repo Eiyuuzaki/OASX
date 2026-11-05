@@ -129,9 +129,9 @@ public partial class DashboardPage : UserControl
             if (state is null || !state.Success)
             {
                 FillDashCard(FosterCardName, FosterCountdown, FosterEnd, FosterRemain,
-                    FosterIcon, FosterRing, "当前未寄养", "", null, 0, null, false);
+                    FosterIcon, FosterRing, FosterPlaceholder, "当前未寄养", "", null, 0, null, false);
                 FillDashCard(OwnCardName, OwnCountdown, OwnEnd, OwnRemain,
-                    OwnIcon, OwnRing, "需要游戏运行", "", null, 0, null, false);
+                    OwnIcon, OwnRing, OwnPlaceholder, "需要游戏运行", "", null, 0, null, false);
                 return;
             }
 
@@ -140,7 +140,7 @@ public partial class DashboardPage : UserControl
             if (foster is null || foster.Active == false || foster.Remaining is null)
             {
                 FillDashCard(FosterCardName, FosterCountdown, FosterEnd, FosterRemain,
-                    FosterIcon, FosterRing, "当前未寄养", "", null, 0, null, false);
+                    FosterIcon, FosterRing, FosterPlaceholder, "当前未寄养", "", null, 0, null, false);
             }
             else
             {
@@ -150,7 +150,7 @@ public partial class DashboardPage : UserControl
                 var matured = remain <= 0;
                 var ts = TimeSpan.FromSeconds(remain);
                 FillDashCard(FosterCardName, FosterCountdown, FosterEnd, FosterRemain,
-                    FosterIcon, FosterRing,
+                    FosterIcon, FosterRing, FosterPlaceholder,
                     name,
                     matured ? "去收取" : $"{ts.Hours}小时{ts.Minutes:00}分",
                     matured ? null : $"{foster.EndText} 收取",
@@ -163,17 +163,17 @@ public partial class DashboardPage : UserControl
             if (own is null || own.Unknown == true)
             {
                 FillDashCard(OwnCardName, OwnCountdown, OwnEnd, OwnRemain,
-                    OwnIcon, OwnRing, "未读取", "", "打开一次结界页后显示", 0, null, false);
+                    OwnIcon, OwnRing, OwnPlaceholder, "未读取", "", "打开一次结界页后显示", 0, null, false);
             }
             else if (own.Error is not null)
             {
                 FillDashCard(OwnCardName, OwnCountdown, OwnEnd, OwnRemain,
-                    OwnIcon, OwnRing, "读取失败", "", null, 0, null, false);
+                    OwnIcon, OwnRing, OwnPlaceholder, "读取失败", "", null, 0, null, false);
             }
             else if (own.Empty == true)
             {
                 FillDashCard(OwnCardName, OwnCountdown, OwnEnd, OwnRemain,
-                    OwnIcon, OwnRing, "空", "", "自己放卡后会显示倒计时", 0, null, false);
+                    OwnIcon, OwnRing, OwnPlaceholder, "空", "", "自己放卡后会显示倒计时", 0, null, false);
             }
             else
             {
@@ -181,7 +181,7 @@ public partial class DashboardPage : UserControl
                 var maturedO = (own.Remaining ?? 0) <= 0;
                 var tsO = TimeSpan.FromSeconds(own.Remaining ?? 0);
                 FillDashCard(OwnCardName, OwnCountdown, OwnEnd, OwnRemain,
-                    OwnIcon, OwnRing,
+                    OwnIcon, OwnRing, OwnPlaceholder,
                     nameO,
                     maturedO ? "去收取" : $"{tsO.Hours}小时{tsO.Minutes:00}分",
                     maturedO ? null : $"{own.EndText} 收取",
@@ -189,9 +189,16 @@ public partial class DashboardPage : UserControl
                     IconKeyOf(own.CardName), !maturedO);
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // 游戏未运行等情况静默
+            // 模拟器离线/游戏未开：如实显示原因，占位加号 + 空轨道
+            var reason = ex is TaskCanceledException or OperationCanceledException
+                ? "读取超时（模拟器离线？）"
+                : "需要游戏运行";
+            FillDashCard(FosterCardName, FosterCountdown, FosterEnd, FosterRemain,
+                FosterIcon, FosterRing, FosterPlaceholder, reason, "", null, 0, null, false);
+            FillDashCard(OwnCardName, OwnCountdown, OwnEnd, OwnRemain,
+                OwnIcon, OwnRing, OwnPlaceholder, reason, "", null, 0, null, false);
         }
     }
 
@@ -199,7 +206,7 @@ public partial class DashboardPage : UserControl
     private void FillDashCard(System.Windows.Controls.TextBlock nameTb,
         System.Windows.Controls.TextBlock cdTb, System.Windows.Controls.TextBlock endTb,
         System.Windows.Controls.TextBlock remainTb, System.Windows.Controls.Image icon,
-        System.Windows.Shapes.Ellipse ring,
+        System.Windows.Shapes.Ellipse ring, System.Windows.UIElement? placeholder,
         string name, string countdown, string? endText, double fraction,
         string? iconKey, bool running)
     {
@@ -213,11 +220,14 @@ public partial class DashboardPage : UserControl
             icon.Source = new System.Windows.Media.Imaging.BitmapImage(
                 new Uri($"pack://application:,,,/Assets/Icons/{iconKey}.png"));
             icon.Visibility = Visibility.Visible;
+            if (placeholder is not null) placeholder.Visibility = Visibility.Collapsed;
         }
         else
         {
             icon.Source = null;
             icon.Visibility = Visibility.Collapsed;
+            // 空槽：圆环里显示加号占位——"来这里放卡"的视觉暗示
+            if (placeholder is not null) placeholder.Visibility = Visibility.Visible;
         }
         cdTb.Foreground = new System.Windows.Media.SolidColorBrush(running
             ? System.Windows.Media.Color.FromRgb(0x25, 0x63, 0xEB)
