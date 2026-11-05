@@ -29,6 +29,9 @@ public partial class MainWindow : FluentWindow
         // 句柄就绪即时应用主题：Deep色标志必须在材质生效前设置，
         // 否则 Acrylic/Mica 按浅色上色（深浅乱串）。此处不再提前设置材质。
         SourceInitialized += (_, _) => ThemeService.ApplyWindowChromeOnly();
+        // 首次渲染完成后再应用一次：句柄就绪时设的材质会被后续 chrome
+        // 重建覆盖（实测同一份 settings 有时 acrylic 有时回落为无）。
+        ContentRendered += (_, _) => ThemeService.ApplyWindowChromeOnly();
 
         // 激活时重申深色标志：部分场景（DWM 重排、切换材质、系统事件）
         // 会把标志冲掉，导致材质按浅色上色（深浅乱串）。

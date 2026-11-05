@@ -223,7 +223,27 @@ public static class ThemeService
             if (window is FluentWindow fluent)
             {
                 fluent.WindowBackdropType = backdrop;
-                Log($"backdrop={backdrop} via WPF-UI setter");
+                // 校验：WPF-UI setter 不保证落到 DWM 属性（实测有时保持 1=无，
+                // 表现为"设置 acrylic 重启后效果消失"）——不符则 DWM 直设兜底。
+                var expect = backdrop switch
+                {
+                    WindowBackdropType.Mica => 2,
+                    WindowBackdropType.Acrylic => 3,
+                    WindowBackdropType.Tabbed => 4,
+                    _ => 1,
+                };
+                var actual = -1;
+                DwmGetWindowAttributeInt(hwnd, DwmBackdropAttr, ref actual);
+                if (actual != expect)
+                {
+                    var force = expect;
+                    DwmSetWindowAttribute(hwnd, DwmBackdropAttr, ref force, sizeof(int));
+                    Log($"backdrop={backdrop} setter 未生效(read={actual})→ DWM 直设");
+                }
+                else
+                {
+                    Log($"backdrop={backdrop} via WPF-UI setter (dwm={actual})");
+                }
                 return;
             }
         }
