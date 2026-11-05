@@ -436,6 +436,8 @@ public partial class ActivityPage : UserControl
         catch (Exception ex)
         {
             FosterNotifyText.Text = $"读取失败：{ex.Message}";
+            FillFosterCard("需要游戏运行", "", "", "", 0, null, false);
+            FillOwnCard("需要游戏运行", "", "", 0, null, false);
         }
     }
 

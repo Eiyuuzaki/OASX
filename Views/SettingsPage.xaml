@@ -79,11 +79,10 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
-                        <TextBlock Text="当前寄养的卡" FontSize="13" VerticalAlignment="Center"
+                        <TextBlock Grid.Row="0" Text="当前寄养的卡" FontSize="13" VerticalAlignment="Center"
                                    Foreground="{DynamicResource OasTextPrimaryBrush}" />
-                        <ComboBox x:Name="ManualCardBox" Grid.Column="1" MinWidth="240"
+                        <ComboBox x:Name="ManualCardBox" Grid.Row="0" Grid.Column="1" MinWidth="240"
                                   Margin="0,0,0,8" SelectionChanged="ManualCard_Changed">
                             <ComboBoxItem Content="未选择" Tag="" />
                             <ComboBoxItem Content="🥁 太鼓" Tag="太鼓" />
@@ -91,11 +90,11 @@
                             <ComboBoxItem Content="符咒（太阴）" Tag="太阴符咒" />
                             <ComboBoxItem Content="伞室内" Tag="伞室内" />
                         </ComboBox>
-                        <TextBlock Text="通知渠道" FontSize="13" VerticalAlignment="Center"
+                        <TextBlock Grid.Row="1" Text="通知渠道" FontSize="13" VerticalAlignment="Center"
                                    Foreground="{DynamicResource OasTextPrimaryBrush}" />
-                        <ComboBox x:Name="NotifyProviderBox" Grid.Column="1" MinWidth="240"
+                        <ComboBox x:Name="NotifyProviderBox" Grid.Row="1" Grid.Column="1" MinWidth="240"
                                   Margin="0,0,0,8" SelectionChanged="NotifyProvider_Changed" />
-                        <StackPanel x:Name="NotifyFieldsPanel" Grid.Row="1" Grid.Column="0"
+                        <StackPanel x:Name="NotifyFieldsPanel" Grid.Row="2" Grid.Column="0"
                                     Grid.ColumnSpan="2" Margin="0,0,0,8" />
 </Grid>
                     <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
