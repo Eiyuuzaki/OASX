@@ -51,20 +51,21 @@ object Api {
         }
     }
 
-    inline fun <reified T> getJson(path: String): T? = try {
-        json.decodeFromString(get(path))
-    } catch (e: Exception) {
-        null
-    }
-
+    /// 网络错误（超时/HTTP 非 2xx）原样抛出；仅解析失败标记为"响应解析失败"。
     inline fun <reified T> getJsonOrThrow(path: String): T =
-        getJson<T>(path) ?: throw RuntimeException("响应解析失败：$path")
+        try {
+            json.decodeFromString(get(path))
+        } catch (e: kotlinx.serialization.SerializationException) {
+            throw RuntimeException("响应解析失败：`$path")
+        }
 
-    inline fun <reified T> postJson(path: String): T? = try {
-        json.decodeFromString(post(path))
-    } catch (e: Exception) {
-        null
-    }
+    /// 同上，POST 版本。
+    inline fun <reified T> postJsonOrThrow(path: String): T =
+        try {
+            json.decodeFromString(post(path))
+        } catch (e: kotlinx.serialization.SerializationException) {
+            throw RuntimeException("响应解析失败：`$path")
+        }
 
     /// GET /config_list → 配置名数组。
     fun configList(): List<String> =
