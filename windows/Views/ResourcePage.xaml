@@ -88,6 +88,9 @@
                                                        FontFamily="{StaticResource AppFontFamily}" />
                                             <TextBlock Text="{Binding DeltaText}" FontSize="14"
                                                        Foreground="{Binding DeltaBrush}" />
+                                            <TextBlock Text="{Binding BaselineText}" FontSize="11"
+                                                       Visibility="{Binding BaselineVisibility}"
+                                                       Foreground="{DynamicResource OasTextTertiaryBrush}" />
                                         </StackPanel>
                                     </StackPanel>
                                     <ui:Button HorizontalAlignment="Right" VerticalAlignment="Top"

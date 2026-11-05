@@ -23,6 +23,9 @@ public sealed class AssetCardVm
     public string CountText { get; init; } = "";
     public string DeltaText { get; init; } = "";
     public Brush DeltaBrush { get; init; } = Brushes.Transparent;
+    /// <summary>账本模式：区间起点的值（"起 6.3M"）；单日快照为空。</summary>
+    public string BaselineText { get; init; } = "";
+    public Visibility BaselineVisibility { get; init; } = Visibility.Collapsed;
     public ImageSource? IconImage { get; init; }
     public string PinKey { get; init; } = "";
     public bool IsPinned { get; init; }
@@ -322,6 +325,11 @@ public partial class ResourcePage : UserControl
 
             var visible = AggregateCards(ledger.Items.Select(i =>
                 new OasResourceApi.ResourceItem(i.Id, i.Name, i.Icon, i.Count, i.Delta)));
+            // 区间起点值：按名称聚合（与聚合管线口径一致），用于"起 X"小字
+            var firstByName = ledger.Items
+                .GroupBy(i => i.Name)
+                .ToDictionary(g => g.Key,
+                    g => g.Sum(x => x.FirstCount ?? 0));
 
             var up = visible.Count(x => (x.Delta ?? 0) > 0);
             var down = visible.Count(x => (x.Delta ?? 0) < 0);
@@ -344,6 +352,11 @@ public partial class ResourcePage : UserControl
                     DeltaBrush = new SolidColorBrush((item.Delta ?? 0) >= 0
                         ? Color.FromRgb(0x4C, 0xAF, 0x50)
                         : Color.FromRgb(0xE5, 0x53, 0x53)),
+                    BaselineText = firstByName.TryGetValue(item.Name, out var first)
+                        ? $"起 {FormatCount(first)}"
+                        : "",
+                    BaselineVisibility = firstByName.ContainsKey(item.Name)
+                        ? Visibility.Visible : Visibility.Collapsed,
                     IconImage = LoadIcon(item.Icon),
                     PinKey = pinKey,
                     IsPinned = pinned,

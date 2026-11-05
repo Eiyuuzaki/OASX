@@ -28,7 +28,13 @@ public partial class MainWindow : FluentWindow
 
         // 句柄就绪即时应用主题：Deep色标志必须在材质生效前设置，
         // 否则 Acrylic/Mica 按浅色上色（深浅乱串）。此处不再提前设置材质。
-        SourceInitialized += (_, _) => ThemeService.ApplyWindowChromeOnly();
+        SourceInitialized += (_, _) =>
+        {
+            ThemeService.ApplyWindowChromeOnly();
+            WireGlobalHotkey();
+        };
+        PreviewKeyDown += Window_PreviewKeyDown;
+        Closed += (_, _) => UnwireGlobalHotkey();
         // 首次渲染完成后再应用一次：句柄就绪时设的材质会被后续 chrome
         // 重建覆盖（实测同一份 settings 有时 acrylic 有时回落为无）。
         ContentRendered += (_, _) =>
@@ -152,6 +158,179 @@ public partial class MainWindow : FluentWindow
         }
     }
 
+    // ==================== 快捷键 ====================
+
+    private const int HotkeyId = 0xC0BE;
+    private string _hotkeyLabel = "";
+    private System.Windows.Interop.HwndSource? _hwndSource;
+
+    [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true)]
+    private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint mods, uint vk);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+
+    /// <summary>注册全局热键 Ctrl+Alt+O（显示/隐藏窗口）。</summary>
+    private void WireGlobalHotkey()
+    {
+        try
+        {
+            var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+            if (hwnd == IntPtr.Zero)
+            {
+                return;
+            }
+            _hwndSource = System.Windows.Interop.HwndSource.FromHwnd(hwnd);
+            _hwndSource?.AddHook(HotkeyWndProc);
+            // 候选热键按顺序尝试（前者被占用就换下一个）：
+            //   Ctrl+Alt+O → Ctrl+Alt+Shift+O → Ctrl+Shift+F10
+            // MOD_ALT=0x1 MOD_CONTROL=0x2 MOD_SHIFT=0x4
+            var candidates = new (uint Mods, uint Vk, string Label)[]
+            {
+                (0x3, 0x4F, "Ctrl+Alt+O"),
+                (0x7, 0x4F, "Ctrl+Alt+Shift+O"),
+                (0x6, 0x79, "Ctrl+Shift+F10"),
+            };
+            foreach (var (mods, vk, label) in candidates)
+            {
+                if (RegisterHotKey(hwnd, HotkeyId, mods, vk))
+                {
+                    _hotkeyLabel = label;
+                    Services.LogPaths.Append("hotkey.log",
+                        $"{DateTime.Now:HH:mm:ss} registered {label}");
+                    return;
+                }
+                Services.LogPaths.Append("hotkey.log",
+                    $"{DateTime.Now:HH:mm:ss} {label} 占用（err=" +
+                    $"{System.Runtime.InteropServices.Marshal.GetLastWin32Error()}）");
+            }
+            Services.LogPaths.Append("hotkey.log",
+                $"{DateTime.Now:HH:mm:ss} 全部候选热键都被占用");
+        }
+        catch
+        {
+            // 热键注册失败不影响主流程
+        }
+    }
+
+    private void UnwireGlobalHotkey()
+    {
+        try
+        {
+            var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+            if (hwnd != IntPtr.Zero)
+            {
+                UnregisterHotKey(hwnd, HotkeyId);
+            }
+            _hwndSource?.RemoveHook(HotkeyWndProc);
+        }
+        catch
+        {
+            // 忽略
+        }
+    }
+
+    private IntPtr HotkeyWndProc(IntPtr hwnd, int msg, IntPtr wParam,
+        IntPtr lParam, ref bool handled)
+    {
+        const int WmHotkey = 0x0312;
+        if (msg == WmHotkey && wParam.ToInt32() == HotkeyId)
+        {
+            Services.LogPaths.Append("hotkey.log",
+                $"{DateTime.Now:HH:mm:ss} WM_HOTKEY fired visible={IsVisible}");
+            ToggleWindowVisibility();
+            handled = true;
+        }
+        return IntPtr.Zero;
+    }
+
+    /// <summary>全局热键：可见则最小化到托盘，托盘态则还原。</summary>
+    private void ToggleWindowVisibility()
+    {
+        if (IsVisible && WindowState != WindowState.Minimized && IsActive)
+        {
+            Hide();
+        }
+        else if (IsVisible && WindowState != WindowState.Minimized)
+        {
+            Hide();
+        }
+        else
+        {
+            RestoreFromTray();
+        }
+    }
+
+    /// <summary>页内快捷键：Ctrl+1..7 切页、Ctrl+, 设置、F5/Ctrl+R 刷新当前页。</summary>
+    private void Window_PreviewKeyDown(object sender,
+        System.Windows.Input.KeyEventArgs e)
+    {
+        var ctrl = System.Windows.Input.Keyboard.Modifiers
+                   == System.Windows.Input.ModifierKeys.Control;
+        if (e.Key == System.Windows.Input.Key.F5 && !ctrl)
+        {
+            ReloadCurrentPage();
+            e.Handled = true;
+            return;
+        }
+        if (!ctrl)
+        {
+            return;
+        }
+        var pages = new[]
+        {
+            typeof(DashboardPage), typeof(WorkbenchPage), typeof(StatisticsPage),
+            typeof(ResourcePage), typeof(ActivityPage), typeof(HuijuanPage),
+            typeof(LogPage),
+        };
+        if (e.Key >= System.Windows.Input.Key.D1 && e.Key <= System.Windows.Input.Key.D7)
+        {
+            RootNavigation.Navigate(pages[e.Key - System.Windows.Input.Key.D1]);
+            e.Handled = true;
+        }
+        else if (e.Key == System.Windows.Input.Key.OemComma)
+        {
+            RootNavigation.Navigate(typeof(SettingsPage));
+            e.Handled = true;
+        }
+        else if (e.Key == System.Windows.Input.Key.R)
+        {
+            ReloadCurrentPage();
+            e.Handled = true;
+        }
+    }
+
+    /// <summary>重新导航当前页（等价于重建页面 → 重读数据）。</summary>
+    private void ReloadCurrentPage()
+    {
+        var current = RootNavigation.SelectedItem switch
+        {
+            Wpf.Ui.Controls.NavigationViewItem nvi => nvi.TargetPageType,
+            _ => null,
+        };
+        if (current is not null)
+        {
+            RootNavigation.Navigate(current);
+        }
+    }
+
+    private void OpenLogFolder()
+    {
+        try
+        {
+            System.IO.Directory.CreateDirectory(Services.LogPaths.Dir);
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = Services.LogPaths.Dir,
+                UseShellExecute = true,
+            });
+        }
+        catch
+        {
+            // 打不开资源管理器不影响主流程
+        }
+    }
+
     private void EnsureTrayIcon()
     {
         if (_trayIcon is not null) return;
@@ -168,9 +347,31 @@ public partial class MainWindow : FluentWindow
         var menu = new System.Windows.Controls.ContextMenu();
         var open = new System.Windows.Controls.MenuItem { Header = "打开" };
         open.Click += (_, _) => RestoreFromTray();
+        var refresh = new System.Windows.Controls.MenuItem { Header = "刷新当前页" };
+        refresh.Click += (_, _) => ReloadCurrentPage();
+        var logs = new System.Windows.Controls.MenuItem { Header = "打开日志目录" };
+        logs.Click += (_, _) => OpenLogFolder();
+        var settings = new System.Windows.Controls.MenuItem { Header = "设置" };
+        settings.Click += (_, _) =>
+        {
+            RestoreFromTray();
+            RootNavigation.Navigate(typeof(SettingsPage));
+        };
         var exit = new System.Windows.Controls.MenuItem { Header = "退出" };
         exit.Click += (_, _) => ExitApplication();
         menu.Items.Add(open);
+        if (_hotkeyLabel.Length > 0)
+        {
+            // 提示当前生效的全局热键（被占用时会自动降级，用户需要知道是哪一组）
+            menu.Items.Add(new System.Windows.Controls.MenuItem
+            {
+                Header = $"{_hotkeyLabel} 显示/隐藏",
+                IsEnabled = false,
+            });
+        }
+        menu.Items.Add(refresh);
+        menu.Items.Add(settings);
+        menu.Items.Add(logs);
         menu.Items.Add(new System.Windows.Controls.Separator());
         menu.Items.Add(exit);
         _trayIcon.ContextMenu = menu;
