@@ -96,6 +96,7 @@ fun firstConfig(): String {
 }
 
 /// 配置选择下拉（数据来自 /config_list）。
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun ConfigPicker(
     configs: List<String>,
@@ -148,17 +149,19 @@ fun DashboardPage(backend: String) {
     }
 
     val cfg = config
+    val cfgList = configs
+    val cfgSel = cfg
     when {
-        configs == null -> Column(
+        cfgList == null -> Column(
             Modifier.fillMaxSize().padding(24.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) { CircularProgressIndicator() }
-        cfg == null -> ErrorView("后端无配置")
+        cfgSel == null -> ErrorView("后端无配置")
         else -> Column(Modifier.fillMaxSize().padding(16.dp)) {
-            ConfigPicker(configs, cfg) { config = it }
-            AsyncView(key = "dash:$backend:$cfg", fetch = {
-                val board = Api.getJsonOrThrow<ActivityBoard>("/activity/$cfg?force=1")
+            ConfigPicker(cfgList, cfgSel) { config = it }
+            AsyncView(key = "dash:$backend:$cfgSel", fetch = {
+                val board = Api.getJsonOrThrow<ActivityBoard>("/activity/$cfgSel?force=1")
                 val foster = Api.getJsonOrThrow<FosterResp>("/notify/foster/refresh")
                 board to foster
             }) { (board, foster) ->
@@ -267,16 +270,18 @@ fun ActivityPage(backend: String) {
     }
 
     val cfg = config
+    val cfgList = configs
+    val cfgSel = cfg
     when {
-        configs == null || cfg == null -> Column(
+        cfgList == null || cfgSel == null -> Column(
             Modifier.fillMaxSize().padding(24.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) { CircularProgressIndicator() }
         else -> Column(Modifier.fillMaxSize().padding(16.dp)) {
-            ConfigPicker(configs, cfg) { config = it }
-            AsyncView(key = "act:$backend:$cfg", fetch = {
-                Api.getJsonOrThrow<ActivityBoard>("/activity/$cfg")
+            ConfigPicker(cfgList, cfgSel) { config = it }
+            AsyncView(key = "act:$backend:$cfgSel", fetch = {
+                Api.getJsonOrThrow<ActivityBoard>("/activity/$cfgSel")
             }) { board ->
                 LazyColumn(
                     Modifier.fillMaxSize(),
@@ -329,16 +334,18 @@ fun AssetsPage(backend: String) {
     }
 
     val cfg = config
+    val cfgList = configs
+    val cfgSel = cfg
     when {
-        configs == null || cfg == null -> Column(
+        cfgList == null || cfgSel == null -> Column(
             Modifier.fillMaxSize().padding(24.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) { CircularProgressIndicator() }
         else -> Column(Modifier.fillMaxSize().padding(16.dp)) {
-            ConfigPicker(configs, cfg) { config = it }
-            AsyncView(key = "ledger:$backend:$cfg", fetch = {
-                Api.getJsonOrThrow<LedgerResp>("/resource/$cfg/ledger?days=7")
+            ConfigPicker(cfgList, cfgSel) { config = it }
+            AsyncView(key = "ledger:$backend:$cfgSel", fetch = {
+                Api.getJsonOrThrow<LedgerResp>("/resource/$cfgSel/ledger?days=7")
             }) { ledger ->
                 LazyColumn(
                     Modifier.fillMaxSize(),
