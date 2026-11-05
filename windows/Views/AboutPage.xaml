@@ -53,6 +53,49 @@
                                        Foreground="{DynamicResource OasTextPrimaryBrush}" />
                         </StackPanel>
                     </Grid>
+                    <Rectangle Height="1" Margin="0,14"
+                               Fill="{DynamicResource OasBorderBrush}" />
+                    <!-- 仓库与反馈（点击用系统浏览器打开） -->
+                    <Grid Cursor="Hand" Background="Transparent" Margin="0,2,0,10"
+                          MouseLeftButtonUp="Repo_Click">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:SymbolIcon Grid.Column="0" Symbol="Code24" FontSize="18"
+                                       VerticalAlignment="Center" Margin="0,0,12,0" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="GitHub 仓库" FontSize="13"
+                                       Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                            <TextBlock Text="github.com/Eiyuuzaki/OASX"
+                                       FontSize="12"
+                                       Foreground="{DynamicResource OasTextSecondaryBrush}" />
+                        </StackPanel>
+                        <ui:SymbolIcon Grid.Column="2" Symbol="ChevronRight24" FontSize="14"
+                                       VerticalAlignment="Center"
+                                       Foreground="{DynamicResource OasTextTertiaryBrush}" />
+                    </Grid>
+                    <Grid Cursor="Hand" Background="Transparent"
+                          MouseLeftButtonUp="Issues_Click">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:SymbolIcon Grid.Column="0" Symbol="ChatHelp24" FontSize="18"
+                                       VerticalAlignment="Center" Margin="0,0,12,0" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="问题反馈" FontSize="13"
+                                       Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                            <TextBlock Text="github.com/Eiyuuzaki/OASX/issues"
+                                       FontSize="12"
+                                       Foreground="{DynamicResource OasTextSecondaryBrush}" />
+                        </StackPanel>
+                        <ui:SymbolIcon Grid.Column="2" Symbol="ChevronRight24" FontSize="14"
+                                       VerticalAlignment="Center"
+                                       Foreground="{DynamicResource OasTextTertiaryBrush}" />
+                    </Grid>
                 </StackPanel>
             </Border>
 

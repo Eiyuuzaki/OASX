@@ -50,6 +50,27 @@ public partial class AboutPage : UserControl
         }
     }
 
+    /// <summary>仓库主页（用系统默认浏览器打开）。</summary>
+    private void Repo_Click(object sender, System.Windows.Input.MouseButtonEventArgs e) =>
+        OpenUrl("https://github.com/Eiyuuzaki/OASX");
+
+    /// <summary>问题反馈（GitHub Issues）。</summary>
+    private void Issues_Click(object sender, System.Windows.Input.MouseButtonEventArgs e) =>
+        OpenUrl("https://github.com/Eiyuuzaki/OASX/issues");
+
+    private static void OpenUrl(string url)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(
+                new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
+        }
+        catch
+        {
+            // 打不开浏览器不影响页面
+        }
+    }
+
     /// <summary>环境信息行。</summary>
     private void BuildEnvironment()
     {
