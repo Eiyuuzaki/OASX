@@ -92,7 +92,7 @@ public sealed class MonsterTaskVm
 
 /// <summary>
 /// 活动页：每日任务 + 悬赏封印（完成状态由游戏客户端数据自动判定），
-/// 活动任务需要游戏内打开活动面板后才可读（客户端懒加载，与同类实现一致）。
+/// 活动任务需要游戏内打开活动面板后才可读（客户端懒加载，需先在游戏内打开活动面板一次）。
 /// </summary>
 public partial class ActivityPage : UserControl
 {
