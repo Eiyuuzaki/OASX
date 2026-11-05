@@ -119,6 +119,7 @@ public partial class WorkbenchPage : UserControl
         {
             ArgsFrame.Navigate(new ArgsPage(script, task));
             ShowArgsView();
+            FadeIn(ArgsFrame);
         }
     }
 
@@ -140,12 +141,37 @@ public partial class WorkbenchPage : UserControl
     {
         OverviewPanel.Visibility = Visibility.Collapsed;
         ArgsHostPanel.Visibility = Visibility.Visible;
+        FadeIn(ArgsHostPanel);
     }
 
     private void ShowOverview()
     {
         ArgsHostPanel.Visibility = Visibility.Collapsed;
         OverviewPanel.Visibility = Visibility.Visible;
+        FadeIn(OverviewPanel);
+    }
+
+    /// <summary>Fluent 风格内容过渡：淡入 + 轻微上移（220ms，EaseOut）。</summary>
+    private static void FadeIn(System.Windows.FrameworkElement el)
+    {
+        var ease = new System.Windows.Media.Animation.CubicEase
+        {
+            EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut,
+        };
+        var dur = new System.Windows.Duration(TimeSpan.FromMilliseconds(220));
+        el.Opacity = 0;
+        var ty = new System.Windows.Media.TranslateTransform(0, 14);
+        el.RenderTransform = ty;
+        el.BeginAnimation(System.Windows.UIElement.OpacityProperty,
+            new System.Windows.Media.Animation.DoubleAnimation(0, 1, dur)
+            {
+                EasingFunction = ease,
+            });
+        ty.BeginAnimation(System.Windows.Media.TranslateTransform.YProperty,
+            new System.Windows.Media.Animation.DoubleAnimation(14, 0, dur)
+            {
+                EasingFunction = ease,
+            });
     }
 
     private void BackToOverview_Click(object sender, RoutedEventArgs e) => ShowOverview();
