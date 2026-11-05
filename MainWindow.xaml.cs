@@ -35,61 +35,6 @@ public partial class MainWindow : FluentWindow
         Activated += (_, _) => ThemeService.SetImmersiveDarkMode(
             this, ThemeService.IsDark);
 
-        // QA：--backdrop-ui-test 用 WPF-UI 的 setter 切材质（验证是否仍抛异常）
-        if (Environment.GetCommandLineArgs().Contains("--backdrop-ui-test"))
-        {
-            var t = new System.Windows.Threading.DispatcherTimer
-            {
-                Interval = TimeSpan.FromSeconds(3),
-            };
-            var seqUi = new[]
-            {
-                WindowBackdropType.Acrylic,
-                WindowBackdropType.Mica,
-                WindowBackdropType.Acrylic,
-            };
-            var k = 0;
-            t.Tick += (_, _) =>
-            {
-                if (k >= seqUi.Length) { t.Stop(); return; }
-                try
-                {
-                    WindowBackdropType = seqUi[k];
-                    ThemeService.LogUiSetterResult(seqUi[k], null);
-                }
-                catch (Exception ex)
-                {
-                    ThemeService.LogUiSetterResult(seqUi[k], ex);
-                }
-                k++;
-            };
-            t.Start();
-        }
-
-        // QA：--backdrop-test 走设置页路径，依次切换 无/Mica/Acrylic
-        if (Environment.GetCommandLineArgs().Contains("--backdrop-test"))
-        {
-            var timer = new System.Windows.Threading.DispatcherTimer
-            {
-                Interval = TimeSpan.FromSeconds(3),
-            };
-            // 走设置页的真实路径：写设置 → ThemeService.Apply()
-            var seq = new[] { "none", "mica", "acrylic" };
-            var idx = 0;
-            timer.Tick += (_, _) =>
-            {
-                if (idx >= seq.Length)
-                {
-                    timer.Stop();
-                    return;
-                }
-                OasSettings.BackdropMode = seq[idx];
-                ThemeService.Apply();
-                idx++;
-            };
-            timer.Start();
-        }
-
         // BGI 同款：页面服务 + TargetPageType，导航全部由 NavigationView
         // 内部接管（点击 → 内部 Navigate → 页面服务出实例）。
         RootNavigation.SetPageProviderService(new PageService());
@@ -103,7 +48,6 @@ public partial class MainWindow : FluentWindow
 
             // 窗口级主题（材质 + 深色标志）：不重建 chrome，避免异常中断导航
             ThemeService.ApplyWindowChromeOnly();
-
 
             // QA 钩子：--page=<仪表盘|工作台|统计|资产|绘卷|日志|设置|关于>
             // 启动直达指定页（自动化验收用，不影响正常启动）

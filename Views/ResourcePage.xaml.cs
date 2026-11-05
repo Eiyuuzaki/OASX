@@ -408,15 +408,6 @@ public partial class ResourcePage : UserControl
             }).ToList();
             StatusText.Text = $"{date} · {visible.Count} 项资产";
 
-            // QA 自检：--share-test 数据就绪后自动跑一次真实分享链路（只跑一次）
-            if (Environment.GetCommandLineArgs().Contains("--share-test") && !_shareTestDone)
-            {
-                _shareTestDone = true;
-                ShareLog("auto share test trigger");
-                Dispatcher.BeginInvoke(new Action(() =>
-                    Share_Click(this, new RoutedEventArgs())),
-                    System.Windows.Threading.DispatcherPriority.Background);
-            }
         }
         catch (Exception ex)
         {
@@ -441,7 +432,6 @@ public partial class ResourcePage : UserControl
     }
 
     private DateTime _lastShareAt = DateTime.MinValue;
-    private bool _shareTestDone;
 
     private void Share_Click(object sender, RoutedEventArgs e)
     {
