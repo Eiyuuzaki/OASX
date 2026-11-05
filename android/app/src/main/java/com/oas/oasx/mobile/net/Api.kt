@@ -30,7 +30,7 @@ object Api {
         client.newCall(req).execute().use { resp ->
             val body = resp.body?.string() ?: ""
             if (!resp.isSuccessful) {
-                throw RuntimeException("HTTP ${resp.code}: ${body.take(120)}")
+                throw RuntimeException("GET $path -> HTTP ${resp.code}: ${body.take(120)}")
             }
             return body
         }
@@ -45,7 +45,7 @@ object Api {
         client.newCall(req).execute().use { resp ->
             val body = resp.body?.string() ?: ""
             if (!resp.isSuccessful) {
-                throw RuntimeException("HTTP ${resp.code}: ${body.take(120)}")
+                throw RuntimeException("POST $path -> HTTP ${resp.code}: ${body.take(120)}")
             }
             return body
         }
