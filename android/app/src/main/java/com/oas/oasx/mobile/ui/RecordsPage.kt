@@ -8,32 +8,64 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.oas.oasx.mobile.data.AccountContext
 import com.oas.oasx.mobile.net.Api
 import com.oas.oasx.mobile.data.StatsResponse
 
-/// 记录页：按日期查看执行统计（总览磁贴 + 各任务次数/时长）。
+/// 记录页：子页签「统计」/「实时日志」（规范五入口下聚合运行记录类信息）。
 @Composable
 fun RecordsPage(backend: String) {
+    var subTab by remember { mutableIntStateOf(0) }
+    Column(Modifier.fillMaxSize()) {
+        Row(
+            Modifier.fillMaxWidth().padding(16.dp, 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("记录", fontSize = 22.sp, modifier = Modifier.weight(1f))
+            FilterChip(
+                selected = subTab == 0,
+                onClick = { subTab = 0 },
+                label = { Text("统计") },
+            )
+            androidx.compose.foundation.layout.Spacer(Modifier.padding(4.dp))
+            FilterChip(
+                selected = subTab == 1,
+                onClick = { subTab = 1 },
+                label = { Text("实时日志") },
+            )
+        }
+        if (subTab == 1) {
+            LogsPage(backend)
+        } else {
+            StatsView(backend)
+        }
+    }
+}
+
+/// 统计视图：日期切换 + 总览磁贴 + 各任务 runs。
+@Composable
+fun StatsView(backend: String) {
     val acct by AccountContext.state.collectAsStateWithLifecycle()
     val account = acct.current
-    var dates by remember { mutableStateOf<List<String>>(emptyList()) }
-    var selected by remember { mutableStateOf<String?>(null) }
-    var stats by remember { mutableStateOf<StatsResponse?>(null) }
-    var error by remember { mutableStateOf<String?>(null) }
+    var dates by remember(account?.config) { mutableStateOf<List<String>>(emptyList()) }
+    var selected by remember(account?.config) { mutableStateOf<String?>(null) }
+    var stats by remember(account?.config) { mutableStateOf<StatsResponse?>(null) }
+    var error by remember(account?.config) { mutableStateOf<String?>(null) }
 
     LaunchedEffect(account?.config, backend) {
         val script = account?.config ?: return@LaunchedEffect
@@ -59,21 +91,17 @@ fun RecordsPage(backend: String) {
     }
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
-        Text("记录", fontSize = 22.sp)
-
-        // 日期切换（最近在前，点击循环切换）
         if (dates.isNotEmpty()) {
             Text(
-                "日期：${selected ?: "—"}（共 ${dates.size} 天，点此切换下一天）",
+                "日期：${selected ?: "—"}（共 ${dates.size} 天）",
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 6.dp, bottom = 8.dp),
             )
             androidx.compose.material3.Button(onClick = {
                 val idx = dates.indexOf(selected)
                 if (idx >= 0 && idx < dates.size - 1) selected = dates[idx + 1]
                 else selected = dates.firstOrNull()
-            }) { Text("切换日期") }
+            }, modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)) { Text("切换日期") }
         }
 
         error?.let {
@@ -83,7 +111,7 @@ fun RecordsPage(backend: String) {
 
         val s = stats
         if (s != null) {
-            Row(Modifier.fillMaxWidth().padding(top = 12.dp)) {
+            Row(Modifier.fillMaxWidth()) {
                 StatTile("总时长", formatDuration(s.totalRuntimeSeconds), Modifier.weight(1f))
                 StatTile("任务次数", "${s.totalTaskRunCount}", Modifier.weight(1f))
                 StatTile("战斗场次", "${s.totalBattleCount}", Modifier.weight(1f))
