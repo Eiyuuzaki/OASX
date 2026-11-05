@@ -85,6 +85,12 @@ public static class OasNotifyApi
             }
             var key = line[..idx].Trim();
             var val = line[(idx + 1)..].Trim();
+            // yaml.safe_dump 会给数字串加引号（appid: '1906157229'），显示时去掉
+            // 用字符码比较，避免引号字面量的转义噪音
+            if (val.Length >= 2 && val[0] == val[^1] && (val[0] == 0x27 || val[0] == 0x22))
+            {
+                val = val[1..^1];
+            }
             if (key == "provider")
             {
                 provider = val;

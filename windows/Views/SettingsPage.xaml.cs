@@ -157,6 +157,8 @@ public partial class SettingsPage : UserControl
         {
             return;
         }
+        // 用户手动换渠道：旧渠道参数作废，清空后重建字段
+        _paramValues.Clear();
         _RefreshParamFields();
         _ = SaveNotifyAsync();
     }
@@ -172,7 +174,8 @@ public partial class SettingsPage : UserControl
     private void _RefreshParamFields()
     {
         NotifyFieldsPanel.Children.Clear();
-        _paramValues.Clear();
+        // 注意：这里**不能**清 _paramValues——加载配置时刚按 YAML 填好参数，
+        // 清空会导致字段永远空（既有 bug：设置页看不到已保存的凭据）。
         if (NotifyProviderBox.SelectedItem is not ComboBoxItem { Tag: string tag } ||
             tag == "null" || _providers is null || !_providers.TryGetValue(tag, out var info))
         {
