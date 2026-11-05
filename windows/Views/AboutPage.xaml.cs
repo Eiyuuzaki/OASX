@@ -24,6 +24,7 @@ public partial class AboutPage : UserControl
         VersionText.Text = $"v{Assembly.GetExecutingAssembly()
             .GetName().Version?.ToString(3) ?? "?"}";
         BackendText.Text = OasSettings.BackendAddress;
+        UpdateStatusText.Text = $"当前版本 v{UpdateChecker.CurrentVersion}";
 
         BuildCredits();
         BuildEnvironment();
@@ -47,6 +48,53 @@ public partial class AboutPage : UserControl
         foreach (var (symbol, name, detail) in rows)
         {
             CreditsPanel.Children.Add(BuildRow(symbol, name, detail));
+        }
+    }
+
+    /// <summary>检查 GitHub Releases 是否有新版本。</summary>
+    private async void CheckUpdate_Click(object sender, RoutedEventArgs e)
+    {
+        CheckUpdateButton.IsEnabled = false;
+        UpdateStatusText.Text = "检查中…";
+        try
+        {
+            var result = await UpdateChecker.CheckAsync();
+            if (!result.Success)
+            {
+                UpdateStatusText.Text = $"检查失败：{result.Error}";
+                return;
+            }
+            if (!result.HasUpdate)
+            {
+                UpdateStatusText.Text = result.Note is null
+                    ? $"已是最新（v{result.CurrentVersion}）"
+                    : $"v{result.CurrentVersion} · {result.Note}";
+                return;
+            }
+            UpdateStatusText.Text =
+                $"发现新版本 {result.LatestVersion}（当前 v{result.CurrentVersion}）";
+            var msg = result.Note ?? "";
+            var choice = System.Windows.MessageBox.Show(
+                Window.GetWindow(this),
+                string.Join(Environment.NewLine,
+                    $"发现新版本 {result.LatestVersion}（当前 v{result.CurrentVersion}）",
+                    msg,
+                    "",
+                    "要打开发布页下载吗？"),
+                "OASX 更新", MessageBoxButton.YesNo, MessageBoxImage.Information);
+            if (choice == MessageBoxResult.Yes)
+            {
+                OpenUrl(result.DownloadUrl ?? result.ReleaseUrl
+                        ?? "https://github.com/Eiyuuzaki/OASX/releases");
+            }
+        }
+        catch (Exception ex)
+        {
+            UpdateStatusText.Text = $"检查失败：{ex.Message}";
+        }
+        finally
+        {
+            CheckUpdateButton.IsEnabled = true;
         }
     }
 

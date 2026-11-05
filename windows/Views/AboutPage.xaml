@@ -76,6 +76,25 @@
                                        VerticalAlignment="Center"
                                        Foreground="{DynamicResource OasTextTertiaryBrush}" />
                     </Grid>
+                    <!-- 检查更新 -->
+                    <Grid Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:SymbolIcon Grid.Column="0" Symbol="ArrowSync24" FontSize="18"
+                                       VerticalAlignment="Center" Margin="0,0,12,0" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="检查更新" FontSize="13"
+                                       Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                            <TextBlock x:Name="UpdateStatusText" Text="当前版本 v—"
+                                       FontSize="12"
+                                       Foreground="{DynamicResource OasTextSecondaryBrush}" />
+                        </StackPanel>
+                        <ui:Button Grid.Column="2" x:Name="CheckUpdateButton" Content="检查"
+                                   VerticalAlignment="Center" Click="CheckUpdate_Click" />
+                    </Grid>
                     <Grid Cursor="Hand" Background="Transparent"
                           MouseLeftButtonUp="Issues_Click">
                         <Grid.ColumnDefinitions>
