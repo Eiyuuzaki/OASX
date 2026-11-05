@@ -11,7 +11,7 @@ public partial class App : Application
     public static System.Windows.Window? MainWindow { get; set; }
 
     private static readonly string CrashLogPath = Path.Combine(
-        AppContext.BaseDirectory, "crash.log");
+        "crash.log");
 
     public App()
     {
@@ -40,7 +40,7 @@ public partial class App : Application
             {
                 var ex = args.ExceptionObject as Exception;
                 System.IO.File.AppendAllText(
-                    System.IO.Path.Combine(AppContext.BaseDirectory, "crash.log"),
+                    Services.LogPaths.File("crash.log"),
                     $"=== {DateTime.Now:yyyy-MM-dd HH:mm:ss} AppDomain " +
                     $"(terminating={args.IsTerminating}) ===\n{ex}\n\n");
             }
@@ -54,7 +54,7 @@ public partial class App : Application
             try
             {
                 System.IO.File.AppendAllText(
-                    System.IO.Path.Combine(AppContext.BaseDirectory, "crash.log"),
+                    Services.LogPaths.File("crash.log"),
                     $"=== {DateTime.Now:yyyy-MM-dd HH:mm:ss} unobserved task ===\n" +
                     $"{args.Exception}\n\n");
             }

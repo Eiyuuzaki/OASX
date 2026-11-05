@@ -113,10 +113,12 @@ public partial class DashboardPage : UserControl
             var state = await OasNotifyApi.GetFosterAsync();
             if (state is null || !state.Success)
             {
+                // 如实显示后端给的原因（模拟器离线/游戏未开），不要笼统写"未寄养"
+                var why = ShortReason(state?.Error);
                 FillDashCard(FosterCardName, FosterCountdown, FosterEnd, FosterRemain,
-                    FosterIcon, FosterRing, FosterPlaceholder, "当前未寄养", "", null, 0, null, false);
+                    FosterIcon, FosterRing, FosterPlaceholder, why, "", null, 0, null, false);
                 FillDashCard(OwnCardName, OwnCountdown, OwnEnd, OwnRemain,
-                    OwnIcon, OwnRing, OwnPlaceholder, "需要游戏运行", "", null, 0, null, false);
+                    OwnIcon, OwnRing, OwnPlaceholder, why, "", null, 0, null, false);
                 return;
             }
 
@@ -185,6 +187,29 @@ public partial class DashboardPage : UserControl
             FillDashCard(OwnCardName, OwnCountdown, OwnEnd, OwnRemain,
                 OwnIcon, OwnRing, OwnPlaceholder, reason, "", null, 0, null, false);
         }
+    }
+
+    /// <summary>把后端错误压成一行短原因（卡片空间有限）。</summary>
+    private static string ShortReason(string? error)
+    {
+        if (string.IsNullOrWhiteSpace(error))
+        {
+            return "需要游戏运行";
+        }
+        var e = error.Trim();
+        if (e.Contains("离线"))
+        {
+            return "模拟器离线";
+        }
+        if (e.Contains("超时"))
+        {
+            return "读取超时";
+        }
+        if (e.Length > 12)
+        {
+            e = e[..12] + "…";
+        }
+        return e;
     }
 
     /// <summary>填充双卡之一；fraction 驱动圆环，iconKey 为空时隐藏卡图。</summary>

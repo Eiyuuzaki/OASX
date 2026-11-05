@@ -29,7 +29,7 @@ public class PageService : INavigationViewPageProvider
             try
             {
                 System.IO.File.AppendAllText(
-                    System.IO.Path.Combine(AppContext.BaseDirectory, "page_fail.log"),
+                    LogPaths.File("page_fail.log"),
                     $"{DateTime.Now:HH:mm:ss} {pageType.FullName}\n{ex}\n\n");
             }
             catch

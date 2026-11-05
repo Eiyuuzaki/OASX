@@ -152,7 +152,7 @@ public sealed class GlobalAccountContext
         try
         {
             File.AppendAllText(
-                Path.Combine(AppContext.BaseDirectory, "account_restore.log"),
+                LogPaths.File("account_restore.log"),
                 $"{DateTime.Now:HH:mm:ss} {msg}\n");
         }
         catch
@@ -231,7 +231,7 @@ public sealed class GlobalAccountContext
                   .AppendLine(o.Entry.RoleKey);
             }
             File.AppendAllText(
-                Path.Combine(AppContext.BaseDirectory, "account_restore.log"),
+                LogPaths.File("account_restore.log"),
                 sb.ToString());
         }
         catch
@@ -252,7 +252,7 @@ public sealed class GlobalAccountContext
             try
             {
                 File.AppendAllText(
-                    System.IO.Path.Combine(AppContext.BaseDirectory, "account_persist.log"),
+                    LogPaths.File("account_persist.log"),
                     $"{DateTime.Now:HH:mm:ss} save {entry.Config}|{entry.RoleKey}\n");
             }
             catch { }

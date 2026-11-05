@@ -265,7 +265,7 @@ public partial class MainWindow : FluentWindow
         try
         {
             System.IO.File.AppendAllText(
-                System.IO.Path.Combine(AppContext.BaseDirectory, "account_restore.log"),
+                LogPaths.File("account_restore.log"),
                 $"{DateTime.Now:HH:mm:ss} switcher label='{AccountButtonText.Text}' " +
                 $"current={(cur is null ? "null" : cur.Config + "/" + cur.DisplayName)} " +
                 $"accounts={ctx.Accounts.Count}\n");
