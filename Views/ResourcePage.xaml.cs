@@ -45,6 +45,16 @@ public partial class ResourcePage : UserControl
     private OasResourceApi.ResourceDay? _currentDay;
     private HashSet<string> _pinned = [];
 
+    /// <summary>视图模式：day=单日快照；"7"/"30"=区间账本（最近 N 天）。</summary>
+    private string ViewMode =>
+        (ViewSelector.SelectedItem as System.Windows.Controls.ComboBoxItem)?.Tag as string ?? "day";
+
+    private async void ViewSelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        DateSelector.IsEnabled = ViewMode == "day";
+        await ReloadCurrentViewAsync();
+    }
+
     private const string PinnedKey = "pinnedResources";
 
     private void LoadPinned()
@@ -177,14 +187,7 @@ public partial class ResourcePage : UserControl
             DateSelector.SelectedIndex = _dateIndex;
             _suppressDateEvent = false;
 
-            if (CurrentDate is string date)
-            {
-                await LoadDayAsync(entry.Config, date, entry.RoleKey);
-            }
-            else
-            {
-                EmptyText.Visibility = Visibility.Visible;
-            }
+            await ReloadCurrentViewAsync();
         }
         catch (Exception ex)
         {
@@ -209,7 +212,7 @@ public partial class ResourcePage : UserControl
         SelectionChangedEventArgs e)
     {
         if (_suppressDateEvent) return;
-        await LoadCurrentDayAsync();
+        await ReloadCurrentViewAsync();
     }
 
     /// <summary>← = 更新的一天（日期列表倒序，最新在前）。</summary>
@@ -221,7 +224,7 @@ public partial class ResourcePage : UserControl
             _suppressDateEvent = true;
             DateSelector.SelectedIndex = _dateIndex;
             _suppressDateEvent = false;
-            await LoadCurrentDayAsync();
+            await ReloadCurrentViewAsync();
         }
     }
 
@@ -234,16 +237,129 @@ public partial class ResourcePage : UserControl
             _suppressDateEvent = true;
             DateSelector.SelectedIndex = _dateIndex;
             _suppressDateEvent = false;
-            await LoadCurrentDayAsync();
+            await ReloadCurrentViewAsync();
         }
     }
 
-    private async Task LoadCurrentDayAsync()
+    /// <summary>按当前视图模式重载（单日快照 / 区间账本）。</summary>
+    private async Task ReloadCurrentViewAsync()
     {
-        if ((AccountSelector.SelectedItem as dynamic)?.Entry is AccountEntry entry &&
-            CurrentDate is string date)
+        if ((AccountSelector.SelectedItem as dynamic)?.Entry is not AccountEntry entry)
+        {
+            EmptyText.Visibility = Visibility.Visible;
+            return;
+        }
+        if (ViewMode != "day")
+        {
+            await LoadLedgerAsync(entry.Config, entry.RoleKey, int.Parse(ViewMode));
+            return;
+        }
+        if (CurrentDate is string date)
         {
             await LoadDayAsync(entry.Config, date, entry.RoleKey);
+        }
+        else
+        {
+            EmptyText.Visibility = Visibility.Visible;
+        }
+    }
+
+    /// <summary>图标过滤 + (图标,名称) 聚合 + 按图标去重 + 排序。
+    /// 单日快照与区间账本共用（Flutter resource_controller._applyIconFilter 移植）。</summary>
+    private List<OasResourceApi.ResourceItem> AggregateCards(
+        IEnumerable<OasResourceApi.ResourceItem> raw)
+    {
+        // 1. 图标白名单；count>0 或 delta≠0（账本里"花光"是重要事件，不能丢）
+        // 2. (图标,名称) 聚合——同名视为同一种资产的多期版本，数量相加
+        var byIconName = raw
+            .Where(item => CurrencyIconRegistry.Has(item.Icon)
+                           && (item.Count > 0 || (item.Delta ?? 0) != 0))
+            .GroupBy(item => (CurrencyIconRegistry.BaseName(item.Icon), item.Name))
+            .Select(g =>
+            {
+                var count = g.Sum(x => x.Count);
+                var deltaSum = g.Sum(x => x.Delta ?? 0);
+                var newest = g.OrderByDescending(x => x.Id).First();
+                return new OasResourceApi.ResourceItem(
+                    newest.Id, g.Key.Name, g.Key.Item1, count, deltaSum);
+            })
+            .ToList();
+
+        // 3. 按图标二次去重：同一图标多期/多名称只留一张卡
+        //    （优先常驻档 id<901000 → 数量大 → id 小），否则过期代币整屏刷出。
+        var byIcon = new Dictionary<string, OasResourceApi.ResourceItem>();
+        foreach (var agg in byIconName)
+        {
+            var icon = CurrencyIconRegistry.BaseName(agg.Icon);
+            if (!byIcon.TryGetValue(icon, out var prev) || PreferGroup(agg, prev))
+            {
+                byIcon[icon] = agg;
+            }
+        }
+
+        // 排序：置顶优先 → |delta| 降序 → 名称
+        return byIcon.Values
+            .OrderByDescending(x => IsPinned(CurrencyIconRegistry.BaseName(x.Icon)))
+            .ThenByDescending(x => Math.Abs(x.Delta ?? 0))
+            .ThenBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    /// <summary>区间账本：最近 N 天首尾对比 → 卡片网格。</summary>
+    private async Task LoadLedgerAsync(string config, string roleKey, int days)
+    {
+        EmptyText.Visibility = Visibility.Collapsed;
+        try
+        {
+            var ledger = await OasResourceApi.GetLedgerAsync(config, roleKey, days);
+            if (ledger is null || ledger.Items.Count == 0)
+            {
+                AssetCards.ItemsSource = null;
+                EmptyText.Visibility = Visibility.Visible;
+                StatusText.Text = "账本：区间内无数据";
+                return;
+            }
+
+            var visible = AggregateCards(ledger.Items.Select(i =>
+                new OasResourceApi.ResourceItem(i.Id, i.Name, i.Icon, i.Count, i.Delta)));
+
+            var up = visible.Count(x => (x.Delta ?? 0) > 0);
+            var down = visible.Count(x => (x.Delta ?? 0) < 0);
+            var baseNote = ledger.BaseDate.Length > 0
+                ? $"基线 {ledger.BaseDate}"
+                : "基线缺失";
+            StatusText.Text =
+                $"账本 {ledger.FirstDate} → {ledger.LastDate}（{baseNote}）· " +
+                $"涨 {up} 项 / 跌 {down} 项 · 共 {visible.Count} 项";
+
+            AssetCards.ItemsSource = visible.Select(item =>
+            {
+                var pinKey = CurrencyIconRegistry.BaseName(item.Icon);
+                var pinned = IsPinned(pinKey);
+                return new AssetCardVm
+                {
+                    Name = item.Name,
+                    CountText = FormatCount(item.Count),
+                    DeltaText = item.Delta is { } d && d != 0 ? FormatDelta(d) : "持平",
+                    DeltaBrush = new SolidColorBrush((item.Delta ?? 0) >= 0
+                        ? Color.FromRgb(0x4C, 0xAF, 0x50)
+                        : Color.FromRgb(0xE5, 0x53, 0x53)),
+                    IconImage = LoadIcon(item.Icon),
+                    PinKey = pinKey,
+                    IsPinned = pinned,
+                    PinIcon = new Wpf.Ui.Controls.SymbolIcon(
+                        Wpf.Ui.Controls.SymbolRegular.Pin24)
+                    {
+                        Foreground = pinned
+                            ? FindBrush("OasAccentBrush")
+                            : FindBrush("OasTextTertiaryBrush"),
+                    },
+                };
+            }).ToList();
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"账本加载失败：{ex.Message}";
         }
     }
 
@@ -263,43 +379,7 @@ public partial class ResourcePage : UserControl
                 return;
             }
 
-            // Flutter 版 resource_controller._applyIconFilter 的移植：
-            // 1. 图标白名单（本地 currency 图标）+ count>0
-            // 2. (图标,名称) 聚合——同名视为同一种资产的多期版本，数量相加
-            // 3. |delta| 降序，同名稳定
-            var byIconName = day.Items
-                .Where(item => CurrencyIconRegistry.Has(item.Icon) && item.Count > 0)
-                .GroupBy(item => (CurrencyIconRegistry.BaseName(item.Icon), item.Name))
-                .Select(g =>
-                {
-                    var count = g.Sum(x => x.Count);
-                    var deltaSum = g.Sum(x => x.Delta ?? 0);
-                    var newest = g.OrderByDescending(x => x.Id).First();
-                    return new OasResourceApi.ResourceItem(
-                        newest.Id, g.Key.Name, g.Key.Item1, count, deltaSum);
-                })
-                .ToList();
-
-            // 3. **按图标二次去重**（Flutter merged[icon] + _preferGroup）：
-            //    同一图标下的多期/多名称版本只保留一张卡——
-            //    优先常驻档（id<901000），其次数量大，最后 id 小。
-            //    没有这步时过期货币和活动代币会整屏刷出来（55 张卡 bug）。
-            var byIcon = new Dictionary<string, OasResourceApi.ResourceItem>();
-            foreach (var agg in byIconName)
-            {
-                var icon = CurrencyIconRegistry.BaseName(agg.Icon);
-                if (!byIcon.TryGetValue(icon, out var prev) || PreferGroup(agg, prev))
-                {
-                    byIcon[icon] = agg;
-                }
-            }
-
-            // 排序（Flutter 版）：置顶优先 → |delta| 降序 → 名称
-            var visible = byIcon.Values
-                .OrderByDescending(x => IsPinned(CurrencyIconRegistry.BaseName(x.Icon)))
-                .ThenByDescending(x => Math.Abs(x.Delta ?? 0))
-                .ThenBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
-                .ToList();
+            var visible = AggregateCards(day.Items);
 
             AssetCards.ItemsSource = visible.Select(item =>
             {

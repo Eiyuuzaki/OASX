@@ -49,6 +49,27 @@ public static class OasResourceApi
                   (q.Count > 0 ? "?" + string.Join("&", q) : "");
         return await OasApi.Http.GetFromJsonAsync<ResourceDay>(url, JsonOptions, cts.Token);
     }
+    public record LedgerItem(
+        string Id, string Name, string Icon, long Count,
+        long? FirstCount, long? Delta);
+
+    public record LedgerResponse(
+        string ConfigName, string RoleKey,
+        string FirstDate, string LastDate, string BaseDate,
+        int Days, List<LedgerItem> Items);
+
+    /// <summary>GET /resource/{config}/ledger?days=&amp;role_key=
+    /// 区间账本：最近 N 天首尾对比，每资产净增量（|delta| 降序）。</summary>
+    public static async Task<LedgerResponse?> GetLedgerAsync(
+        string config, string roleKey, int days = 7)
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        var url = $"/resource/{Uri.EscapeDataString(config)}/ledger" +
+                  $"?days={days}&role_key={Uri.EscapeDataString(roleKey)}";
+        return await OasApi.Http.GetFromJsonAsync<LedgerResponse>(
+            url, JsonOptions, cts.Token);
+    }
+
     public record HistoryPoint(string Date, long Count);
 
     public record HistoryResponse(

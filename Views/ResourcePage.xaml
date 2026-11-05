@@ -19,6 +19,12 @@
                      调度器名作为账号条目的次要信息展示 -->
                 <ComboBox x:Name="AccountSelector" MinWidth="240" MinHeight="40"
                           SelectionChanged="AccountSelector_SelectionChanged" />
+                <ComboBox x:Name="ViewSelector" MinWidth="110" MinHeight="40" Margin="12,0,0,0"
+                          SelectionChanged="ViewSelector_SelectionChanged">
+                    <ComboBoxItem Content="单日快照" Tag="day" IsSelected="True" />
+                    <ComboBoxItem Content="近 7 天账本" Tag="7" />
+                    <ComboBoxItem Content="近 30 天账本" Tag="30" />
+                </ComboBox>
                 <ComboBox x:Name="DateSelector" MinWidth="140" MinHeight="40" Margin="12,0,0,0"
                           SelectionChanged="DateSelector_SelectionChanged" />
                 <ui:Button x:Name="ShareButton" MinWidth="40" MinHeight="40" Margin="12,0,0,0"
