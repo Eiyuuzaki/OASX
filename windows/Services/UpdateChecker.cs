@@ -1,29 +1,17 @@
 using System.Net.Http;
-using System.Text.Json;
-using System.Text.Json.Serialization;
+using System.Xml.Linq;
 
 namespace OASX.Services;
 
 /// <summary>
-/// 更新检查：查 GitHub Releases 最新版本，与当前程序集版本比较。
-/// 网络不可达/仓库无 Release 时返回明确状态，绝不阻塞 UI。
+/// 更新检查：读 GitHub Releases 的 Atom 订阅源（releases.atom）。
+/// 不用 REST API：api.github.com 对未认证请求按 IP 限流（代理出口 IP 常被打满，
+/// 实测返回 403 "API rate limit exceeded"），而 atom 源没有这个限制。
 /// </summary>
 public static class UpdateChecker
 {
-    private const string LatestReleaseUrl =
-        "https://api.github.com/repos/Eiyuuzaki/OASX/releases/latest";
-
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-    };
-
-    public record ReleaseInfo(
-        string TagName, string Name, string HtmlUrl, string Body,
-        bool Prerelease, List<ReleaseAsset> Assets);
-
-    public record ReleaseAsset(string Name, string BrowserDownloadUrl, long Size);
+    private const string AtomUrl =
+        "https://github.com/Eiyuuzaki/OASX/releases.atom";
 
     public record CheckResult(
         bool Success, bool HasUpdate, string CurrentVersion,
@@ -35,41 +23,42 @@ public static class UpdateChecker
         System.Reflection.Assembly.GetExecutingAssembly()
             .GetName().Version?.ToString(3) ?? "0.0.0";
 
-    /// <summary>查询最新 Release 并比较版本（异步、10 秒超时）。</summary>
+    /// <summary>查询最新 Release 并比较版本（异步、12 秒超时）。</summary>
     public static async Task<CheckResult> CheckAsync()
     {
         var current = CurrentVersion;
         try
         {
-            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
-            http.DefaultRequestHeaders.UserAgent.ParseAdd("OASX-UpdateChecker");
-            using var resp = await http.GetAsync(LatestReleaseUrl);
-            if (resp.StatusCode == System.Net.HttpStatusCode.NotFound)
-            {
-                return new CheckResult(true, false, current, null, null, null,
-                    "仓库还没有发布版本", null);
-            }
+            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(12) };
+            http.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 OASX-UpdateChecker");
+            using var resp = await http.GetAsync(AtomUrl);
             if (!resp.IsSuccessStatusCode)
             {
                 return new CheckResult(false, false, current, null, null, null, null,
                     $"GitHub 返回 {(int)resp.StatusCode}");
             }
-            var json = await resp.Content.ReadAsStringAsync();
-            var release = JsonSerializer.Deserialize<ReleaseInfo>(json, JsonOptions);
-            if (release is null || string.IsNullOrWhiteSpace(release.TagName))
+            var xml = await resp.Content.ReadAsStringAsync();
+            var doc = XDocument.Parse(xml);
+            XNamespace ns = "http://www.w3.org/2005/Atom";
+            var entry = doc.Root?.Elements(ns + "entry").FirstOrDefault();
+            if (entry is null)
+            {
+                return new CheckResult(true, false, current, null, null, null,
+                    "仓库还没有发布版本", null);
+            }
+            var tag = entry.Element(ns + "title")?.Value?.Trim() ?? "";
+            var link = entry.Element(ns + "link")?.Attribute("href")?.Value;
+            var content = entry.Element(ns + "content")?.Value;
+            if (tag.Length == 0)
             {
                 return new CheckResult(false, false, current, null, null, null, null,
-                    "解析 Release 失败");
+                    "解析 Release 标题失败");
             }
-
-            var latest = release.TagName.TrimStart('v', 'V');
+            var latest = tag.TrimStart('v', 'V');
             var hasUpdate = CompareVersions(latest, current) > 0;
-            var asset = release.Assets.FirstOrDefault(a =>
-                a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
             return new CheckResult(
-                true, hasUpdate, current, release.TagName,
-                asset?.BrowserDownloadUrl, release.HtmlUrl,
-                FirstLine(release.Body), null);
+                true, hasUpdate, current, tag, link, link,
+                FirstLine(content), null);
         }
         catch (TaskCanceledException)
         {
@@ -78,8 +67,9 @@ public static class UpdateChecker
         }
         catch (Exception ex)
         {
+            var msg = ex.Message;
             return new CheckResult(false, false, current, null, null, null, null,
-                ex.Message.Length > 80 ? ex.Message[..80] : ex.Message);
+                msg.Length > 80 ? msg[..80] : msg);
         }
     }
 
@@ -106,7 +96,9 @@ public static class UpdateChecker
         {
             return null;
         }
-        var line = text.Split('\n').FirstOrDefault(l => l.Trim().Length > 0)?.Trim();
+        var line = text.Split('\n')
+            .Select(l => System.Net.WebUtility.HtmlDecode(l).Trim())
+            .FirstOrDefault(l => l.Length > 0);
         return line is { Length: > 80 } ? line[..80] : line;
     }
 }

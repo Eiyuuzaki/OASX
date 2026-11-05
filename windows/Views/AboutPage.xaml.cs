@@ -24,7 +24,7 @@ public partial class AboutPage : UserControl
         VersionText.Text = $"v{Assembly.GetExecutingAssembly()
             .GetName().Version?.ToString(3) ?? "?"}";
         BackendText.Text = OasSettings.BackendAddress;
-        UpdateStatusText.Text = $"当前版本 v{UpdateChecker.CurrentVersion}";
+        VersionInlineText.Text = $"v{UpdateChecker.CurrentVersion}";
 
         BuildCredits();
         BuildEnvironment();
@@ -52,9 +52,10 @@ public partial class AboutPage : UserControl
     }
 
     /// <summary>检查 GitHub Releases 是否有新版本。</summary>
-    private async void CheckUpdate_Click(object sender, RoutedEventArgs e)
+    private async void CheckUpdate_Click(object sender,
+        System.Windows.Input.MouseButtonEventArgs e)
     {
-        CheckUpdateButton.IsEnabled = false;
+        UpdateRow.IsHitTestVisible = false;
         UpdateStatusText.Text = "检查中…";
         try
         {
@@ -94,7 +95,7 @@ public partial class AboutPage : UserControl
         }
         finally
         {
-            CheckUpdateButton.IsEnabled = true;
+            UpdateRow.IsHitTestVisible = true;
         }
     }
 
