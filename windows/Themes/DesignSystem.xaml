@@ -1,0 +1,59 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+        OASX Design System — 主题无关部分（字体/间距/圆角/排版）
+        语义色在 Themes/Light.xaml 与 Themes/Dark.xaml，由 ThemeService 切换。
+        页面一律使用 Oas* 语义键，禁止散用框架内部键与字面颜色。
+    -->
+
+    <!-- ============ 字体 ============ -->
+    <!-- MiSans：小米发布的免费商用字体（BGI 同款）；内嵌保证未安装环境一致 -->
+    <FontFamily x:Key="AppFontFamily">pack://application:,,,/Assets/Fonts/#MiSans</FontFamily>
+
+    <!-- ============ 间距（4px 基础体系） ============ -->
+    <Thickness x:Key="Spacing4">4</Thickness>
+    <Thickness x:Key="Spacing8">8</Thickness>
+    <Thickness x:Key="Spacing12">12</Thickness>
+    <Thickness x:Key="Spacing16">16</Thickness>
+    <Thickness x:Key="Spacing20">20</Thickness>
+    <Thickness x:Key="Spacing24">24</Thickness>
+    <Thickness x:Key="PagePadding">28,20,28,24</Thickness>
+
+    <!-- ============ 圆角与尺寸 ============ -->
+    <CornerRadius x:Key="RadiusCard">10</CornerRadius>
+    <CornerRadius x:Key="RadiusControl">6</CornerRadius>
+    <sys:Double xmlns:sys="clr-namespace:System;assembly=mscorlib"
+                x:Key="ControlHeight">40</sys:Double>
+    <sys:Double xmlns:sys="clr-namespace:System;assembly=mscorlib"
+                x:Key="CardHeight">112</sys:Double>
+
+    <!-- ============ Typography ============ -->
+    <Style x:Key="OasPageTitle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}" />
+        <Setter Property="FontSize" Value="24" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style x:Key="OasSectionTitle" TargetType="TextBlock" BasedOn="{StaticResource OasPageTitle}">
+        <Setter Property="FontSize" Value="18" />
+    </Style>
+    <Style x:Key="OasCardTitle" TargetType="TextBlock" BasedOn="{StaticResource OasPageTitle}">
+        <Setter Property="FontSize" Value="16" />
+    </Style>
+    <Style x:Key="OasBody" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontWeight" Value="Regular" />
+    </Style>
+    <Style x:Key="OasNumericValue" TargetType="TextBlock" BasedOn="{StaticResource OasBody}">
+        <Setter Property="FontSize" Value="25" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style x:Key="OasSecondary" TargetType="TextBlock" BasedOn="{StaticResource OasBody}">
+        <Setter Property="FontSize" Value="13" />
+    </Style>
+    <Style x:Key="OasCaption" TargetType="TextBlock" BasedOn="{StaticResource OasBody}">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Foreground" Value="{DynamicResource OasTextSecondaryBrush}" />
+    </Style>
+</ResourceDictionary>

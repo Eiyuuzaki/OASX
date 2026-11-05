@@ -1,0 +1,102 @@
+<ui:FluentWindow x:Class="OASX.MainWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:views="clr-namespace:OASX.Views"
+                 mc:Ignorable="d"
+                 Title="OASX"
+                 Width="1050" Height="700"
+                 ExtendsContentIntoTitleBar="True"
+                 WindowStartupLocation="CenterScreen"
+                 UseLayoutRounding="True"
+                 SnapsToDevicePixels="True"
+                 FontFamily="{StaticResource AppFontFamily}">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0" Title="OASX">
+            <ui:TitleBar.Icon>
+                <ui:ImageIcon Source="pack://application:,,,/Assets/appicon.png" />
+            </ui:TitleBar.Icon>
+        </ui:TitleBar>
+
+        <!-- BGI 同款结构：NavigationView 内部自带 Frame + 页面服务导航。
+             不用 ContentOverlay 自管 Frame——那会替换掉内部内容管线，
+             条目点击的导航事件链整个断掉（实测踩坑）。 -->
+        <ui:NavigationView Grid.Row="1"
+                           x:Name="RootNavigation"
+                           IsBackButtonVisible="Collapsed"
+                           IsPaneToggleVisible="True"
+                           IsTopSeparatorVisible="False"
+                           IsFooterSeparatorVisible="False"
+                           OpenPaneLength="160">
+            <ui:NavigationView.MenuItems>
+                <ui:NavigationViewItem Content="仪表盘" TargetPageType="{x:Type views:DashboardPage}"
+                                       Icon="{ui:SymbolIcon Home24}" />
+                <ui:NavigationViewItem Content="工作台" TargetPageType="{x:Type views:WorkbenchPage}"
+                                       Icon="{ui:SymbolIcon Rocket24}" />
+                <ui:NavigationViewItem Content="统计" TargetPageType="{x:Type views:StatisticsPage}"
+                                       Icon="{ui:SymbolIcon DataHistogram24}" />
+                <ui:NavigationViewItem Content="资产" TargetPageType="{x:Type views:ResourcePage}"
+                                       Icon="{ui:SymbolIcon Wallet24}" />
+                <ui:NavigationViewItem Content="活动" TargetPageType="{x:Type views:ActivityPage}"
+                                       Icon="{ui:SymbolIcon CalendarLtr24}" />
+                <ui:NavigationViewItem Content="绘卷" TargetPageType="{x:Type views:HuijuanPage}"
+                                       Icon="{ui:SymbolIcon Book24}" />
+                <ui:NavigationViewItem Content="日志" TargetPageType="{x:Type views:LogPage}"
+                                       Icon="{ui:SymbolIcon SlideText24}" />
+            </ui:NavigationView.MenuItems>
+            <!-- 侧栏底部账号块：头像 + 名称，点击弹出账号列表 -->
+            <ui:NavigationView.PaneFooter>
+                <ui:Button x:Name="AccountButton" HorizontalAlignment="Stretch"
+                           Margin="4,4,4,6" Padding="8,6"
+                           Click="AccountButton_Click"
+                           ToolTip="切换账号（仪表盘/资产/统计/绘卷 全局生效）">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:SymbolIcon Grid.Column="0" Symbol="PersonAccounts24"
+                                       FontSize="17" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1" x:Name="AccountButtonText"
+                                   Text="未选择账号" FontSize="13" Margin="8,0,4,0"
+                                   VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" />
+                        <ui:SymbolIcon Grid.Column="2" Symbol="ChevronUp24"
+                                       FontSize="12" VerticalAlignment="Center" />
+                    </Grid>
+                </ui:Button>
+            </ui:NavigationView.PaneFooter>
+            <ui:NavigationView.FooterMenuItems>
+                <ui:NavigationViewItem Content="设置" TargetPageType="{x:Type views:SettingsPage}"
+                                       Icon="{ui:SymbolIcon Settings24}" />
+                <ui:NavigationViewItem Content="关于" TargetPageType="{x:Type views:AboutPage}"
+                                       Icon="{ui:SymbolIcon Info24}" />
+            </ui:NavigationView.FooterMenuItems>
+        </ui:NavigationView>
+
+        <!-- 账号切换弹层：用 Popup + 真按钮列表（ContextMenu 在本布局下
+             命中不可靠，点项无反应） -->
+        <Popup x:Name="AccountPopup" Placement="Top" StaysOpen="False"
+               AllowsTransparency="True" PopupAnimation="Fade"
+               VerticalOffset="-6">
+            <Border CornerRadius="{StaticResource RadiusCard}" Padding="6"
+                    Background="{DynamicResource OasSurfaceBrush}"
+                    BorderBrush="{DynamicResource OasBorderBrush}" BorderThickness="1"
+                    MinWidth="280" MaxWidth="380">
+                <StackPanel x:Name="AccountPopupPanel" />
+            </Border>
+        </Popup>
+
+        <!-- ContentDialog 浮层宿主 -->
+        <ContentPresenter x:Name="RootDialogHost" Grid.Row="0" Grid.RowSpan="2" Panel.ZIndex="100" />
+    </Grid>
+</ui:FluentWindow>

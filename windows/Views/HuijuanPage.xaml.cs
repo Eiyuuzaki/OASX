@@ -1,0 +1,324 @@
+using System.Globalization;
+using System.Text.Json;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using OASX.Services;
+
+namespace OASX.Views;
+
+/// <summary>单卷展示模型。</summary>
+public sealed class ScrollCardVm
+{
+    /// <summary>卷序号（01..）：按卷 ID 升序，与游戏内"卷一/卷二"顺序一致。</summary>
+    public string IndexText { get; init; } = "";
+
+    public string Name { get; init; } = "";
+
+    public double Percent { get; init; }
+    public string PercentText { get; init; } = "";
+
+    /// <summary>我在该卷的排名，如 "排名 412"；无数据时为空。</summary>
+    public string RankText { get; init; } = "";
+    public System.Windows.Visibility RankVisibility { get; init; } =
+        System.Windows.Visibility.Collapsed;
+
+    /// <summary>我在该卷的积分，如 "积分 1,860"；0 时隐藏。</summary>
+    public string ScoreText { get; init; } = "";
+    public System.Windows.Visibility ScoreVisibility { get; init; } =
+        System.Windows.Visibility.Collapsed;
+
+    /// <summary>未满卷时的差距，如 "还差 447万"（仅未满时出现）。</summary>
+    public string RemainText { get; init; } = "";
+    public System.Windows.Visibility RemainVisibility { get; init; } =
+        System.Windows.Visibility.Collapsed;
+
+    public string StateText { get; init; } = "";
+    public Brush StateBrush { get; init; } = Brushes.Gray;
+}
+
+/// <summary>剩余碎片展示模型（图标 + 数量）。</summary>
+public sealed class FragmentVm
+{
+    public System.Windows.Media.ImageSource? IconImage { get; init; }
+    public System.Windows.Visibility IconVisibility { get; init; }
+    public string Label { get; init; } = "";
+    public System.Windows.Visibility LabelVisibility { get; init; }
+    public string CountText { get; init; } = "";
+}
+
+/// <summary>
+/// 绘卷页：本区服绘卷棋盘（区服维度，数据来自运行中客户端的 HuiJuanInfoMgr）。
+/// 一个账号只能看到自己所在区服的数据——客户端本身只拉当前登录服。
+/// 活动期外显示"本期已结束"，不造假进度。
+/// </summary>
+public partial class HuijuanPage : UserControl
+{
+    public HuijuanPage()
+    {
+        InitializeComponent();
+        Loaded += (_, _) =>
+        {
+            var ctx = GlobalAccountContext.Instance;
+            ctx.CurrentChanged += OnContextChanged;
+            ctx.AccountsLoaded += OnAccountsLoaded;
+            _ = LoadAsync();
+            // 活动期自动刷新（客户端自身 refreshInterval = 60s）
+            _autoRefresh.Interval = TimeSpan.FromSeconds(60);
+            _autoRefresh.Tick += OnAutoRefreshTick;
+            _autoRefresh.Start();
+        };
+        Unloaded += (_, _) =>
+        {
+            var ctx = GlobalAccountContext.Instance;
+            ctx.CurrentChanged -= OnContextChanged;
+            ctx.AccountsLoaded -= OnAccountsLoaded;
+            _autoRefresh.Stop();
+            _autoRefresh.Tick -= OnAutoRefreshTick;
+        };
+    }
+
+    /// <summary>全局账号变化 → 重载本页（页面不自持选择状态）。</summary>
+    private void OnContextChanged(AccountEntry? entry) => _ = LoadAsync();
+
+    /// <summary>账号列表加载完成 → 若此前是空态则补载。</summary>
+    private void OnAccountsLoaded() => _ = LoadAsync();
+
+    private readonly System.Windows.Threading.DispatcherTimer _autoRefresh = new();
+
+    private void OnAutoRefreshTick(object? sender, EventArgs e)
+    {
+        // 仅活动期自动刷新（活动外数据不变，刷了也没意义，还会白白连桥）
+        if (_lastActive && GlobalAccountContext.Instance.Current is not null)
+        {
+            _ = LoadAsync(force: true);
+        }
+    }
+
+    private bool _lastActive;
+
+    private void Page_Unloaded(object sender, RoutedEventArgs e)
+    {
+        // 页面无后台任务；预留
+    }
+
+
+    private async void Refresh_Click(object sender, RoutedEventArgs e) =>
+        await LoadAsync(force: true);
+
+    private async Task LoadAsync(bool force = false)
+    {
+        var ctx = GlobalAccountContext.Instance;
+        if (ctx.Accounts.Count == 0 && !ctx.IsLoading)
+        {
+            // 直达本页时账号可能尚未加载（启动加载可能仍在进行）
+            await ctx.LoadAccountsAsync();
+        }
+        var entry = ctx.Current;
+        if (entry is null)
+        {
+            AccountNameText.Text = "未选择账号";
+            AccountDetailText.Text = "在资产页选择账号后查看其区服绘卷";
+            EmptyText.Text = "未选择账号";
+            ScrollList.ItemsSource = null;
+            SelfCard.Visibility = Visibility.Collapsed;
+            SetBadge("—", Brushes.Gray);
+            return;
+        }
+
+        AccountNameText.Text = entry.Name;
+        AccountDetailText.Text = $"Lv{entry.Level} · {entry.ServerName} · 调度器 {entry.Config}";
+        EmptyText.Text = "正在读取…";
+        ScrollList.ItemsSource = null;
+
+        try
+        {
+            var board = await OasHuijuanApi.GetBoardAsync(entry.Config, force);
+            if (board is null || !board.Success)
+            {
+                SetBadge("读取失败", Brushes.Gray);
+                EmptyText.Text = board?.Error ?? "读取失败";
+                if (!string.IsNullOrEmpty(board?.Hint))
+                {
+                    EmptyText.Text += $"（{board.Hint}）";
+                }
+                SubtitleText.Text = "需要游戏运行才能读取绘卷数据（内存桥依赖游戏内嵌解释器）";
+                return;
+            }
+
+            _lastActive = board.Active;
+            IssueText.Text = board.Issue.ToString(CultureInfo.InvariantCulture);
+            ThresholdText.Text = Compact(board.Threshold);
+            var win = board.Scrolls?.FirstOrDefault();
+            WindowText.Text = win is null || string.IsNullOrEmpty(win.BeginText)
+                ? ""
+                : $"{win.BeginText[5..]} → {win.EndText[5..]}";
+            SubtitleText.Text = board.Active
+                ? "本期绘卷进行中——数据来自运行中的游戏客户端（20 秒缓存）"
+                : "本期已结束——显示上一期最终结果";
+
+            SetBadge(board.Active ? "进行中" : "已结束",
+                board.Active ? Brush("OasSuccessBrush", Color.FromRgb(0x16, 0xA3, 0x4A))
+                             : Brush("OasTextSecondaryBrush", Color.FromRgb(0x61, 0x61, 0x61)));
+
+            var scrolls = board.Scrolls ?? [];
+            EmptyText.Text = scrolls.Count == 0 ? "本区服暂无绘卷数据" : "";
+            EmptyText.Visibility = scrolls.Count == 0
+                ? Visibility.Visible : Visibility.Collapsed;
+
+            ScrollList.ItemsSource = scrolls.Select((s, i) =>
+            {
+                var rankText = s.SelfRank is > 0 ? $"排名 {s.SelfRank.Value:N0}" : "";
+                return new ScrollCardVm
+                {
+                    IndexText = (i + 1).ToString("00"),
+                    Name = s.Name,
+                    Percent = Math.Clamp(s.Percent, 0, 100),
+                    PercentText = $"{s.Percent:0.##}%",
+                    RankText = rankText,
+                    RankVisibility = rankText.Length > 0
+                        ? Visibility.Visible : Visibility.Collapsed,
+                    ScoreText = s.SelfScore > 0 ? $"积分 {s.SelfScore:N0}" : "",
+                    ScoreVisibility = s.SelfScore > 0
+                        ? Visibility.Visible : Visibility.Collapsed,
+                    RemainText = s.Remain > 0 ? $"还差 {Compact(s.Remain)}" : "",
+                    RemainVisibility = s.Remain > 0 && board.Active
+                        ? Visibility.Visible : Visibility.Collapsed,
+                    StateText = s.Finished ? "已满卷" : (board.Active ? "进行中" : "未满"),
+                    StateBrush = s.Finished
+                        ? Brush("OasSuccessBrush", Color.FromRgb(0x16, 0xA3, 0x4A))
+                        : Brush("OasWarningBrush", Color.FromRgb(0xD9, 0x77, 0x06)),
+                };
+            }).ToList();
+
+            RenderSelf(board);
+        }
+        catch (Exception ex)
+        {
+            SetBadge("读取失败", Brushes.Gray);
+            EmptyText.Visibility = Visibility.Visible;
+            EmptyText.Text = $"读取失败：{ex.Message}";
+        }
+    }
+
+    /// <summary>我的积分/排名。
+    /// 积分口径：各卷 getSelfTotalScore(卷ID) 求和（实测验证）；
+    /// 排名来自 rankInfo（需游戏内拉过榜单），没有就如实显示未拉取。</summary>
+    private void RenderSelf(OasHuijuanApi.HuijuanBoard board)
+    {
+        SelfCard.Visibility = Visibility.Visible;
+
+        // 总积分：本期各卷积分之和
+        var score = board.SelfTotal;
+        SelfScoreText.Text = score > 0 ? score.ToString("N0") : "—";
+
+        // 最佳排名：各卷独立榜里名次最好的那一卷
+        var best = board.BestRank;
+        SelfRankText.Text = best is > 0
+            ? $"{best.Value:N0}" +
+              (board.BestRankIndex is > 0 ? $"（卷{Cn(board.BestRankIndex.Value)}）" : "")
+            : "—";
+
+        // 参与卷 / 剩余碎片
+        var joined = board.Scrolls?.Count(x => x.SelfScore > 0) ?? 0;
+        var total = board.Scrolls?.Count ?? 0;
+        JoinText.Text = joined > 0 ? $"{joined} / {total}" : "—";
+        _fragmentVms = BuildFragmentVms(board.Fragments);
+        FragmentsControl.ItemsSource = _fragmentVms;
+        FragmentsControl.Visibility = _fragmentVms.Count > 0
+            ? Visibility.Visible : Visibility.Collapsed;
+        FragmentsPlain.Visibility = _fragmentVms.Count > 0
+            ? Visibility.Collapsed : Visibility.Visible;
+
+        SelfHintText.Text = score > 0
+            ? "本期参与数据"
+            : board.Active
+                ? "本期尚未参与（各卷积分均为 0）"
+                : "本期已结束，无参与数据";
+    }
+
+    private List<FragmentVm> _fragmentVms = [];
+
+    /// <summary>剩余碎片：图标 + 数量（小→中→大）；图标缺失时退回文字标签。</summary>
+    private static List<FragmentVm> BuildFragmentVms(
+        List<OasHuijuanApi.FragmentEntry>? items)
+    {
+        if (items is null || items.Count == 0)
+        {
+            return [];
+        }
+        static int Weight(string name) => name.Contains('小') ? 0
+            : name.Contains('中') ? 1
+            : name.Contains('大') ? 2 : 3;
+        static string Short(string name)
+        {
+            var idx = name.IndexOf('·');
+            return idx >= 0 && idx + 1 < name.Length
+                ? name[(idx + 1)..]
+                : name.Replace("绘卷", "").Replace("碎片", "").Trim();
+        }
+        return items
+            .OrderBy(x => Weight(x.Name))
+            .Select(x =>
+            {
+                var icon = LoadIcon(x.Icon);
+                return new FragmentVm
+                {
+                    IconImage = icon,
+                    IconVisibility = icon is null ? Visibility.Collapsed : Visibility.Visible,
+                    Label = Short(x.Name),
+                    LabelVisibility = icon is null ? Visibility.Visible : Visibility.Collapsed,
+                    CountText = x.Count.ToString("N0"),
+                };
+            })
+            .ToList();
+    }
+
+    /// <summary>货币图标（Assets/currency/{base}.png），缺失返回 null。</summary>
+    private static System.Windows.Media.ImageSource? LoadIcon(string icon)
+    {
+        var baseName = CurrencyIconRegistry.BaseName(icon ?? "");
+        if (baseName.Length == 0)
+        {
+            return null;
+        }
+        try
+        {
+            var uri = new Uri($"pack://application:,,,/Assets/currency/{baseName}.png");
+            return new System.Windows.Media.Imaging.BitmapImage(uri);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>1..10 → 一..十（卷序号展示用）。</summary>
+    private static string Cn(int n) => n switch
+    {
+        1 => "一", 2 => "二", 3 => "三", 4 => "四", 5 => "五",
+        6 => "六", 7 => "七", 8 => "八", 9 => "九", 10 => "十",
+        _ => n.ToString(),
+    };
+
+    /// <summary>数字压缩：≥1 万用"万"（20,700,000 → 2070万）。</summary>
+    private static string Compact(long value)
+    {
+        if (value >= 10_000)
+        {
+            var w = value / 10_000.0;
+            return w >= 100 ? $"{w:0}万" : $"{w:0.#}万";
+        }
+        return value.ToString("N0");
+    }
+
+    private void SetBadge(string text, Brush brush)
+    {
+        StatusBadgeText.Text = text;
+        StatusBadgeText.Foreground = brush;
+    }
+
+    private static Brush Brush(string key, Color fallback) =>
+        Application.Current.TryFindResource(key) as Brush
+        ?? new SolidColorBrush(fallback);
+}

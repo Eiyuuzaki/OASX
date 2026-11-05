@@ -1,0 +1,106 @@
+<UserControl x:Class="OASX.Views.ResourcePage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+    <Grid Margin="{StaticResource PagePadding}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- 工具条：配置选择 + 角色下拉 + 日期下拉（对应 Flutter _Toolbar） -->
+        <Border Grid.Row="0" CornerRadius="8" Padding="12"
+                Background="{DynamicResource ControlFillColorDefaultBrush}"
+                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                BorderThickness="1" Margin="0,0,0,12">
+            <StackPanel Orientation="Horizontal">
+                <!-- 规范 4.1：资产页只放账号选择器（全局上下文驱动），
+                     不放调度器选择器——资源数据地址由 (调度器,角色) 对决定，
+                     调度器名作为账号条目的次要信息展示 -->
+                <ComboBox x:Name="AccountSelector" MinWidth="240" MinHeight="40"
+                          SelectionChanged="AccountSelector_SelectionChanged" />
+                <ComboBox x:Name="ViewSelector" MinWidth="110" MinHeight="40" Margin="12,0,0,0"
+                          SelectionChanged="ViewSelector_SelectionChanged">
+                    <ComboBoxItem Content="单日快照" Tag="day" IsSelected="True" />
+                    <ComboBoxItem Content="近 7 天账本" Tag="7" />
+                    <ComboBoxItem Content="近 30 天账本" Tag="30" />
+                </ComboBox>
+                <ComboBox x:Name="DateSelector" MinWidth="140" MinHeight="40" Margin="12,0,0,0"
+                          SelectionChanged="DateSelector_SelectionChanged" />
+                <ui:Button x:Name="ShareButton" MinWidth="40" MinHeight="40" Margin="12,0,0,0"
+                           Icon="{ui:SymbolIcon Share24}"
+                           ToolTip="生成资产分享图（保存到 图片\OASX）"
+                           Click="Share_Click" />
+                <TextBlock x:Name="StatusText" VerticalAlignment="Center" Margin="12,0,0,0"
+                           FontSize="12"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            </StackPanel>
+        </Border>
+
+        <!-- 资产卡片网格（自适应列数，对应 Flutter _Grid） -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <TextBlock x:Name="EmptyText" Text="暂无数据" Visibility="Collapsed"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           Margin="0,0,0,8" />
+                <!-- 不可选网格：用 ItemsControl（WPF ListBox 没有 SelectionMode.None） -->
+                <ItemsControl x:Name="AssetCards"
+                              ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <!-- 规范 6.2：高 112 / 圆角 10 / 图标容器 56 / 数量 25px >
+                                <   名称 16px > 增减 14px；宽度响应式（2/3/4 列） -->
+                            <Border Width="{Binding CardWidth, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    Height="{StaticResource CardHeight}" Margin="0,0,8,8" Padding="12"
+                                    CornerRadius="{StaticResource RadiusCard}"
+                                    Cursor="Hand"
+                                    MouseLeftButtonUp="AssetCard_Click"
+                                    Tag="{Binding Name}"
+                                    Background="{DynamicResource OasSurfaceBrush}">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="BorderBrush" Value="{DynamicResource OasBorderBrush}" />
+                                        <Setter Property="BorderThickness" Value="1" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsPinned}" Value="True">
+                                                <Setter Property="BorderBrush" Value="{DynamicResource OasAccentBrush}" />
+                                                <Setter Property="BorderThickness" Value="1.5" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <Grid>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Width="56" VerticalAlignment="Center">
+                                            <Image Width="36" Height="36" HorizontalAlignment="Left"
+                                                   Stretch="Uniform"
+                                                   Source="{Binding IconImage}" />
+                                        </Border>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="SemiBold"
+                                                       TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding CountText}" FontSize="25" FontWeight="SemiBold"
+                                                       FontFamily="{StaticResource AppFontFamily}" />
+                                            <TextBlock Text="{Binding DeltaText}" FontSize="14"
+                                                       Foreground="{Binding DeltaBrush}" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                    <ui:Button HorizontalAlignment="Right" VerticalAlignment="Top"
+                                               Icon="{Binding PinIcon}" Padding="2"
+                                               Background="Transparent" BorderThickness="0"
+                                               ToolTip="置顶 / 取消置顶"
+                                               Click="PinButton_Click" Tag="{Binding PinKey}" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>
