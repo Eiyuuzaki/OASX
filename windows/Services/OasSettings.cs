@@ -25,14 +25,31 @@ public static class OasSettings
 
     private static string ResolveWritablePath()
     {
+        // 设置必须落在**用户级固定位置**：早期版本按「第一个可写」回退到
+        // exe 旁，导致每个构建目录各一份 settings.json——换 exe 启动
+        // （重新发布/换构建）时设置全丢，表现为「材质/主题重启就掉」。
+        var candidates = new List<string>();
+        // LOCALAPPDATA 环境变量最可靠（SpecialFolder 在个别宿主下返回空）
+        var localEnv = Environment.GetEnvironmentVariable("LOCALAPPDATA");
+        if (!string.IsNullOrWhiteSpace(localEnv))
+        {
+            candidates.Add(Path.Combine(localEnv, "OASX", "settings.json"));
+        }
         var local = Environment.GetFolderPath(
             Environment.SpecialFolder.LocalApplicationData);
+        if (!string.IsNullOrWhiteSpace(local))
+        {
+            candidates.Add(Path.Combine(local, "OASX", "settings.json"));
+        }
         var roaming = Environment.GetFolderPath(
             Environment.SpecialFolder.ApplicationData);
-        var candidates = new List<string>();
-        if (local.Length > 0) candidates.Add(Path.Combine(local, "OASX", "settings.json"));
-        if (roaming.Length > 0) candidates.Add(Path.Combine(roaming, "OASX", "settings.json"));
-        candidates.Add(Path.Combine(AppContext.BaseDirectory, "settings.json"));
+        if (!string.IsNullOrWhiteSpace(roaming))
+        {
+            candidates.Add(Path.Combine(roaming, "OASX", "settings.json"));
+        }
+        // 最后才是 exe 目录（便携/完全无权限环境兜底）
+        var exeDir = Path.Combine(AppContext.BaseDirectory, "settings.json");
+        candidates.Add(exeDir);
 
         foreach (var c in candidates)
         {
@@ -42,11 +59,46 @@ public static class OasSettings
                 var probe = c + ".probe";
                 File.WriteAllText(probe, "x");
                 File.Delete(probe);
+                // 一次性迁移：新位置没有设置，而 exe 旁有旧设置 → 导入
+                if (!File.Exists(c) && File.Exists(exeDir)
+                    && !string.Equals(c, exeDir, StringComparison.OrdinalIgnoreCase))
+                {
+                    try
+                    {
+                        File.Copy(exeDir, c, overwrite: false);
+                    }
+                    catch
+                    {
+                        // 迁移失败不影响使用（会以默认值启动）
+                    }
+                }
+                try
+                {
+                    File.AppendAllText(Path.Combine(AppContext.BaseDirectory,
+                            "settings_path.log"),
+                        $"{DateTime.Now:HH:mm:ss} OK   {c}{Environment.NewLine}");
+                }
+                catch
+                {
+                    // 诊断日志失败不影响主流程
+                }
                 return c;
             }
-            catch
+            catch (Exception ex)
             {
-                // 该候选不可写，试下一个
+                // 该候选不可写，试下一个（记录原因：历史 bug 里这里静默过，
+                // 导致"设置存到 exe 旁、换构建就丢"很久没被发现）
+                try
+                {
+                    File.AppendAllText(Path.Combine(AppContext.BaseDirectory,
+                            "settings_path.log"),
+                        $"{DateTime.Now:HH:mm:ss} FAIL {c} :: {ex.GetType().Name}: " +
+                        $"{ex.Message}{Environment.NewLine}");
+                }
+                catch
+                {
+                    // 诊断日志失败不影响主流程
+                }
             }
         }
         return candidates[0];   // 全失败：仍用首选，Save 会落错误日志
