@@ -104,6 +104,9 @@ public partial class ActivityPage : UserControl
     };
 
     private bool _lastHasTasks;
+    /// <summary>最近一次成功加载的数据（分享图用，避免再次请求）。</summary>
+    private OasActivityApi.ActivityBoard? _lastBoard;
+    private OasNotifyApi.FosterState? _lastFoster;
     private readonly List<WeeklyItemVm> _weekly = [];
 
     /// <summary>周常清单（按用户意见精简）。
@@ -162,6 +165,82 @@ public partial class ActivityPage : UserControl
             _ = LoadAsync(force: true);
         }
     }
+
+    /// <summary>生成活动/寄养摘要分享图，并弹出预览。</summary>
+    private void ShareActivity_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var entry = GlobalAccountContext.Instance.Current;
+            var board = _lastBoard;
+            var foster = _lastFoster;
+            if (board is null && foster is null)
+            {
+                StatusText.Text = "还没有可分享的数据，先刷新一次";
+                return;
+            }
+
+            var rows = new List<(string Label, string Value, string Note)>();
+            if (board is not null)
+            {
+                rows.Add(("每日任务", $"{board.DailyDone}/{board.DailyTotal}",
+                    "满 100 活跃度"));
+                rows.Add(("悬赏封印", $"{board.MonsterDone}/{board.Monster?.Count ?? 0}",
+                    "封印完成"));
+                rows.Add(("每周任务", $"{WeeklyDoneCount()}/{_weekly.Count}",
+                    $"本周 {CurrentWeekKey()}"));
+                var live = board.LiveWindows ?? [];
+                if (live.Count > 0)
+                {
+                    var first = live.OrderBy(w => w.End).First();
+                    rows.Add(("进行中时段", $"{live.Count} 个",
+                        $"最近结束 {first.EndText}"));
+                }
+            }
+            if (foster is not null)
+            {
+                var f = foster.Foster;
+                if (f is not null && f.Active != false && f.Remaining is not null)
+                {
+                    var ts = TimeSpan.FromSeconds(f.Remaining ?? 0);
+                    rows.Add((f.CardName ?? "寄养",
+                        (f.Remaining ?? 0) <= 0 ? "已成熟" : $"{ts.Hours}小时{ts.Minutes:00}分",
+                        $"{f.EndText} 收取"));
+                }
+                else
+                {
+                    rows.Add(("寄养", "未寄养", ""));
+                }
+                var own = foster.Own;
+                if (own is not null && own.Empty == true)
+                {
+                    rows.Add(("自结界卡", "空", "自己放卡后显示倒计时"));
+                }
+                else if (own is not null && own.Unknown != true && own.Remaining is not null)
+                {
+                    var ts2 = TimeSpan.FromSeconds(own.Remaining ?? 0);
+                    rows.Add(("自结界卡", $"{ts2.Hours}小时{ts2.Minutes:00}分",
+                        $"{own.EndText} 收取"));
+                }
+            }
+
+            var path = ShareImageRenderer.RenderSummary(
+                "活动与寄养",
+                entry?.DisplayName ?? "未选择账号",
+                entry is null ? "" : $"调度器 {entry.Config}",
+                $"服务器时间 {board?.ServerTimeText ?? "—"}",
+                rows,
+                "OASX活动");
+            SharePreviewDialog.Show(Window.GetWindow(this), path);
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"分享图生成失败：{ex.Message}";
+        }
+    }
+
+    private int WeeklyDoneCount() =>
+        _weekly.Count(x => x.Done);
 
     private async void Refresh_Click(object sender, RoutedEventArgs e) =>
         await LoadAsync(force: true);
@@ -384,6 +463,7 @@ public partial class ActivityPage : UserControl
                 return;
             }
 
+            _lastFoster = state;
             var liveDesc = DescribeLiveRole(state.LiveRole);
             FosterNotifyText.Text = state.NotifyEnabled ? "通知已启用" : "通知未启用";
 
@@ -610,6 +690,7 @@ public partial class ActivityPage : UserControl
                 return;
             }
 
+            _lastBoard = board;
             _lastHasTasks = (board.Daily?.Count ?? 0) > 0;
             UpdateLiveRoleBanner(board.LiveRole);
             SubtitleText.Text = board.ServerWeekDay > 0

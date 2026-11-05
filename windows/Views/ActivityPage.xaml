@@ -15,9 +15,14 @@
                                FontSize="12" Margin="0,2,0,0"
                                Foreground="{DynamicResource OasTextSecondaryBrush}" />
                 </StackPanel>
-                <ui:Button HorizontalAlignment="Right" VerticalAlignment="Top"
-                           Icon="{ui:SymbolIcon ArrowClockwise24}" MinWidth="40"
-                           ToolTip="刷新（重读游戏客户端）" Click="Refresh_Click" />
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
+                            VerticalAlignment="Top">
+                    <ui:Button Icon="{ui:SymbolIcon Share24}" MinWidth="40"
+                               ToolTip="生成活动/寄养分享图" Click="ShareActivity_Click" />
+                    <ui:Button Margin="8,0,0,0"
+                               Icon="{ui:SymbolIcon ArrowClockwise24}" MinWidth="40"
+                               ToolTip="刷新（重读游戏客户端）" Click="Refresh_Click" />
+                </StackPanel>
             </Grid>
 
             <!-- 概览 -->

@@ -24,6 +24,130 @@ public static class ShareImageRenderer
         return SavePng(root, $"OASX资产_{date}_{DateTime.Now:HHmmss}.png");
     }
 
+    /// <summary>通用摘要分享图：标题 + 账号 + 若干「标签 / 值 / 备注」行。
+    /// 活动页与结界寄养共用（资产页仍走 RenderAssets 的图标网格样式）。</summary>
+    public static string RenderSummary(
+        string title, string accountName, string accountDetail, string subtitle,
+        IReadOnlyList<(string Label, string Value, string Note)> rows,
+        string fileNamePrefix)
+    {
+        var surface = Brush("OasSurfaceBrush", Color.FromRgb(0xFF, 0xFF, 0xFF));
+        var text1 = Brush("OasTextPrimaryBrush", Color.FromRgb(0x24, 0x24, 0x24));
+        var text2 = Brush("OasTextSecondaryBrush", Color.FromRgb(0x61, 0x61, 0x61));
+        var text3 = Brush("OasTextTertiaryBrush", Color.FromRgb(0x9B, 0x9B, 0x9B));
+        var accent = Brush("OasAccentBrush", Color.FromRgb(0x25, 0x63, 0xEB));
+
+        var panel = new StackPanel
+        {
+            Width = ImageWidth,
+            Background = new SolidColorBrush(Color.FromRgb(0xF3, 0xF4, 0xF6)),
+        };
+
+        // 头部：标题 + 账号
+        var header = new Border
+        {
+            Background = surface,
+            Padding = new Thickness(36, 28, 36, 24),
+        };
+        var headStack = new StackPanel();
+        headStack.Children.Add(new TextBlock
+        {
+            Text = title,
+            FontSize = 30,
+            FontWeight = FontWeights.SemiBold,
+            FontFamily = AppFont(),
+            Foreground = text1,
+        });
+        headStack.Children.Add(new TextBlock
+        {
+            Text = accountName + "　" + accountDetail,
+            FontSize = 15,
+            Margin = new Thickness(0, 8, 0, 0),
+            FontFamily = AppFont(),
+            Foreground = text2,
+        });
+        if (!string.IsNullOrWhiteSpace(subtitle))
+        {
+            headStack.Children.Add(new TextBlock
+            {
+                Text = subtitle,
+                FontSize = 13,
+                Margin = new Thickness(0, 4, 0, 0),
+                FontFamily = AppFont(),
+                Foreground = text3,
+            });
+        }
+        header.Child = headStack;
+        panel.Children.Add(header);
+
+        // 清单
+        var list = new StackPanel { Margin = new Thickness(36, 20, 36, 26) };
+        foreach (var (label, value, note) in rows)
+        {
+            var rowGrid = new Grid { Margin = new Thickness(0, 6, 0, 6) };
+            rowGrid.ColumnDefinitions.Add(new ColumnDefinition
+            {
+                Width = new GridLength(1, GridUnitType.Star),
+            });
+            rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var left = new StackPanel();
+            left.Children.Add(new TextBlock
+            {
+                Text = label,
+                FontSize = 16,
+                FontFamily = AppFont(),
+                Foreground = text1,
+            });
+            if (!string.IsNullOrWhiteSpace(note))
+            {
+                left.Children.Add(new TextBlock
+                {
+                    Text = note,
+                    FontSize = 12,
+                    Margin = new Thickness(0, 2, 0, 0),
+                    FontFamily = AppFont(),
+                    Foreground = text3,
+                });
+            }
+            Grid.SetColumn(left, 0);
+            rowGrid.Children.Add(left);
+
+            var right = new TextBlock
+            {
+                Text = value,
+                FontSize = 20,
+                FontWeight = FontWeights.SemiBold,
+                VerticalAlignment = VerticalAlignment.Center,
+                FontFamily = AppFont(),
+                Foreground = accent,
+            };
+            Grid.SetColumn(right, 1);
+            rowGrid.Children.Add(right);
+
+            list.Children.Add(rowGrid);
+        }
+        panel.Children.Add(new Border
+        {
+            Child = list,
+            Background = surface,
+            CornerRadius = new CornerRadius(12),
+            Margin = new Thickness(24, 16, 24, 24),
+        });
+
+        panel.Children.Add(new TextBlock
+        {
+            Text = $"OASX · {DateTime.Now:yyyy-MM-dd HH:mm}",
+            FontSize = 11,
+            Margin = new Thickness(36, 0, 0, 20),
+            FontFamily = AppFont(),
+            Foreground = text3,
+        });
+
+        return SavePng(panel,
+            $"{fileNamePrefix}_{DateTime.Now:yyyyMMdd_HHmmss}.png");
+    }
+
     private static FrameworkElement BuildVisual(string accountName,
         string accountDetail, string date,
         IReadOnlyList<(string Name, string Count, string Delta, bool Up)> assets)
