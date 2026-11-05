@@ -51,7 +51,31 @@ public static class ThemeService
         }
     }
 
-    private static void ApplyCore(bool dark)
+    /// <summary>强制完整应用一次：绕过幂等缓存。
+    /// 启动时 ApplyWindowChromeOnly 只设了窗口级 DWM 属性且写入了幂等缓存，
+    /// 导致随后的 Apply 直接早退——材质"属性正确但画面无效果"。
+    /// 窗口渲染完成后调用本方法补上合成（ApplicationThemeManager.Apply）。</summary>
+    public static void ApplyFull()
+    {
+        var mode = OasSettings.ThemeMode;
+        var dark = mode switch
+        {
+            "light" => false,
+            "dark" => true,
+            _ => IsSystemDark(),
+        };
+        try
+        {
+            ApplyCore(dark, force: true);
+            Log("startup ApplyFull completed");
+        }
+        catch (Exception ex)
+        {
+            Log("startup ApplyFull failed: " + ex);
+        }
+    }
+
+    private static void ApplyCore(bool dark, bool force = false)
     {
         var app = Application.Current;
         if (app is not null && !app.Dispatcher.CheckAccess())
@@ -65,7 +89,7 @@ public static class ThemeService
         // 触发 FluentWindow.SetWindowChrome 的 Freezable 上下文异常（整页黑屏）。
         var backdropNow = ResolveBackdropType();
         var currentWindow = app?.MainWindow;
-        var alreadyThemed = currentWindow is not null
+        var alreadyThemed = !force && currentWindow is not null
                             && _themedWindow is not null
                             && _themedWindow.TryGetTarget(out var themed)
                             && ReferenceEquals(themed, currentWindow)

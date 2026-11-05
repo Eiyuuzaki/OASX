@@ -31,7 +31,23 @@ public partial class MainWindow : FluentWindow
         SourceInitialized += (_, _) => ThemeService.ApplyWindowChromeOnly();
         // 首次渲染完成后再应用一次：句柄就绪时设的材质会被后续 chrome
         // 重建覆盖（实测同一份 settings 有时 acrylic 有时回落为无）。
-        ContentRendered += (_, _) => ThemeService.ApplyWindowChromeOnly();
+        ContentRendered += (_, _) =>
+        {
+            ThemeService.ApplyWindowChromeOnly();
+            // 再补一次**完整**主题应用：仅设 DWM 属性不会产生材质合成，
+            // 表现为"设置里是 acrylic 但刚打开没效果，手动切一下才有"。
+            // 延迟到渲染完成之后，避开导航期的 chrome 重建异常。
+            var once = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(400),
+            };
+            once.Tick += (_, _) =>
+            {
+                once.Stop();
+                ThemeService.ApplyFull();
+            };
+            once.Start();
+        };
 
         // 激活时重申深色标志：部分场景（DWM 重排、切换材质、系统事件）
         // 会把标志冲掉，导致材质按浅色上色（深浅乱串）。
