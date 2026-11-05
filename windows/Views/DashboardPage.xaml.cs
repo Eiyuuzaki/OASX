@@ -282,6 +282,20 @@ public partial class DashboardPage : UserControl
         ((MainWindow)Window.GetWindow(this)).RootNav.Navigate(typeof(ActivityPage));
     }
 
+    /// <summary>真实探测后端可用性（不再用"没账号"推断服务状态）。</summary>
+    private async Task ProbeServiceAsync()
+    {
+        try
+        {
+            await OasApi.GetConfigListAsync();
+            SetOasService(true, "正常");
+        }
+        catch
+        {
+            SetOasService(false, "不可达");
+        }
+    }
+
     private async Task RefreshAllAsync()
     {
         var ctx = GlobalAccountContext.Instance;
@@ -297,7 +311,7 @@ public partial class DashboardPage : UserControl
             AccountDetailText.Text = ctx.Accounts.Count > 0
                 ? "在资产页选择账号后展示概况"
                 : (ctx.IsLoading ? "账号加载中…" : "未发现任何账号（后端无角色数据）");
-            SetOasService(false, "不可达");
+            await ProbeServiceAsync();
             SetScheduler(null, null);
             SetDevice(null);
             TodayDoneText.Text = "—";

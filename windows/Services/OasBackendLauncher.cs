@@ -14,7 +14,7 @@ public static class OasBackendLauncher
     private const string DefaultWorkDir = @"D:\OAS-Kirin\OAS";
 
     public static bool Enabled =>
-        OasSettings.Get("autoStartBackend", "false") == "true";
+        OasSettings.Get("autoStartBackend", "true") == "true";
 
     /// <summary>OAS 工作目录（含 server.py 与 toolkit/python.exe）。</summary>
     public static string WorkDir =>

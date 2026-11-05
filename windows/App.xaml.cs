@@ -67,13 +67,25 @@ public partial class App : Application
         ThemeService.WatchSystem();
         ThemeService.Apply();
 
-        // 自动拉起后端（设置项，失败不阻塞 UI）
-        _ = OasBackendLauncher.EnsureRunningAsync();
+        // 启动链：先确保后端就绪，**再**加载账号上下文。
+        // 早期两行都是 fire-and-forget 并发发出——后端还在启动时账号已加载完，
+        // 结果账号列表为空且不再重试（发布版首次启动必现）。
+        _ = StartServicesAsync();
 
-        // 启动即加载账号上下文：任何页面（绘卷/资产/仪表盘）都能直接读 Current，
-        // 不必各自触发加载——否则直达某页时账号为空。
-        _ = GlobalAccountContext.Instance.LoadAccountsAsync();
+    }
 
+    /// <summary>启动序列：后端就绪 → 账号上下文就绪。</summary>
+    private static async Task StartServicesAsync()
+    {
+        try
+        {
+            await OasBackendLauncher.EnsureRunningAsync();
+        }
+        catch
+        {
+            // 后端启动失败不阻塞 UI；账号加载会记录错误
+        }
+        await GlobalAccountContext.Instance.LoadAccountsAsync();
     }
 
     /// <summary>把持久化的主题应用到全局（设置页切换时也会调用）。</summary>

@@ -50,13 +50,36 @@ public sealed class GlobalAccountContext
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
     };
 
+    /// <summary>后端可能仍在启动：配置列表为空/异常时重试（3 次 × 2s）。</summary>
+    private static async Task<List<string>> LoadConfigsWithRetryAsync()
+    {
+        var configs = new List<string>();
+        for (var i = 0; i < 3; i++)
+        {
+            try
+            {
+                configs = await OasApi.GetConfigListAsync();
+            }
+            catch
+            {
+                configs = [];
+            }
+            if (configs.Count > 0)
+            {
+                return configs;
+            }
+            await Task.Delay(2000);
+        }
+        return configs;
+    }
+
     /// <summary>枚举全部调度器的角色，扁平化为账号列表。
     /// 单个调度器失败不影响其他（该调度器的账号缺席并记入 Error）。</summary>
     public async Task LoadAccountsAsync()
     {
         IsLoading = true;
         Error = null;
-        var configs = await OasApi.GetConfigListAsync();
+        var configs = await LoadConfigsWithRetryAsync();
         var all = new List<AccountEntry>();
         var errors = new List<string>();
 
