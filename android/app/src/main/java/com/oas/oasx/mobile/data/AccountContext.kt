@@ -1,6 +1,8 @@
 package com.oas.oasx.mobile.data
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -40,6 +42,12 @@ object AccountContext {
     fun select(account: Account) {
         Prefs.currentConfig = "${account.config}|${account.roleKey}"
         _state.value = _state.value.copy(current = account)
+    }
+
+    /// 后台刷新账号列表（供 UI 按钮调用，不阻塞 Compose）。
+    fun refreshInBackground() {
+        if (_state.value.loading) return
+        MainScope().launch { refresh() }
     }
 
     /// 拉取全部调度器的角色，扁平化为账号列表。
