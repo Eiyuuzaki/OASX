@@ -38,7 +38,6 @@ import com.oas.oasx.mobile.net.ResourceDay
 import com.oas.oasx.mobile.ui.components.OasBody
 import com.oas.oasx.mobile.ui.components.OasCaption
 import com.oas.oasx.mobile.ui.components.OasCard
-import com.oas.oasx.mobile.ui.components.OasCardLevel
 import com.oas.oasx.mobile.ui.components.OasError
 import com.oas.oasx.mobile.ui.components.OasLabel
 import com.oas.oasx.mobile.ui.components.OasMetric

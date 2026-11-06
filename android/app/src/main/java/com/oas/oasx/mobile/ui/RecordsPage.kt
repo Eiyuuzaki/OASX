@@ -29,7 +29,7 @@ import com.oas.oasx.mobile.data.StatsResponse
 import com.oas.oasx.mobile.ui.components.OasBody
 import com.oas.oasx.mobile.ui.components.OasCaption
 import com.oas.oasx.mobile.ui.components.OasCard
-import com.oas.oasx.mobile.ui.components.OasCardLevel
+import com.oas.oasx.mobile.ui.components.OasCardTone
 import com.oas.oasx.mobile.ui.components.OasError
 import com.oas.oasx.mobile.ui.components.OasLabel
 import com.oas.oasx.mobile.ui.components.OasMetric
@@ -183,7 +183,7 @@ fun StatsView(backend: String) {
 
 @Composable
 fun StatTile(label: String, value: String, modifier: Modifier = Modifier) {
-    OasCard(modifier = modifier, level = OasCardLevel.Emphasis) {
+    OasCard(modifier = modifier, tone = OasCardTone.Primary) {
         OasLabel(label)
         OasMetric(value)
     }

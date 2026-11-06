@@ -1,48 +1,69 @@
 package com.oas.oasx.mobile.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.oas.oasx.mobile.ui.theme.Spacing
 
-/// M3 语义卡片：按用途区分 container 层级（M3 用 tonal surface 表达 elevation）。
-enum class OasCardLevel {
-    /// 默认容器：列表项、普通信息块
-    Default,
-    /// 强调容器：关键指标、当前执行中
-    Emphasis,
-    /// 低层级：嵌套在卡片内的子区域
-    Nested,
+/// M3 卡片色阶：surface 灰阶 + primary/secondary/tertiary 彩色容器。
+///
+/// M3 的视觉丰富度来自 color roles 的对比，不是灰度层次。
+/// 关键指标用 primaryContainer，次级信息用 secondaryContainer，
+/// 辅助信息用 tertiaryContainer——这样界面才有"色彩"而不只是"深浅"。
+enum class OasCardTone {
+    /// 默认容器（灰阶低）
+    Neutral,
+    /// 强调容器（灰阶高）
+    NeutralHigh,
+    /// 主色容器：关键指标、当前执行
+    Primary,
+    /// 次色容器：次要信息块
+    Secondary,
+    /// 三色容器：辅助/补充信息
+    Tertiary,
+    /// 错误容器：异常提示
+    Error,
 }
 
 @Composable
 fun OasCard(
     modifier: Modifier = Modifier,
-    level: OasCardLevel = OasCardLevel.Default,
+    tone: OasCardTone = OasCardTone.Neutral,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    // M3 规范：elevation 靠 surface-container 色阶，不靠描边/阴影
-    val color = when (level) {
-        OasCardLevel.Default -> MaterialTheme.colorScheme.surfaceContainerLow
-        OasCardLevel.Emphasis -> MaterialTheme.colorScheme.surfaceContainerHigh
-        OasCardLevel.Nested -> MaterialTheme.colorScheme.surfaceContainer
+    val cs = MaterialTheme.colorScheme
+    val container = when (tone) {
+        OasCardTone.Neutral -> cs.surfaceContainerLow
+        OasCardTone.NeutralHigh -> cs.surfaceContainerHigh
+        OasCardTone.Primary -> cs.primaryContainer
+        OasCardTone.Secondary -> cs.secondaryContainer
+        OasCardTone.Tertiary -> cs.tertiaryContainer
+        OasCardTone.Error -> cs.errorContainer
     }
     Card(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = color),
+        colors = CardDefaults.cardColors(containerColor = container),
         shape = MaterialTheme.shapes.medium,
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
@@ -50,7 +71,135 @@ fun OasCard(
     }
 }
 
-/// 页面标题：headlineSmall 语义档
+/// 卡片内容色：与容器配对（M3 要求 on-X 配 X）
+@Composable
+fun contentColorFor(tone: OasCardTone): Color {
+    val cs = MaterialTheme.colorScheme
+    return when (tone) {
+        OasCardTone.Neutral, OasCardTone.NeutralHigh -> cs.onSurface
+        OasCardTone.Primary -> cs.onPrimaryContainer
+        OasCardTone.Secondary -> cs.onSecondaryContainer
+        OasCardTone.Tertiary -> cs.onTertiaryContainer
+        OasCardTone.Error -> cs.onErrorContainer
+    }
+}
+
+@Composable
+fun captionColorFor(tone: OasCardTone): Color {
+    val cs = MaterialTheme.colorScheme
+    return when (tone) {
+        OasCardTone.Neutral, OasCardTone.NeutralHigh -> cs.onSurfaceVariant
+        OasCardTone.Primary -> cs.onPrimaryContainer.copy(alpha = 0.75f)
+        OasCardTone.Secondary -> cs.onSecondaryContainer.copy(alpha = 0.75f)
+        OasCardTone.Tertiary -> cs.onTertiaryContainer.copy(alpha = 0.75f)
+        OasCardTone.Error -> cs.onErrorContainer.copy(alpha = 0.75f)
+    }
+}
+
+/// 圆形图标徽章：M3 用容器色 + 图标建立视觉锚点
+@Composable
+fun OasIconBadge(
+    icon: ImageVector,
+    modifier: Modifier = Modifier,
+    tone: OasCardTone = OasCardTone.Primary,
+    size: androidx.compose.ui.unit.Dp = 40.dp,
+) {
+    val cs = MaterialTheme.colorScheme
+    val bg = when (tone) {
+        OasCardTone.Neutral, OasCardTone.NeutralHigh -> cs.surfaceContainerHighest
+        OasCardTone.Primary -> cs.primaryContainer
+        OasCardTone.Secondary -> cs.secondaryContainer
+        OasCardTone.Tertiary -> cs.tertiaryContainer
+        OasCardTone.Error -> cs.errorContainer
+    }
+    Box(
+        modifier = modifier.size(size).background(bg, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = contentColorFor(tone),
+            modifier = Modifier.size(size * 0.5f),
+        )
+    }
+}
+
+/// 指标卡：图标 + 标签 + 大数值（M3 强调层级）
+@Composable
+fun OasStatCard(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
+    tone: OasCardTone = OasCardTone.Primary,
+    supporting: String? = null,
+) {
+    OasCard(modifier = modifier, tone = tone) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (icon != null) {
+                OasIconBadge(icon, tone = OasCardTone.Neutral, size = 36.dp)
+                Spacer(Modifier.size(Spacing.sm))
+            }
+            Column(Modifier.weight(1f)) {
+                Text(
+                    label,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = captionColorFor(tone),
+                )
+                Text(
+                    value,
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = contentColorFor(tone),
+                )
+                if (supporting != null) {
+                    Text(
+                        supporting,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = captionColorFor(tone),
+                    )
+                }
+            }
+        }
+    }
+}
+
+/// 页面标题（带可选图标徽章）
+@Composable
+fun OasPageHeader(
+    title: String,
+    modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    icon: ImageVector? = null,
+    action: (@Composable () -> Unit)? = null,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (icon != null) {
+            OasIconBadge(icon, tone = OasCardTone.Primary, size = 44.dp)
+            Spacer(Modifier.size(Spacing.sm))
+        }
+        Column(Modifier.weight(1f)) {
+            Text(
+                title,
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            if (subtitle != null) {
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        action?.invoke()
+    }
+}
+
+/// 页面标题（兼容旧调用）
 @Composable
 fun OasPageTitle(text: String, modifier: Modifier = Modifier) {
     Text(
@@ -61,7 +210,6 @@ fun OasPageTitle(text: String, modifier: Modifier = Modifier) {
     )
 }
 
-/// 区块标题：titleMedium 语义档
 @Composable
 fun OasSectionTitle(text: String, modifier: Modifier = Modifier) {
     Text(
@@ -72,7 +220,6 @@ fun OasSectionTitle(text: String, modifier: Modifier = Modifier) {
     )
 }
 
-/// 卡片内的小标签：labelMedium + onSurfaceVariant
 @Composable
 fun OasLabel(text: String, modifier: Modifier = Modifier) {
     Text(
@@ -83,7 +230,6 @@ fun OasLabel(text: String, modifier: Modifier = Modifier) {
     )
 }
 
-/// 主要数值：headlineMedium（强调）+ primary 色
 @Composable
 fun OasMetric(
     text: String,
@@ -99,12 +245,11 @@ fun OasMetric(
     )
 }
 
-/// 正文：bodyMedium
 @Composable
 fun OasBody(
     text: String,
     modifier: Modifier = Modifier,
-    color: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurface,
+    color: Color = MaterialTheme.colorScheme.onSurface,
 ) {
     Text(
         text = text,
@@ -114,7 +259,6 @@ fun OasBody(
     )
 }
 
-/// 辅助说明：bodySmall + onSurfaceVariant
 @Composable
 fun OasCaption(text: String, modifier: Modifier = Modifier) {
     Text(
@@ -125,7 +269,6 @@ fun OasCaption(text: String, modifier: Modifier = Modifier) {
     )
 }
 
-/// 错误提示：bodySmall + error（M3 error role）
 @Composable
 fun OasError(text: String, modifier: Modifier = Modifier) {
     Text(
@@ -136,13 +279,14 @@ fun OasError(text: String, modifier: Modifier = Modifier) {
     )
 }
 
-/// 统一空/加载/错误三态。任何状态都有明确文案，不会永久转圈。
+/// 统一空/加载/错误三态（空态带图标，符合 M3 引导性空态做法）
 @Composable
 fun OasStateBlock(
     loading: Boolean,
     error: String?,
     emptyText: String? = null,
     modifier: Modifier = Modifier,
+    emptyIcon: ImageVector? = null,
     onRetry: (() -> Unit)? = null,
 ) {
     Column(
@@ -169,19 +313,27 @@ fun OasStateBlock(
                 }
             }
             emptyText != null -> {
+                if (emptyIcon != null) {
+                    Icon(
+                        emptyIcon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        modifier = Modifier.size(48.dp),
+                    )
+                    Spacer(Modifier.size(Spacing.sm))
+                }
                 OasCaption(emptyText)
             }
         }
     }
 }
 
-/// 键值行：左侧 label，右侧 value（列表/详情通用）
 @Composable
 fun OasKeyValueRow(
     label: String,
     value: String,
     modifier: Modifier = Modifier,
-    valueColor: androidx.compose.ui.graphics.Color? = null,
+    valueColor: Color? = null,
 ) {
     Row(
         modifier = modifier.fillMaxWidth().padding(vertical = Spacing.xs),

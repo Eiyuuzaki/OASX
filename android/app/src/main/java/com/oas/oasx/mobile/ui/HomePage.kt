@@ -4,12 +4,23 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Dns
+import androidx.compose.material.icons.filled.HourglassEmpty
+import androidx.compose.material.icons.filled.Inbox
+import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -34,18 +45,19 @@ import com.oas.oasx.mobile.net.FosterResp
 import com.oas.oasx.mobile.ui.components.OasBody
 import com.oas.oasx.mobile.ui.components.OasCaption
 import com.oas.oasx.mobile.ui.components.OasCard
-import com.oas.oasx.mobile.ui.components.OasCardLevel
+import com.oas.oasx.mobile.ui.components.OasCardTone
 import com.oas.oasx.mobile.ui.components.OasError
-import com.oas.oasx.mobile.ui.components.OasLabel
-import com.oas.oasx.mobile.ui.components.OasMetric
-import com.oas.oasx.mobile.ui.components.OasPageTitle
+import com.oas.oasx.mobile.ui.components.OasIconBadge
+import com.oas.oasx.mobile.ui.components.OasPageHeader
 import com.oas.oasx.mobile.ui.components.OasSectionTitle
+import com.oas.oasx.mobile.ui.components.OasStatCard
 import com.oas.oasx.mobile.ui.components.OasStateBlock
-import com.oas.oasx.mobile.ui.theme.OasColors
+import com.oas.oasx.mobile.ui.components.captionColorFor
+import com.oas.oasx.mobile.ui.components.contentColorFor
 import com.oas.oasx.mobile.ui.theme.Spacing
 
-/// 首页：账号 + 调度器实时状态 + 每日/活动 + 结界寄养。
-/// 全部使用 M3 语义组件（OasCard/OasPageTitle/…），不再手写字号与色值。
+/// 首页：账号 + 调度器 + 每日/活动 + 结界寄养。
+/// 使用 M3 彩色容器（primary/secondary/tertiary）与图标徽章建立视觉层次。
 @Composable
 fun HomePage(backend: String) {
     val acct by AccountContext.state.collectAsStateWithLifecycle()
@@ -59,7 +71,6 @@ fun HomePage(backend: String) {
 
     LaunchedEffect(backend) { I18n.ensureLoaded() }
 
-    // 调度器实时状态
     var wsState by remember(acctKey) { mutableStateOf("") }
     var running by remember(acctKey) { mutableStateOf<String?>(null) }
     var queueCount by remember(acctKey) { mutableStateOf(0) }
@@ -78,7 +89,6 @@ fun HomePage(backend: String) {
         }
     }
 
-    // 每日任务 + 寄养
     var board by remember(acctKey) { mutableStateOf<ActivityBoard?>(null) }
     var foster by remember(acctKey) { mutableStateOf<FosterResp?>(null) }
     var fosterError by remember(acctKey) { mutableStateOf<String?>(null) }
@@ -114,16 +124,19 @@ fun HomePage(backend: String) {
         contentPadding = androidx.compose.foundation.layout.PaddingValues(Spacing.md),
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
-        // 页头
         item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                OasPageTitle("首页", Modifier.weight(1f))
-                if (acct.accounts.isNotEmpty()) {
-                    TextButton(onClick = { showSwitcher = true }) {
-                        Text("切换账号", style = MaterialTheme.typography.labelLarge)
+            OasPageHeader(
+                title = "首页",
+                subtitle = "OAS 自动化运行总览",
+                icon = Icons.Filled.AccountCircle,
+                action = if (acct.accounts.isNotEmpty()) {
+                    {
+                        TextButton(onClick = { showSwitcher = true }) {
+                            Text("切换", style = MaterialTheme.typography.labelLarge)
+                        }
                     }
-                }
-            }
+                } else null,
+            )
         }
 
         // 账号状态
@@ -139,7 +152,7 @@ fun HomePage(backend: String) {
                 )
             }
             acct.loaded && acct.accounts.isEmpty() -> item {
-                OasCard {
+                OasCard(tone = OasCardTone.Tertiary) {
                     OasSectionTitle("没有可用账号")
                     OasCaption("需要先在某个调度器下登录游戏并产生一次存档")
                     TextButton(onClick = { AccountContext.refreshInBackground() }) {
@@ -149,40 +162,95 @@ fun HomePage(backend: String) {
             }
             else -> item {
                 OasCard(
-                    level = OasCardLevel.Emphasis,
+                    tone = OasCardTone.Primary,
                     modifier = Modifier.clickable { showSwitcher = true },
                 ) {
-                    OasBody(account?.name ?: "未选择账号")
-                    OasCaption(
-                        account?.let {
-                            "Lv${it.level} · ${it.serverName} · 调度器 ${it.config}"
-                        } ?: "点击选择账号",
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        OasIconBadge(
+                            Icons.Filled.AccountCircle,
+                            tone = OasCardTone.Neutral,
+                            size = 44.dp,
+                        )
+                        Spacer(Modifier.size(Spacing.sm))
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                account?.name ?: "未选择账号",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = contentColorFor(OasCardTone.Primary),
+                            )
+                            Text(
+                                account?.let {
+                                    "Lv${it.level} · ${it.serverName} · ${it.config}"
+                                } ?: "点击选择账号",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = captionColorFor(OasCardTone.Primary),
+                            )
+                        }
+                    }
                     val live = board?.liveRole
                     if (live != null && account != null &&
                         live.roleKey.isNotBlank() && live.roleKey != account.roleKey
                     ) {
-                        OasError("⚠ 游戏内当前登录：${live.name}（与所选账号不一致）")
+                        Text(
+                            "⚠ 游戏内当前登录：${live.name}（与所选账号不一致）",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(top = Spacing.xs),
+                        )
                     }
                 }
             }
         }
 
-        // 调度器状态
         if (account != null) {
+            // 调度器状态：primary 容器 + 图标
             item {
-                OasCard {
-                    OasLabel("调度器")
-                    OasMetric(wsState.ifBlank { "未连接" })
-                    running?.let { OasCaption("正在执行：${t(it)}") }
-                    if (queueCount > 0) OasCaption("队列 $queueCount 项")
+                OasCard(tone = OasCardTone.Secondary) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        OasIconBadge(
+                            Icons.Filled.Dns,
+                            tone = OasCardTone.Neutral,
+                            size = 40.dp,
+                        )
+                        Spacer(Modifier.size(Spacing.sm))
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                "调度器",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = captionColorFor(OasCardTone.Secondary),
+                            )
+                            Text(
+                                wsState.ifBlank { "未连接" },
+                                style = MaterialTheme.typography.titleMedium,
+                                color = contentColorFor(OasCardTone.Secondary),
+                            )
+                        }
+                    }
+                    running?.let {
+                        Text(
+                            "正在执行：${t(it)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = captionColorFor(OasCardTone.Secondary),
+                            modifier = Modifier.padding(top = Spacing.xs),
+                        )
+                    }
+                    if (queueCount > 0) {
+                        Text(
+                            "队列 $queueCount 项",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = captionColorFor(OasCardTone.Secondary),
+                        )
+                    }
                     board?.serverTimeText?.takeIf { it.isNotBlank() }?.let {
-                        OasCaption("服务器时间 $it")
+                        Text(
+                            "服务器时间 $it",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = captionColorFor(OasCardTone.Secondary),
+                        )
                     }
                 }
             }
 
-            // 子页签
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     FilterChip(
@@ -207,31 +275,50 @@ fun HomePage(backend: String) {
                     OasStateBlock(loading = false, error = dataError)
                 }
                 b == null -> item {
-                    OasStateBlock(loading = false, error = null, emptyText = "暂无数据")
+                    OasStateBlock(
+                        loading = false, error = null,
+                        emptyText = "暂无数据", emptyIcon = Icons.Filled.Inbox,
+                    )
                 }
                 !b.success -> item {
-                    OasCard {
-                        OasError(b.error ?: "读取失败")
-                        b.hint?.let { OasCaption(it) }
+                    OasCard(tone = OasCardTone.Error) {
+                        Text(
+                            b.error ?: "读取失败",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = contentColorFor(OasCardTone.Error),
+                        )
+                        b.hint?.let {
+                            Text(
+                                it,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = captionColorFor(OasCardTone.Error),
+                            )
+                        }
                     }
                 }
                 subTab == 0 -> {
+                    // 每日任务：主色容器 + 大数值
                     item {
-                        OasCard(level = OasCardLevel.Emphasis) {
-                            OasLabel("每日任务")
-                            OasMetric("${b.dailyDone} / ${b.dailyTotal}")
-                        }
+                        OasStatCard(
+                            label = "每日任务",
+                            value = "${b.dailyDone} / ${b.dailyTotal}",
+                            icon = Icons.Filled.CheckCircle,
+                            tone = OasCardTone.Primary,
+                            supporting = "已完成 ${b.dailyDone} 项",
+                        )
                     }
                     items(b.daily) { d ->
                         Row(
                             Modifier.fillMaxWidth().padding(vertical = Spacing.xs),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text(
-                                if (d.done) "✓" else "○",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = if (d.done) MaterialTheme.colorScheme.primary
-                                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                            Icon(
+                                if (d.done) Icons.Filled.CheckCircle
+                                else Icons.Filled.RadioButtonUnchecked,
+                                contentDescription = null,
+                                tint = if (d.done) MaterialTheme.colorScheme.primary
+                                       else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(18.dp),
                             )
                             Text(
                                 t(d.title.ifBlank { d.name }),
@@ -240,14 +327,20 @@ fun HomePage(backend: String) {
                                         else MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.weight(1f).padding(start = Spacing.sm),
                             )
-                            OasCaption(d.progressText)
+                            Text(
+                                d.progressText,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
                     }
                     item {
-                        OasCard {
-                            OasLabel("悬赏封印")
-                            OasMetric("${b.monsterDone} / ${b.monster.size}")
-                        }
+                        OasStatCard(
+                            label = "悬赏封印",
+                            value = "${b.monsterDone} / ${b.monster.size}",
+                            icon = Icons.Filled.Inbox,
+                            tone = OasCardTone.Tertiary,
+                        )
                     }
                     items(b.monster.filter { !it.fin }.take(8)) { m ->
                         Row(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
@@ -263,18 +356,37 @@ fun HomePage(backend: String) {
                 else -> {
                     item { OasSectionTitle("当前参与活动") }
                     if (b.activities.isEmpty()) {
-                        item { OasCaption("无（或游戏内未打开活动页）") }
+                        item {
+                            OasStateBlock(
+                                loading = false, error = null,
+                                emptyText = "无（或游戏内未打开活动页）",
+                                emptyIcon = Icons.Filled.Inbox,
+                            )
+                        }
                     } else {
                         items(b.activities) { a ->
-                            OasCard {
-                                OasBody(t(a.name))
-                                OasCaption("${a.begin} → ${a.end}")
+                            OasCard(tone = OasCardTone.Tertiary) {
+                                Text(
+                                    t(a.name),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = contentColorFor(OasCardTone.Tertiary),
+                                )
+                                Text(
+                                    "${a.begin} → ${a.end}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = captionColorFor(OasCardTone.Tertiary),
+                                )
                             }
                         }
                     }
                     item { OasSectionTitle("活动面板任务") }
                     if (b.activity.isEmpty()) {
-                        item { OasCaption("无（需在游戏内打开过活动页）") }
+                        item {
+                            OasStateBlock(
+                                loading = false, error = null,
+                                emptyText = "无（需在游戏内打开过活动页）",
+                            )
+                        }
                     } else {
                         items(b.activity) { name ->
                             OasBody("· ${t(name)}", Modifier.padding(vertical = 2.dp))
@@ -290,35 +402,103 @@ fun HomePage(backend: String) {
                 }
             }
 
-            // 结界寄养
+            // 结界寄养：两张卡片，寄养用 primary、自结界卡用 tertiary
             item {
-                OasCard {
-                    OasLabel("结界寄养")
-                    val fo = foster
-                    val f = fo?.foster
-                    when {
-                        fo == null && fosterError != null -> OasError(fosterError ?: "")
-                        fo == null -> OasCaption("读取中…")
-                        !fo.success -> OasError(fo.error ?: "读取失败")
-                        f == null || f.active == false -> OasBody("当前未寄养")
-                        (f.remaining ?: 0) <= 0 ->
-                            OasMetric("已成熟，去收取")
-                        else -> {
-                            val r = (f.remaining ?: 0) / 60
-                            OasMetric("${r / 60}小时${r % 60}分后成熟")
-                            OasCaption("${f.cardName ?: f.cardItem} · ${f.endText} 收取")
+                val fo = foster
+                val f = fo?.foster
+                OasCard(
+                    tone = when {
+                        fo == null && fosterError != null -> OasCardTone.Error
+                        f != null && (f.remaining ?: 0) <= 0 -> OasCardTone.Primary
+                        else -> OasCardTone.NeutralHigh
+                    },
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        OasIconBadge(
+                            Icons.Filled.HourglassEmpty,
+                            tone = OasCardTone.Primary,
+                            size = 40.dp,
+                        )
+                        Spacer(Modifier.size(Spacing.sm))
+                        Column(Modifier.weight(1f)) {
+                            OasCaption("结界寄养")
+                            when {
+                                fo == null && fosterError != null ->
+                                    OasError(fosterError ?: "")
+                                fo == null -> OasCaption("读取中…")
+                                !fo.success -> OasError(fo.error ?: "读取失败")
+                                f == null || f.active == false ->
+                                    OasBody("当前未寄养")
+                                (f.remaining ?: 0) <= 0 ->
+                                    Text(
+                                        "已成熟，去收取",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.primary,
+                                    )
+                                else -> {
+                                    val r = (f.remaining ?: 0) / 60
+                                    Text(
+                                        "${r / 60}小时${r % 60}分后成熟",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                    OasCaption("${f.cardName ?: f.cardItem} · ${f.endText} 收取")
+                                }
+                            }
                         }
                     }
-                    val o = fo?.own
-                    when {
-                        o == null || o.unknown == true -> {}
-                        o.empty == true -> OasCaption("自结界卡：空")
-                        (o.remaining ?: 0) <= 0 -> OasCaption("自结界卡：已成熟")
-                        else -> {
-                            val r = (o.remaining ?: 0) / 60
-                            OasCaption(
-                                "自结界卡：${o.cardName ?: o.cardItem} ${r / 60}小时${r % 60}分",
+                }
+            }
+
+            item {
+                val o = foster?.own
+                OasCard(tone = OasCardTone.Tertiary) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        OasIconBadge(
+                            Icons.Filled.PlayCircle,
+                            tone = OasCardTone.Neutral,
+                            size = 36.dp,
+                        )
+                        Spacer(Modifier.size(Spacing.sm))
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                "自结界卡",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = captionColorFor(OasCardTone.Tertiary),
                             )
+                            when {
+                                o == null || o.unknown == true ->
+                                    Text(
+                                        "未读取",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = contentColorFor(OasCardTone.Tertiary),
+                                    )
+                                o.empty == true ->
+                                    Text(
+                                        "空",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = contentColorFor(OasCardTone.Tertiary),
+                                    )
+                                (o.remaining ?: 0) <= 0 ->
+                                    Text(
+                                        "已成熟",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                    )
+                                else -> {
+                                    val r = (o.remaining ?: 0) / 60
+                                    Text(
+                                        "${o.cardName ?: o.cardItem}",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        color = contentColorFor(OasCardTone.Tertiary),
+                                    )
+                                    Text(
+                                        "${r / 60}小时${r % 60}分",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = captionColorFor(OasCardTone.Tertiary),
+                                    )
+                                }
+                            }
                         }
                     }
                 }
