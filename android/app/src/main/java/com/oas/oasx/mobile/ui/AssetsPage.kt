@@ -124,11 +124,11 @@ fun AssetsPage(backend: String) {
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("资产", fontSize = 22.sp, modifier = Modifier.weight(1f))
+            Text("资产", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
             if (acct.accounts.isNotEmpty()) {
                 Text(
                     "切换账号",
-                    fontSize = 12.sp,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.clickable { showPicker = true },
                 )
@@ -144,7 +144,7 @@ fun AssetsPage(backend: String) {
                     acct.loaded -> "无可用账号"
                     else -> "准备中…"
                 },
-            fontSize = 12.sp,
+            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
@@ -160,25 +160,25 @@ fun AssetsPage(backend: String) {
                     false -> "○ 未采集"
                     null -> "? 状态未知"
                 },
-                fontSize = 12.sp,
+                style = MaterialTheme.typography.bodySmall,
                 color = if (collecting == true) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.onSurfaceVariant,
             )
             TextButton(
                 enabled = !collectBusy,
                 onClick = { runCollect({ c -> CollectApi.collectNow(c) }, "已请求采集") },
-            ) { Text("立即采集", fontSize = 12.sp) }
+            ) { Text("立即采集", style = MaterialTheme.typography.bodySmall) }
             TextButton(
                 enabled = !collectBusy,
                 onClick = { runCollect({ c -> CollectApi.start(c) }, "已启动采集") },
-            ) { Text("启动", fontSize = 12.sp) }
+            ) { Text("启动", style = MaterialTheme.typography.bodySmall) }
             TextButton(
                 enabled = !collectBusy,
                 onClick = { runCollect({ c -> CollectApi.stop(c) }, "已停止采集") },
-            ) { Text("停止", fontSize = 12.sp) }
+            ) { Text("停止", style = MaterialTheme.typography.bodySmall) }
         }
         if (collectMsg.isNotBlank()) {
-            Text(collectMsg, fontSize = 11.sp,
+            Text(collectMsg, style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
@@ -191,12 +191,12 @@ fun AssetsPage(backend: String) {
                 FilterChip(
                     selected = mode == index,
                     onClick = { mode = index },
-                    label = { Text(label, fontSize = 12.sp) },
+                    label = { Text(label, style = MaterialTheme.typography.bodySmall) },
                 )
             }
         }
         if (header.isNotBlank()) {
-            Text(header, fontSize = 12.sp,
+            Text(header, style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp))
         }
@@ -212,12 +212,12 @@ fun AssetsPage(backend: String) {
                                 acct.loaded -> "没有可用账号"
                                 else -> "准备中…"
                             },
-                            fontSize = 15.sp,
+                            style = MaterialTheme.typography.titleSmall,
                             color = if (acct.error != null) MaterialTheme.colorScheme.error
                                     else MaterialTheme.colorScheme.onSurface,
                         )
                         acct.error?.let {
-                            Text(it, fontSize = 11.sp,
+                            Text(it, style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         if (!acct.loading) {
@@ -233,22 +233,22 @@ fun AssetsPage(backend: String) {
             error != null -> {
                 Card(Modifier.fillMaxWidth().padding(top = 12.dp)) {
                     Column(Modifier.padding(16.dp)) {
-                        Text("读取失败", fontSize = 14.sp,
+                        Text("读取失败", style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.error)
-                        Text(error ?: "", fontSize = 11.sp,
+                        Text(error ?: "", style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
             loading || rows == null -> {
-                Text("读取中…", fontSize = 12.sp,
+                Text("读取中…", style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 12.dp))
             }
             else -> {
                 val data = rows ?: emptyList()
                 if (data.isEmpty()) {
-                    Text("该区间没有资源数据", fontSize = 12.sp,
+                    Text("该区间没有资源数据", style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 12.dp))
                 } else {
@@ -260,19 +260,19 @@ fun AssetsPage(backend: String) {
                             ) {
                                 CurrencyIcon(row.icon, modifier = Modifier.size(28.dp))
                                 Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
-                                    Text(row.name, fontSize = 14.sp)
+                                    Text(row.name, style = MaterialTheme.typography.bodyMedium)
                                     if (mode != 0) {
-                                        Text("起 ${fmt(row.base)}", fontSize = 11.sp,
+                                        Text("起 ${fmt(row.base)}", style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                 }
                                 Column(horizontalAlignment = Alignment.End) {
-                                    Text(fmt(row.count), fontSize = 16.sp)
+                                    Text(fmt(row.count), style = MaterialTheme.typography.titleMedium)
                                     if (mode != 0) {
                                         Text(
                                             if (row.delta == 0L) "持平"
                                             else (if (row.delta > 0L) "+" else "") + fmt(row.delta),
-                                            fontSize = 13.sp,
+                                            style = MaterialTheme.typography.bodyMedium,
                                             color = if (row.delta >= 0L)
                                                 MaterialTheme.colorScheme.primary
                                                 else MaterialTheme.colorScheme.error,
@@ -394,7 +394,7 @@ fun CurrencyIcon(base: String?, modifier: Modifier = Modifier) {
         ) {
             Text(
                 baseName.firstOrNull()?.toString() ?: "?",
-                fontSize = 13.sp,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }

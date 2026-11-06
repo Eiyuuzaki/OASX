@@ -69,33 +69,33 @@ fun ArgsEditor(script: String, task: String, onBack: () -> Unit) {
         Text(
             "← 返回",
             Modifier.clickable { onBack() },
-            fontSize = 14.sp,
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.primary,
         )
         Text(I18n.t(task), fontSize = 20.sp, modifier = Modifier.padding(top = 8.dp))
         Text(
             "参数 · $script · 点任意项修改",
-            fontSize = 12.sp,
+            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 8.dp),
         )
         if (status.isNotEmpty()) {
-            Text(status, fontSize = 12.sp,
+            Text(status, style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 6.dp))
         }
 
         when {
-            error != null -> Text("加载失败：$error", fontSize = 13.sp,
+            error != null -> Text("加载失败：$error", style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.error)
-            parsed == null -> Text("解析中…", fontSize = 13.sp,
+            parsed == null -> Text("解析中…", style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 parsed.forEach { (group, fields) ->
                     item {
                         Text(
                             I18n.t(group),
-                            fontSize = 14.sp,
+                            style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
                         )
@@ -115,15 +115,15 @@ fun ArgsEditor(script: String, task: String, onBack: () -> Unit) {
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Column(Modifier.weight(1f)) {
-                                    Text(I18n.t(title), fontSize = 13.sp)
+                                    Text(I18n.t(title), style = MaterialTheme.typography.bodyMedium)
                                     if (type.isNotBlank()) {
-                                        Text(type, fontSize = 10.sp,
+                                        Text(type, style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                 }
                                 Text(
                                     displayValue(type, value),
-                                    fontSize = 13.sp,
+                                    style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
@@ -202,7 +202,7 @@ private fun EditFieldDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (edit.type.isNotBlank()) {
-                    Text(edit.type, fontSize = 11.sp,
+                    Text(edit.type, style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 if (isBool) {
@@ -210,7 +210,7 @@ private fun EditFieldDialog(
                         Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text("启用", Modifier.weight(1f), fontSize = 14.sp)
+                        Text("启用", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
                         Switch(
                             checked = boolValue,
                             onCheckedChange = { boolValue = it },
@@ -230,7 +230,7 @@ private fun EditFieldDialog(
                                 "integer", "number" -> "数字"
                                 else -> ""
                             }
-                            if (hint.isNotEmpty()) Text(hint, fontSize = 10.sp)
+                            if (hint.isNotEmpty()) Text(hint, style = MaterialTheme.typography.labelSmall)
                         },
                     )
                 }

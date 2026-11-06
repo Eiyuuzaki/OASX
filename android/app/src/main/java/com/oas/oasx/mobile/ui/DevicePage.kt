@@ -103,22 +103,22 @@ fun DevicePage(onBack: () -> Unit) {
         Text(
             "← 返回",
             Modifier.clickable { onBack() },
-            fontSize = 14.sp,
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.primary,
         )
-        Text("模拟器", fontSize = 22.sp)
+        Text("模拟器", style = MaterialTheme.typography.headlineSmall)
         Text(
             "调度器 ${config ?: "—"} · 切换只改配置，下次启动脚本生效",
-            fontSize = 12.sp,
+            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
         val cur = current
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp)) {
-                Text("当前设备", fontSize = 13.sp,
+                Text("当前设备", style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(cur?.serial ?: "—", fontSize = 17.sp)
+                Text(cur?.serial ?: "—", style = MaterialTheme.typography.titleMedium)
                 Text(
                     buildString {
                         cur?.emulatorName?.let { append(it) }
@@ -129,17 +129,17 @@ fun DevicePage(onBack: () -> Unit) {
                         if (isNotEmpty()) append(" · ")
                         append(if (cur?.online == true) "在线" else "离线")
                     },
-                    fontSize = 11.sp,
+                    style = MaterialTheme.typography.labelSmall,
                     color = if (cur?.online == true) MaterialTheme.colorScheme.primary
                             else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
 
-        Text("可用实例", fontSize = 13.sp,
+        Text("可用实例", style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (instances.isEmpty()) {
-            Text("未发现实例（需 MuMu 等模拟器已启动）", fontSize = 12.sp,
+            Text("未发现实例（需 MuMu 等模拟器已启动）", style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         instances.forEach { ins ->
@@ -169,12 +169,12 @@ fun DevicePage(onBack: () -> Unit) {
                         Text(
                             ins.displayName.ifBlank { ins.instanceName },
                             Modifier.weight(1f),
-                            fontSize = 15.sp,
+                            style = MaterialTheme.typography.titleSmall,
                             color = if (isCurrent) MaterialTheme.colorScheme.primary
                                     else MaterialTheme.colorScheme.onSurface,
                         )
                         if (isCurrent) {
-                            Text("当前", fontSize = 11.sp,
+                            Text("当前", style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.primary)
                         }
                     }
@@ -186,7 +186,7 @@ fun DevicePage(onBack: () -> Unit) {
                             if (ins.root) append(" · root")
                             if (ins.model.isNotBlank()) append(" · ${ins.model}")
                         },
-                        fontSize = 11.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -194,17 +194,17 @@ fun DevicePage(onBack: () -> Unit) {
         }
 
         if (adbDevices.isNotEmpty()) {
-            Text("其它 adb 设备", fontSize = 13.sp,
+            Text("其它 adb 设备", style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 6.dp))
             adbDevices.forEach { d ->
-                Text("· $d", fontSize = 11.sp,
+                Text("· $d", style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
 
         if (status.isNotEmpty()) {
-            Text(status, fontSize = 12.sp,
+            Text(status, style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }

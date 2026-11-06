@@ -36,7 +36,7 @@ fun RecordsPage(backend: String) {
             Modifier.fillMaxWidth().padding(16.dp, 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("记录", fontSize = 22.sp, modifier = Modifier.weight(1f))
+            Text("记录", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
             FilterChip(
                 selected = subTab == 0,
                 onClick = { subTab = 0 },
@@ -125,7 +125,7 @@ fun StatsView(backend: String) {
         if (dates.isNotEmpty()) {
             Text(
                 "日期：${selected ?: "—"}（共 ${dates.size} 天）",
-                fontSize = 12.sp,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             androidx.compose.material3.Button(onClick = {
@@ -136,7 +136,7 @@ fun StatsView(backend: String) {
         }
 
         error?.let {
-            Text(it, fontSize = 12.sp, color = MaterialTheme.colorScheme.error,
+            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(top = 8.dp))
         }
 
@@ -147,25 +147,25 @@ fun StatsView(backend: String) {
                 StatTile("任务次数", "${s.totalTaskRunCount}", Modifier.weight(1f))
                 StatTile("战斗场次", "${s.totalBattleCount}", Modifier.weight(1f))
             }
-            Text("各任务", fontSize = 14.sp,
+            Text("各任务", style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 14.dp, bottom = 4.dp))
             LazyColumn {
                 items(s.tasks.entries.toList()) { (name, t) ->
                     Card(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                         Column(Modifier.padding(12.dp)) {
-                            Text(name, fontSize = 14.sp)
+                            Text(name, style = MaterialTheme.typography.bodyMedium)
                             Text(
                                 "执行 ${t.runCount} 次 · 共 " +
                                     formatDuration(t.totalDurationSeconds),
-                                fontSize = 12.sp,
+                                style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             t.runs.takeLast(3).reversed().forEach { run ->
                                 Text(
                                     "  ${run.startTime.takeLast(8)} · " +
                                         formatDuration(run.durationSeconds),
-                                    fontSize = 11.sp,
+                                    style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
@@ -176,21 +176,21 @@ fun StatsView(backend: String) {
         } else {
             // 明确区分四种状态，任何分支都不会永久显示"加载中"
             when {
-                account == null -> Text("先在首页选择账号", fontSize = 12.sp,
+                account == null -> Text("先在首页选择账号", style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 8.dp))
-                datesLoading -> Text("读取日期列表…", fontSize = 12.sp,
+                datesLoading -> Text("读取日期列表…", style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 8.dp))
-                statsLoading -> Text("读取统计数据…", fontSize = 12.sp,
+                statsLoading -> Text("读取统计数据…", style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 8.dp))
                 datesLoaded && dates.isEmpty() -> Text(
                     "该账号暂无统计数据（脚本跑过一次后才会有）",
-                    fontSize = 12.sp,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 8.dp))
-                else -> Text("无数据", fontSize = 12.sp,
+                else -> Text("无数据", style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 8.dp))
             }
@@ -202,9 +202,9 @@ fun StatsView(backend: String) {
 fun StatTile(label: String, value: String, modifier: Modifier = Modifier) {
     Card(modifier.fillMaxWidth()) {
         Column(Modifier.padding(10.dp)) {
-            Text(label, fontSize = 11.sp,
+            Text(label, style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(value, fontSize = 17.sp)
+            Text(value, style = MaterialTheme.typography.titleMedium)
         }
     }
 }

@@ -61,9 +61,9 @@ fun SettingsPage(
         Modifier.fillMaxSize().padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text("设置", fontSize = 22.sp)
+        Text("设置", style = MaterialTheme.typography.headlineSmall)
 
-        Text("OAS 后端地址", fontSize = 13.sp)
+        Text("OAS 后端地址", style = MaterialTheme.typography.bodyMedium)
         OutlinedTextField(
             value = url,
             onValueChange = { url = it },
@@ -87,11 +87,11 @@ fun SettingsPage(
             }.start()
         }) { Text("保存并测试") }
         if (status.isNotEmpty()) {
-            Text(status, fontSize = 12.sp,
+            Text(status, style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
-        Text("主题", fontSize = 13.sp,
+        Text("主题", style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(top = 12.dp))
         listOf(
             "system" to "跟随系统",
@@ -111,68 +111,68 @@ fun SettingsPage(
             }
         }
 
-        Text("模拟器", fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp))
+        Text("模拟器", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 12.dp))
         Card(Modifier.fillMaxWidth().clickable { showDevice = true }) {
             Row(
                 Modifier.fillMaxWidth().padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(Modifier.weight(1f)) {
-                    Text("设备与实例", fontSize = 15.sp)
+                    Text("设备与实例", style = MaterialTheme.typography.titleSmall)
                     Text(
                         "切换当前调度器使用的模拟器",
-                        fontSize = 11.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                Text("›", fontSize = 16.sp,
+                Text("›", style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary)
             }
         }
 
-        Text("配置传输", fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp))
+        Text("配置传输", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 12.dp))
         Card(Modifier.fillMaxWidth().clickable { showTransfer = true }) {
             Row(
                 Modifier.fillMaxWidth().padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(Modifier.weight(1f)) {
-                    Text("导出 / 导入配置", fontSize = 15.sp)
+                    Text("导出 / 导入配置", style = MaterialTheme.typography.titleSmall)
                     Text(
                         "备份到手机文件，或从文件导入",
-                        fontSize = 11.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                Text("›", fontSize = 16.sp,
+                Text("›", style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary)
             }
         }
 
-        Text("通知推送", fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp))
+        Text("通知推送", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 12.dp))
         Card(Modifier.fillMaxWidth().clickable { showNotify = true }) {
             Row(
                 Modifier.fillMaxWidth().padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(Modifier.weight(1f)) {
-                    Text("推送渠道与参数", fontSize = 15.sp)
+                    Text("推送渠道与参数", style = MaterialTheme.typography.titleSmall)
                     Text(
                         "结界寄养成熟提醒（onepush 渠道）",
-                        fontSize = 11.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                Text("›", fontSize = 16.sp,
+                Text("›", style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary)
             }
         }
 
-        Text("关于", fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp))
+        Text("关于", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 12.dp))
         Text(
             "OASX Android v0.1.0 · OAS 自动化脚本管理客户端\n" +
                 "github.com/Eiyuuzaki/OASX",
-            fontSize = 11.sp,
+            style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }

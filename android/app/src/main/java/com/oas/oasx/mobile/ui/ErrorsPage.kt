@@ -78,17 +78,17 @@ fun ErrorsPage(onBack: () -> Unit) {
             Text(
                 "← 返回列表",
                 Modifier.clickable { openId = null; detail = null },
-                fontSize = 14.sp,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.primary,
             )
             val d = detail
             if (d == null) {
                 if (error != null) {
-                    Text("详情加载失败：$error", fontSize = 12.sp,
+                    Text("详情加载失败：$error", style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.padding(top = 10.dp))
                 } else {
-                    Text("加载中…", fontSize = 12.sp,
+                    Text("加载中…", style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 10.dp))
                 }
@@ -96,13 +96,13 @@ fun ErrorsPage(onBack: () -> Unit) {
             }
             Text(
                 (d.scriptName ?: "未知脚本") + " · " + d.time.replace('T', ' ').take(19),
-                fontSize = 16.sp,
+                style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(top = 8.dp),
             )
             Text(
                 "${d.log?.fileName ?: "log.txt"} · ${(d.log?.content?.length ?: 0)} 字符 · " +
                     "${d.images.size} 张截图",
-                fontSize = 11.sp,
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
@@ -123,15 +123,14 @@ fun ErrorsPage(onBack: () -> Unit) {
             }
 
             // 日志全文
-            Text("日志内容", fontSize = 13.sp,
+            Text("日志内容", style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
             Card(Modifier.fillMaxWidth().weight(1f)) {
                 Column(Modifier.verticalScroll(rememberScrollState()).padding(10.dp)) {
                     Text(
                         d.log?.content ?: "（无内容）",
-                        fontSize = 10.sp,
-                        lineHeight = 14.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         fontFamily = FontFamily.Monospace,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
@@ -146,28 +145,28 @@ fun ErrorsPage(onBack: () -> Unit) {
         Text(
             "← 返回",
             Modifier.clickable { onBack() },
-            fontSize = 14.sp,
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.primary,
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("错误记录", fontSize = 22.sp, modifier = Modifier.weight(1f))
-            TextButton(onClick = { reload++ }) { Text("刷新", fontSize = 12.sp) }
+            Text("错误记录", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
+            TextButton(onClick = { reload++ }) { Text("刷新", style = MaterialTheme.typography.bodySmall) }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(
                 selected = scopeAll == 0,
                 onClick = { scopeAll = 0 },
-                label = { Text("全部", fontSize = 12.sp) },
+                label = { Text("全部", style = MaterialTheme.typography.bodySmall) },
             )
             FilterChip(
                 selected = scopeAll == 1,
                 onClick = { scopeAll = 1 },
-                label = { Text("当前账号", fontSize = 12.sp) },
+                label = { Text("当前账号", style = MaterialTheme.typography.bodySmall) },
             )
         }
 
         error?.let {
-            Text(it, fontSize = 12.sp, color = MaterialTheme.colorScheme.error,
+            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(top = 8.dp))
         }
 
@@ -181,7 +180,7 @@ fun ErrorsPage(onBack: () -> Unit) {
         }
         if (list.isEmpty()) {
             Text("没有错误记录（运行异常时后端会自动归档）",
-                fontSize = 12.sp,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 12.dp))
             return@Column
@@ -199,7 +198,7 @@ fun ErrorsPage(onBack: () -> Unit) {
                         Column(Modifier.weight(1f)) {
                             Text(
                                 it.time.replace('T', ' ').take(19),
-                                fontSize = 13.sp,
+                                style = MaterialTheme.typography.bodyMedium,
                             )
                             Text(
                                 buildString {
@@ -209,11 +208,11 @@ fun ErrorsPage(onBack: () -> Unit) {
                                     append(" 字节")
                                     if (it.imageCount > 0) append(" · ${it.imageCount} 图")
                                 },
-                                fontSize = 11.sp,
+                                style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-                        Text("›", fontSize = 15.sp,
+                        Text("›", style = MaterialTheme.typography.titleSmall,
                             color = MaterialTheme.colorScheme.primary)
                     }
                 }
@@ -250,9 +249,9 @@ fun RemoteImage(url: String, modifier: Modifier = Modifier) {
             contentDescription = null,
             modifier = modifier,
         )
-        failed -> Text("截图加载失败", fontSize = 11.sp,
+        failed -> Text("截图加载失败", style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.error)
-        else -> Text("加载中…", fontSize = 11.sp,
+        else -> Text("加载中…", style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

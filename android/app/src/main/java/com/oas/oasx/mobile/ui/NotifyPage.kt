@@ -81,18 +81,18 @@ fun NotifyPage(onBack: () -> Unit) {
         Text(
             "← 返回",
             Modifier.clickable { onBack() },
-            fontSize = 14.sp,
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.primary,
         )
-        Text("通知推送", fontSize = 22.sp)
+        Text("通知推送", style = MaterialTheme.typography.headlineSmall)
         Text(
             "复用 OAS 的 onepush 渠道（结界寄养成熟提醒等）",
-            fontSize = 12.sp,
+            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
         if (loading) {
-            Text("读取中…", fontSize = 13.sp,
+            Text("读取中…", style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             return@Column
         }
@@ -103,10 +103,10 @@ fun NotifyPage(onBack: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(Modifier.weight(1f)) {
-                    Text("启用通知", fontSize = 15.sp)
+                    Text("启用通知", style = MaterialTheme.typography.titleSmall)
                     Text(
                         "关闭后所有推送静默",
-                        fontSize = 11.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -114,7 +114,7 @@ fun NotifyPage(onBack: () -> Unit) {
             }
         }
 
-        Text("推送渠道", fontSize = 13.sp,
+        Text("推送渠道", style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
         Card(
             Modifier.fillMaxWidth().clickable { pickProvider = true },
@@ -126,9 +126,9 @@ fun NotifyPage(onBack: () -> Unit) {
                 Text(
                     if (provider == "null" || provider.isBlank()) "未选择" else provider,
                     Modifier.weight(1f),
-                    fontSize = 15.sp,
+                    style = MaterialTheme.typography.titleSmall,
                 )
-                Text("选择 ›", fontSize = 12.sp,
+                Text("选择 ›", style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary)
             }
         }
@@ -136,11 +136,11 @@ fun NotifyPage(onBack: () -> Unit) {
         if (provider != "null" && provider.isNotBlank()) {
             Text(
                 "参数（标 * 为必填）",
-                fontSize = 13.sp,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             if (fieldNames.isEmpty()) {
-                Text("该渠道无参数定义", fontSize = 12.sp,
+                Text("该渠道无参数定义", style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             fieldNames.forEach { name ->
@@ -228,7 +228,7 @@ fun NotifyPage(onBack: () -> Unit) {
         }
 
         if (status.isNotEmpty()) {
-            Text(status, fontSize = 12.sp,
+            Text(status, style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
@@ -247,7 +247,7 @@ fun NotifyPage(onBack: () -> Unit) {
                                     pickProvider = false
                                 }
                                 .padding(vertical = 10.dp),
-                        ) { Text("不使用通知", fontSize = 14.sp) }
+                        ) { Text("不使用通知", style = MaterialTheme.typography.bodyMedium) }
                     }
                     items(providers.keys.sorted().toList()) { name ->
                         Row(
@@ -262,12 +262,12 @@ fun NotifyPage(onBack: () -> Unit) {
                             Text(
                                 name,
                                 Modifier.weight(1f),
-                                fontSize = 14.sp,
+                                style = MaterialTheme.typography.bodyMedium,
                                 color = if (name == provider) MaterialTheme.colorScheme.primary
                                         else MaterialTheme.colorScheme.onSurface,
                             )
                             if (name == provider) {
-                                Text("✓", fontSize = 14.sp,
+                                Text("✓", style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.primary)
                             }
                         }

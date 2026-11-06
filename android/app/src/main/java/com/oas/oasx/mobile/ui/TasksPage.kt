@@ -77,10 +77,10 @@ fun TasksPage(backend: String) {
     }
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
-        Text("任务", fontSize = 22.sp)
+        Text("任务", style = MaterialTheme.typography.headlineSmall)
         Text(
             "调度器 ${script ?: "—"} · 点任务名查看参数（只读）",
-            fontSize = 12.sp,
+            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 12.dp),
         )
@@ -108,14 +108,14 @@ fun TasksPage(backend: String) {
         }
 
         if (status.isNotEmpty()) {
-            Text(status, fontSize = 12.sp,
+            Text(status, style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 8.dp))
         }
 
         val m = menu
         if (m == null) {
-            Text("任务菜单加载中…", fontSize = 13.sp,
+            Text("任务菜单加载中…", style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             return@Column
         }
@@ -123,7 +123,7 @@ fun TasksPage(backend: String) {
         LazyColumn {
             m.forEach { (group, tasks) ->
                 item {
-                    Text(t(group), fontSize = 14.sp,
+                    Text(t(group), style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
                 }
@@ -140,12 +140,12 @@ fun TasksPage(backend: String) {
                             Text(
                                 t(task),
                                 Modifier.weight(1f),
-                                fontSize = 13.sp,
+                                style = MaterialTheme.typography.bodyMedium,
                                 color = if (isRunning) MaterialTheme.colorScheme.primary
                                         else MaterialTheme.colorScheme.onSurface,
                             )
                             if (isRunning) {
-                                Text("● 运行中", fontSize = 11.sp,
+                                Text("● 运行中", style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.primary)
                             }
                         }

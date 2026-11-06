@@ -58,44 +58,44 @@ fun HuijuanPage(onBack: () -> Unit) {
             Text(
                 "← 返回",
                 Modifier.padding(end = 12.dp),
-                fontSize = 14.sp,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.primary,
             )
-            Text("绘卷", fontSize = 22.sp, modifier = Modifier.weight(1f))
-            TextButton(onClick = { reload++ }) { Text("刷新", fontSize = 12.sp) }
+            Text("绘卷", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
+            TextButton(onClick = { reload++ }) { Text("刷新", style = MaterialTheme.typography.bodySmall) }
         }
         Text(
             account?.let { "${it.name} · ${it.serverName}" } ?: "未选择账号",
-            fontSize = 12.sp,
+            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
         error?.let {
-            Text(it, fontSize = 12.sp, color = MaterialTheme.colorScheme.error,
+            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(top = 8.dp))
         }
 
         val b = board
         when {
-            loading && b == null -> Text("读取中…", fontSize = 12.sp,
+            loading && b == null -> Text("读取中…", style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 12.dp))
-            b == null -> Text("暂无数据", fontSize = 12.sp,
+            b == null -> Text("暂无数据", style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 12.dp))
-            !b.success -> Text(b.error ?: "读取失败", fontSize = 13.sp,
+            !b.success -> Text(b.error ?: "读取失败", style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(top = 12.dp))
             !HuijuanApi.isActive(b) -> {
                 // 非活动期：不展示上期遗留分数
                 Text(
                     "当前不在绘卷活动期",
-                    fontSize = 15.sp,
+                    style = MaterialTheme.typography.titleSmall,
                     modifier = Modifier.padding(top = 16.dp),
                 )
                 Text(
                     "活动结束后不再显示上期分数。下一次活动开启后自动恢复。",
-                    fontSize = 12.sp,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 4.dp),
                 )
@@ -103,7 +103,7 @@ fun HuijuanPage(onBack: () -> Unit) {
             else -> {
                 Text(
                     "第 ${b.issue} 期 · 目标 ${fmt(b.threshold)}",
-                    fontSize = 12.sp,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
                 )
@@ -115,16 +115,16 @@ fun HuijuanPage(onBack: () -> Unit) {
                                     Text(
                                         sc.name.ifBlank { "卷 ${sc.id}" },
                                         Modifier.weight(1f),
-                                        fontSize = 14.sp,
+                                        style = MaterialTheme.typography.bodyMedium,
                                     )
                                     if (sc.finished) {
-                                        Text("✓ 已达成", fontSize = 11.sp,
+                                        Text("✓ 已达成", style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.primary)
                                     }
                                 }
                                 Text(
                                     "区服 ${fmt(sc.score)} · ${"%.2f".format(sc.percent)}%",
-                                    fontSize = 11.sp,
+                                    style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(top = 2.dp),
                                 )
@@ -135,18 +135,18 @@ fun HuijuanPage(onBack: () -> Unit) {
                                 Row(Modifier.fillMaxWidth().padding(top = 6.dp)) {
                                     Text(
                                         "我的贡献 ${fmt(sc.selfScore)}",
-                                        fontSize = 11.sp,
+                                        style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.weight(1f),
                                     )
                                     sc.selfRank?.let {
-                                        Text("排名 $it", fontSize = 11.sp,
+                                        Text("排名 $it", style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                 }
                                 Text(
                                     "${sc.beginText} → ${sc.endText}",
-                                    fontSize = 10.sp,
+                                    style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(top = 2.dp),
                                 )

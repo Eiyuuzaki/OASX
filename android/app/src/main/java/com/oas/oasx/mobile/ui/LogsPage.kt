@@ -65,10 +65,10 @@ fun LogsPage(backend: String) {
     }
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
-        Text("日志", fontSize = 22.sp)
+        Text("日志", style = MaterialTheme.typography.headlineSmall)
         Text(
             "$script · $status · ${lines.size} 行",
-            fontSize = 12.sp,
+            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 2.dp, bottom = 8.dp),
         )
@@ -78,7 +78,7 @@ fun LogsPage(backend: String) {
                     Text(
                         if (script == null) "先在首页选择账号"
                         else "等待日志…（脚本运行时实时滚动）",
-                        fontSize = 12.sp,
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -87,8 +87,7 @@ fun LogsPage(backend: String) {
                     items(lines) { line ->
                         Text(
                             line,
-                            fontSize = 11.sp,
-                            lineHeight = 15.sp,
+                            style = MaterialTheme.typography.labelSmall,
                             fontFamily = FontFamily.Monospace,
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp),
