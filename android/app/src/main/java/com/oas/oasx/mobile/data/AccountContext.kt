@@ -57,7 +57,15 @@ object AccountContext {
         val st = _state.value
         if (st.loading) return
         if (st.loaded && !force) return
-        refresh()
+        try {
+            refresh()
+        } catch (e: Exception) {
+            // refresh 内部已处理异常；这里兜底防 loading 卡住
+            _state.value = _state.value.copy(
+                loading = false,
+                error = e.message?.take(120) ?: "账号加载失败",
+            )
+        }
     }
 
     /// 后台刷新（供 UI 按钮调用，不阻塞 Compose）。
@@ -69,7 +77,11 @@ object AccountContext {
     suspend fun refresh() {
         _state.value = _state.value.copy(loading = true, error = null)
         try {
-            val configs = Api.configList()
+            // ★ 必须切到 IO：Api 的 OkHttp 调用是同步阻塞的，
+            //   在 LaunchedEffect（主线程）里直接调会卡死 UI。
+            val configs = kotlinx.coroutines.withContext(
+                kotlinx.coroutines.Dispatchers.IO,
+            ) { Api.configList() }
             val pairs = coroutineScope {
                 configs.map { config ->
                     async(Dispatchers.IO) {

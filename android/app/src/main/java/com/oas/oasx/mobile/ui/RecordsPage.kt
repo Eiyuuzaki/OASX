@@ -83,8 +83,10 @@ fun StatsView(backend: String) {
     LaunchedEffect(account?.config, backend) {
         val script = account?.config ?: return@LaunchedEffect
         try {
-            val resp = Api.getJsonOrThrow<com.oas.oasx.mobile.data.StatsDatesResponse>(
-                "/stats/$script/dates")
+            val resp = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                Api.getJsonOrThrow<com.oas.oasx.mobile.data.StatsDatesResponse>(
+                    "/stats/$script/dates")
+            }
             dates = resp.dates
             selected = resp.dates.firstOrNull()
         } catch (e: Exception) {
@@ -96,7 +98,9 @@ fun StatsView(backend: String) {
         val script = account?.config ?: return@LaunchedEffect
         val date = selected ?: return@LaunchedEffect
         try {
-            stats = Api.getJsonOrThrow<StatsResponse>("/stats/$script?date=$date")
+            stats = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                Api.getJsonOrThrow<StatsResponse>("/stats/$script?date=$date")
+            }
             error = null
         } catch (e: Exception) {
             error = e.message

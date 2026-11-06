@@ -58,7 +58,9 @@ fun TasksPage(backend: String) {
     LaunchedEffect(script) {
         if (script == null) return@LaunchedEffect
         try {
-            menu = Api.getJsonOrThrow<Map<String, List<String>>>("/script_menu")
+            menu = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                Api.getJsonOrThrow<Map<String, List<String>>>("/script_menu")
+            }
         } catch (e: Exception) {
             status = "任务菜单加载失败：${e.message?.take(60)}"
         }
