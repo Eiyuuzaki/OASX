@@ -58,8 +58,10 @@ public partial class StatisticsPage : UserControl
         {
             _configs = await OasApi.GetConfigListAsync();
             ConfigSelector.ItemsSource = _configs;
-            var last = WorkbenchState.ActiveScript;
-            var idx = last is not null ? _configs.IndexOf(last) : -1;
+            // 优先跟随全局选中账号的调度器，其次工作台，最后才回退第一个
+            var wanted = GlobalAccountContext.Instance.Current?.Config
+                         ?? WorkbenchState.ActiveScript;
+            var idx = wanted is not null ? _configs.IndexOf(wanted) : -1;
             ConfigSelector.SelectedIndex = idx >= 0 ? idx : (_configs.Count > 0 ? 0 : -1);
         }
         catch (Exception ex)
@@ -168,8 +170,11 @@ public partial class StatisticsPage : UserControl
         if (date == TodayKey)
         {
             _stream = new OasStatsStream();
-            _stream.SnapshotReceived += ApplyDay;
-            _stream.UpdateReceived += ApplyUpdate;
+            // ★ SSE 回调在后台线程：必须封送回 UI 线程，否则控件更新不生效
+            _stream.SnapshotReceived += day =>
+                Dispatcher.Invoke(() => ApplyDay(day));
+            _stream.UpdateReceived += upd =>
+                Dispatcher.Invoke(() => ApplyUpdate(upd));
             _stream.StatusChanged += msg => Dispatcher.Invoke(() => StatusText.Text = msg);
             _stream.Start(config, date);
             return;
@@ -260,7 +265,12 @@ public partial class StatisticsPage : UserControl
 
     // ==================== 历史趋势 ====================
 
-    private sealed record TrendVm(string DateLabel, double BarWidth, string ValueLabel);
+    /// <summary>趋势行（public：DataTemplate 反射绑定需要可访问）。</summary>
+    public sealed record TrendVm(
+        string DateLabel,
+        double BarWidth,
+        string ValueLabel,
+        bool HasValue);
 
     /// <summary>趋势条形图最大像素宽（BarWidth 按占比换算）。</summary>
     private const double TrendBarMaxWidth = 420;
@@ -271,6 +281,7 @@ public partial class StatisticsPage : UserControl
     {
         try
         {
+            StatusText.Text = "趋势加载中…";
             var rows = new List<(string Date, double Runtime, int Tasks, int Battles)>();
             foreach (var date in _dates)
             {
@@ -279,10 +290,13 @@ public partial class StatisticsPage : UserControl
                 rows.Add((date, day.TotalRuntimeSeconds, day.TotalTaskRunCount, day.TotalBattleCount));
             }
             RenderTrend(rows);
+            StatusText.Text = "";
         }
         catch (Exception ex)
         {
             StatusText.Text = $"趋势加载失败：{ex.Message}";
+            EmptyText.Visibility = Visibility.Visible;
+            EmptyText.Text = $"趋势加载失败：{ex.Message}";
         }
     }
 
@@ -299,10 +313,21 @@ public partial class StatisticsPage : UserControl
         var values = rows.Select(pick).ToList();
         max = values.Count == 0 ? 0 : values.Max(x => x.v);
 
+        if (values.Count == 0)
+        {
+            TrendList.ItemsSource = null;
+            EmptyText.Visibility = Visibility.Visible;
+            EmptyText.Text = "暂无历史数据（后端还没有该脚本的统计）";
+            return;
+        }
+        EmptyText.Visibility = Visibility.Collapsed;
+
+        // 最小值 3px：避免 0 值时条完全不可见，看起来像没渲染
         TrendList.ItemsSource = rows.Zip(values, (r, v) => new TrendVm(
             DateLabel: r.Date,
-            BarWidth: max > 0 ? v.v / max * TrendBarMaxWidth : 0,
-            ValueLabel: v.label)).ToList();
+            BarWidth: max > 0 ? Math.Max(3, v.v / max * TrendBarMaxWidth) : 3,
+            ValueLabel: v.label,
+            HasValue: v.v > 0)).ToList();
     }
 
     private async void MetricSelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
