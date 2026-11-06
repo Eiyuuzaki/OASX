@@ -1,0 +1,172 @@
+<UserControl x:Class="OASX.Views.TransferPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+    <Grid Margin="{StaticResource PagePadding}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- 页头 -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,12">
+            <TextBlock Text="配置传输" FontSize="24" FontWeight="SemiBold"
+                       Foreground="{DynamicResource OasTextPrimaryBrush}" />
+            <TextBlock Text="导出备份、分享配置，或从文件导入（只新建，不覆盖）"
+                       FontSize="12" Margin="0,4,0,0"
+                       Foreground="{DynamicResource OasTextTertiaryBrush}" />
+        </StackPanel>
+
+        <!-- 页签：导出 / 导入 -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,12">
+            <ui:Button x:Name="TabExport" MinWidth="96" Height="34" Content="导出"
+                       Click="TabExport_Click" />
+            <ui:Button x:Name="TabImport" MinWidth="96" Height="34" Margin="8,0,0,0"
+                       Content="导入" Click="TabImport_Click" />
+            <TextBlock x:Name="CapabilityText" VerticalAlignment="Center"
+                       Margin="16,0,0,0" FontSize="12"
+                       Foreground="{DynamicResource OasTextTertiaryBrush}" />
+        </StackPanel>
+
+        <!-- 内容区 -->
+        <Grid Grid.Row="2">
+
+            <!-- ─────────── 导出面板 ─────────── -->
+            <Border x:Name="ExportPanel" CornerRadius="{StaticResource RadiusCard}"
+                    Background="{DynamicResource OasSurfaceBrush}"
+                    BorderBrush="{DynamicResource OasBorderBrush}" BorderThickness="1"
+                    Padding="16">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="导出内容" FontSize="14"
+                               FontWeight="SemiBold" Margin="0,0,0,10"
+                               Foreground="{DynamicResource OasTextPrimaryBrush}" />
+
+                    <!-- 配置选择 + 模式 -->
+                    <StackPanel Grid.Row="1" Orientation="Horizontal">
+                        <TextBlock Text="配置" FontSize="12" VerticalAlignment="Center"
+                                   Margin="0,0,8,0"
+                                   Foreground="{DynamicResource OasTextTertiaryBrush}" />
+                        <ComboBox x:Name="ExportConfigSelector" MinWidth="180" Height="34"
+                                  VerticalAlignment="Center"
+                                  SelectionChanged="ExportConfigSelector_SelectionChanged" />
+                        <TextBlock Text="模式" FontSize="12" VerticalAlignment="Center"
+                                   Margin="16,0,8,0"
+                                   Foreground="{DynamicResource OasTextTertiaryBrush}" />
+                        <ComboBox x:Name="ExportModeSelector" MinWidth="150" Height="34"
+                                  VerticalAlignment="Center" SelectedIndex="0">
+                            <ComboBoxItem Content="备份（含敏感信息）" Tag="backup" />
+                            <ComboBoxItem Content="分享（脱敏）" Tag="share" />
+                        </ComboBox>
+                    </StackPanel>
+
+                    <!-- 范围：整份 / 单任务 -->
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,10,0,0">
+                        <RadioButton x:Name="ScopeWhole" Content="整份配置" IsChecked="True"
+                                     VerticalAlignment="Center"
+                                     Checked="Scope_Checked" />
+                        <RadioButton x:Name="ScopeTask" Content="单个任务" Margin="16,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Checked="Scope_Checked" />
+                        <ComboBox x:Name="ExportTaskSelector" MinWidth="180" Height="34"
+                                  Margin="16,0,0,0" VerticalAlignment="Center"
+                                  IsEnabled="False" />
+                    </StackPanel>
+
+                    <!-- 操作 -->
+                    <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,12,0,0">
+                        <ui:Button x:Name="ExportButton" MinWidth="120" Height="34"
+                                   Content="导出到文件" Click="Export_Click" />
+                        <ui:Button x:Name="PreviewButton" MinWidth="96" Height="34"
+                                   Margin="8,0,0,0" Content="预览" Click="Preview_Click" />
+                        <TextBlock x:Name="ExportStatus" VerticalAlignment="Center"
+                                   Margin="12,0,0,0" FontSize="12"
+                                   Foreground="{DynamicResource OasTextTertiaryBrush}" />
+                    </StackPanel>
+
+                    <!-- 预览 -->
+                    <Border Grid.Row="4" CornerRadius="6" Padding="8" Margin="0,12,0,0"
+                            Background="{DynamicResource ControlFillColorDefaultBrush}">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Auto">
+                            <TextBlock x:Name="PreviewText" FontFamily="Consolas, Microsoft YaHei UI"
+                                       FontSize="11" TextWrapping="NoWrap"
+                                       Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                        </ScrollViewer>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- ─────────── 导入面板 ─────────── -->
+            <Border x:Name="ImportPanel" Visibility="Collapsed"
+                    CornerRadius="{StaticResource RadiusCard}"
+                    Background="{DynamicResource OasSurfaceBrush}"
+                    BorderBrush="{DynamicResource OasBorderBrush}" BorderThickness="1"
+                    Padding="16">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="导入内容" FontSize="14"
+                               FontWeight="SemiBold" Margin="0,0,0,10"
+                               Foreground="{DynamicResource OasTextPrimaryBrush}" />
+
+                    <!-- 导入类型 -->
+                    <StackPanel Grid.Row="1" Orientation="Horizontal">
+                        <RadioButton x:Name="ImportWhole" Content="整份配置（新建配置）"
+                                     IsChecked="True" VerticalAlignment="Center"
+                                     Checked="ImportScope_Checked" />
+                        <RadioButton x:Name="ImportTask" Content="单任务参数" Margin="16,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Checked="ImportScope_Checked" />
+                    </StackPanel>
+
+                    <!-- 目标配置（单任务导入需要） -->
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,10,0,0">
+                        <TextBlock Text="目标配置" FontSize="12" VerticalAlignment="Center"
+                                   Margin="0,0,8,0"
+                                   Foreground="{DynamicResource OasTextTertiaryBrush}" />
+                        <ComboBox x:Name="ImportConfigSelector" MinWidth="180" Height="34"
+                                  VerticalAlignment="Center" IsEnabled="False" />
+                        <TextBlock x:Name="ImportHintText" FontSize="11" VerticalAlignment="Center"
+                                   Margin="12,0,0,0"
+                                   Foreground="{DynamicResource OasTextTertiaryBrush}"
+                                   Text="（整份导入会新建配置，不覆盖已有）" />
+                    </StackPanel>
+
+                    <!-- 操作 -->
+                    <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,12,0,0">
+                        <ui:Button x:Name="ImportButton" MinWidth="120" Height="34"
+                                   Content="选择文件并导入" Click="Import_Click" />
+                        <TextBlock x:Name="ImportStatus" VerticalAlignment="Center"
+                                   Margin="12,0,0,0" FontSize="12"
+                                   Foreground="{DynamicResource OasTextTertiaryBrush}" />
+                    </StackPanel>
+
+                    <!-- 结果 -->
+                    <Border Grid.Row="4" CornerRadius="6" Padding="8" Margin="0,12,0,0"
+                            Background="{DynamicResource ControlFillColorDefaultBrush}">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <TextBlock x:Name="ImportResultText" FontSize="12"
+                                       TextWrapping="Wrap"
+                                       Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                        </ScrollViewer>
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>
