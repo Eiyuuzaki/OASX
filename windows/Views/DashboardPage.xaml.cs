@@ -380,9 +380,30 @@ public partial class DashboardPage : UserControl
                 ScrollBadge.Visibility = Visibility.Collapsed;
                 return;
             }
-            // 活动期判定（数据驱动）：最新采样必须是今天——
-            // 非活动期没有新采样，上期遗留值不展示
-            if (entry.Dates[0] != TodayKey)
+            // 活动期判定：必须用 /huijuan 的真实活动边界（end_text），
+            // 不能用「今天有采样」当判据——绘卷结束后今天照样会有采样，
+            // 上期遗留的绘卷数值就会被误当成"当前活动分数"。
+            var board = await OasHuijuanApi.GetBoardAsync(entry.Config);
+            if (board is null || board.Scrolls.Count == 0)
+            {
+                ScrollBadge.Visibility = Visibility.Collapsed;
+                return;
+            }
+            var now = DateTime.Now;
+            var anyActive = board.Scrolls.Any(sc =>
+            {
+                var end = TryParseDate(sc.EndText);
+                return end is not null && end > now;
+            });
+            if (!anyActive)
+            {
+                // 所有卷都已结束 → 非活动期，不展示
+                ScrollBadge.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            // 仍需今日采样作为数值来源
+            if (entry.Dates.Count == 0 || entry.Dates[0] != TodayKey)
             {
                 ScrollBadge.Visibility = Visibility.Collapsed;
                 return;
@@ -743,5 +764,21 @@ public partial class DashboardPage : UserControl
         if (ts.TotalHours >= 1) return $"{(int)ts.TotalHours}时{ts.Minutes}分";
         if (ts.TotalMinutes >= 1) return $"{ts.Minutes}分{ts.Seconds}秒";
         return $"{seconds:0.#}秒";
+    }
+
+    /// <summary>"2026-10-30 23:59" → DateTime；解析失败返回 null。</summary>
+    private static DateTime? TryParseDate(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return null;
+        foreach (var fmt in new[] { "yyyy-MM-dd HH:mm", "yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd" })
+        {
+            try
+            {
+                return DateTime.ParseExact(text.Trim(), fmt,
+                    System.Globalization.CultureInfo.InvariantCulture);
+            }
+            catch { /* 换下一个格式 */ }
+        }
+        return null;
     }
 }
