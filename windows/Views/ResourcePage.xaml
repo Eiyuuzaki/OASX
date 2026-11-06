@@ -13,28 +13,59 @@
                 Background="{DynamicResource ControlFillColorDefaultBrush}"
                 BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
                 BorderThickness="1" Margin="0,0,0,12">
-            <StackPanel Orientation="Horizontal">
-                <!-- 规范 4.1：资产页只放账号选择器（全局上下文驱动），
-                     不放调度器选择器——资源数据地址由 (调度器,角色) 对决定，
-                     调度器名作为账号条目的次要信息展示 -->
-                <ComboBox x:Name="AccountSelector" MinWidth="240" MinHeight="40"
-                          SelectionChanged="AccountSelector_SelectionChanged" />
-                <ComboBox x:Name="ViewSelector" MinWidth="110" MinHeight="40" Margin="12,0,0,0"
-                          SelectionChanged="ViewSelector_SelectionChanged">
-                    <ComboBoxItem Content="单日快照" Tag="day" IsSelected="True" />
-                    <ComboBoxItem Content="近 7 天账本" Tag="7" />
-                    <ComboBoxItem Content="近 30 天账本" Tag="30" />
-                </ComboBox>
-                <ComboBox x:Name="DateSelector" MinWidth="140" MinHeight="40" Margin="12,0,0,0"
-                          SelectionChanged="DateSelector_SelectionChanged" />
-                <ui:Button x:Name="ShareButton" MinWidth="40" MinHeight="40" Margin="12,0,0,0"
-                           Icon="{ui:SymbolIcon Share24}"
-                           ToolTip="生成资产分享图（保存到 图片\OASX）"
-                           Click="Share_Click" />
-                <TextBlock x:Name="StatusText" VerticalAlignment="Center" Margin="12,0,0,0"
-                           FontSize="12"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-            </StackPanel>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <!-- 第 1 行：账号 + 视图 + 日期 + 分享 -->
+                <StackPanel Grid.Row="0" Orientation="Horizontal">
+                    <!-- 规范 4.1：资产页只放账号选择器（全局上下文驱动），
+                         不放调度器选择器——资源数据地址由 (调度器,角色) 对决定，
+                         调度器名作为账号条目的次要信息展示 -->
+                    <ComboBox x:Name="AccountSelector" MinWidth="240" MinHeight="40"
+                              SelectionChanged="AccountSelector_SelectionChanged" />
+                    <ComboBox x:Name="ViewSelector" MinWidth="110" MinHeight="40" Margin="12,0,0,0"
+                              SelectionChanged="ViewSelector_SelectionChanged">
+                        <ComboBoxItem Content="单日快照" Tag="day" IsSelected="True" />
+                        <ComboBoxItem Content="近 7 天账本" Tag="7" />
+                        <ComboBoxItem Content="近 30 天账本" Tag="30" />
+                    </ComboBox>
+                    <ComboBox x:Name="DateSelector" MinWidth="140" MinHeight="40" Margin="12,0,0,0"
+                              SelectionChanged="DateSelector_SelectionChanged" />
+                    <ui:Button x:Name="ShareButton" MinWidth="40" MinHeight="40" Margin="12,0,0,0"
+                               Icon="{ui:SymbolIcon Share24}"
+                               ToolTip="生成资产分享图（保存到 图片\OASX）"
+                               Click="Share_Click" />
+                    <TextBlock x:Name="StatusText" VerticalAlignment="Center" Margin="12,0,0,0"
+                               FontSize="12"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
+
+                <!-- 第 2 行：采集控制（独立一行，窄窗口也不被裁） -->
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,8,0,0">
+                    <TextBlock Text="采集" FontSize="12" VerticalAlignment="Center"
+                               Margin="0,0,8,0"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <TextBlock x:Name="CollectStatusText" VerticalAlignment="Center"
+                               Margin="0,0,10,0" FontSize="12"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Text="状态未知" />
+                    <ui:Button x:Name="CollectNowButton" MinWidth="88" MinHeight="32"
+                               Content="立即采集"
+                               ToolTip="触发一次资源采样（需模拟器与游戏运行）"
+                               Click="CollectNow_Click" />
+                    <ui:Button x:Name="CollectStartButton" MinWidth="72" MinHeight="32"
+                               Margin="8,0,0,0" Content="启动"
+                               ToolTip="开启周期采集"
+                               Click="CollectStart_Click" />
+                    <ui:Button x:Name="CollectStopButton" MinWidth="72" MinHeight="32"
+                               Margin="8,0,0,0" Content="停止"
+                               ToolTip="关闭周期采集"
+                               Click="CollectStop_Click" />
+                </StackPanel>
+            </Grid>
         </Border>
 
         <!-- 资产卡片网格（自适应列数，对应 Flutter _Grid） -->

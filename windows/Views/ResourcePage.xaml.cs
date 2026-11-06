@@ -95,6 +95,7 @@ public partial class ResourcePage : UserControl
         Loaded += (_, _) => RecomputeCardWidth(AssetCards.ActualWidth);
         AssetCards.SizeChanged += (_, e) => RecomputeCardWidth(e.NewSize.Width);
         _ = LoadAccountsAsync();
+        Loaded += async (_, _) => await RefreshCollectStatusAsync();
     }
 
     /// <summary>可用宽度 → 列数（卡片最小 260px，2–4 列）→ 卡片宽度。</summary>
@@ -628,5 +629,91 @@ public partial class ResourcePage : UserControl
             _ => Math.Abs(d).ToString("N0"),
         };
         return $"{sign}{v}";
+    }
+
+    // ==================== 采集控制（对齐 Flutter resource_controller） ====================
+
+    /// <summary>当前选中账号的调度器名（采集以 config 为单位）。</summary>
+    private string? CurrentCollectConfig()
+    {
+        if ((AccountSelector.SelectedItem as dynamic)?.Entry is AccountEntry entry)
+            return entry.Config;
+        return GlobalAccountContext.Instance.Current?.Config;
+    }
+
+    /// <summary>刷新采集状态文案与按钮可用性。</summary>
+    private async Task RefreshCollectStatusAsync()
+    {
+        var config = CurrentCollectConfig();
+        if (config is null)
+        {
+            CollectStatusText.Text = "采集状态未知";
+            return;
+        }
+        var st = await OasResourceApi.GetStatusAsync(config);
+        if (st is null)
+        {
+            CollectStatusText.Text = "采集状态未知";
+            return;
+        }
+        CollectStatusText.Text = st.Running ? "● 采集中" : "○ 未采集";
+        CollectStatusText.Foreground = st.Running
+            ? new SolidColorBrush(Color.FromRgb(0x16, 0xA3, 0x4A))
+            : (Brush)FindResource("TextFillColorSecondaryBrush");
+        CollectStartButton.IsEnabled = !st.Running;
+        CollectStopButton.IsEnabled = st.Running;
+    }
+
+    private async void CollectNow_Click(object sender, RoutedEventArgs e)
+    {
+        var config = CurrentCollectConfig();
+        if (config is null) return;
+        CollectNowButton.IsEnabled = false;
+        StatusText.Text = "正在采集…";
+        try
+        {
+            var (ok, body) = await OasResourceApi.CollectNowAsync(config);
+            StatusText.Text = ok ? "已触发采集（采样完成后刷新查看）" : $"采集失败：{body}";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"采集失败：{ex.Message}";
+        }
+        CollectNowButton.IsEnabled = true;
+        await RefreshCollectStatusAsync();
+    }
+
+    private async void CollectStart_Click(object sender, RoutedEventArgs e)
+    {
+        var config = CurrentCollectConfig();
+        if (config is null) return;
+        CollectStartButton.IsEnabled = false;
+        try
+        {
+            var (ok, body) = await OasResourceApi.StartCollectAsync(config);
+            StatusText.Text = ok ? "已启动周期采集" : $"启动失败：{body}";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"启动失败：{ex.Message}";
+        }
+        await RefreshCollectStatusAsync();
+    }
+
+    private async void CollectStop_Click(object sender, RoutedEventArgs e)
+    {
+        var config = CurrentCollectConfig();
+        if (config is null) return;
+        CollectStopButton.IsEnabled = false;
+        try
+        {
+            var (ok, body) = await OasResourceApi.StopCollectAsync(config);
+            StatusText.Text = ok ? "已停止周期采集" : $"停止失败：{body}";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"停止失败：{ex.Message}";
+        }
+        await RefreshCollectStatusAsync();
     }
 }

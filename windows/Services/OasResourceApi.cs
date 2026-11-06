@@ -89,6 +89,48 @@ public static class OasResourceApi
             url, JsonOptions, cts.Token);
         return res?.Points ?? [];
     }
+    // ==================== 采集控制（对齐 Flutter resource_controller） ====================
+
+    /// <summary>采集器状态：{config_name, running}</summary>
+    public record CollectorStatus(string ConfigName, bool Running);
+
+    /// <summary>GET /resource/{config}/status → 采集器是否在周期运行。</summary>
+    public static async Task<CollectorStatus?> GetStatusAsync(string config)
+    {
+        try
+        {
+            return await OasApi.Http.GetFromJsonAsync<CollectorStatus>(
+                $"/resource/{Uri.EscapeDataString(config)}/status", OasApi.JsonOptions);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>POST /resource/{config}/collect → 立即采集一次。</summary>
+    public static async Task<(bool Ok, string Body)> CollectNowAsync(string config)
+    {
+        var res = await OasApi.Http.PostAsync(
+            $"/resource/{Uri.EscapeDataString(config)}/collect", null);
+        return (res.IsSuccessStatusCode, await res.Content.ReadAsStringAsync());
+    }
+
+    /// <summary>POST /resource/{config}/start → 启动周期采集。</summary>
+    public static async Task<(bool Ok, string Body)> StartCollectAsync(string config)
+    {
+        var res = await OasApi.Http.PostAsync(
+            $"/resource/{Uri.EscapeDataString(config)}/start", null);
+        return (res.IsSuccessStatusCode, await res.Content.ReadAsStringAsync());
+    }
+
+    /// <summary>POST /resource/{config}/stop → 停止周期采集。</summary>
+    public static async Task<(bool Ok, string Body)> StopCollectAsync(string config)
+    {
+        var res = await OasApi.Http.PostAsync(
+            $"/resource/{Uri.EscapeDataString(config)}/stop", null);
+        return (res.IsSuccessStatusCode, await res.Content.ReadAsStringAsync());
+    }
 }
 
 
