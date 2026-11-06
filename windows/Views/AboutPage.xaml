@@ -123,32 +123,81 @@
             <Border CornerRadius="{StaticResource RadiusCard}" Padding="16" Margin="0,0,0,16"
                     Background="{DynamicResource OasSurfaceBrush}"
                     BorderBrush="{DynamicResource OasBorderBrush}" BorderThickness="1">
-                <Grid x:Name="UpdateRow" Cursor="Hand" Background="Transparent"
-                      MinHeight="44" Margin="0,2"
-                      MouseLeftButtonUp="CheckUpdate_Click">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ui:SymbolIcon Grid.Column="0" Symbol="ArrowSync24" FontSize="18"
-                                   VerticalAlignment="Center" Margin="0,0,12,0" />
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="检查更新" FontSize="13"
-                                       Foreground="{DynamicResource OasTextPrimaryBrush}" />
-                            <TextBlock x:Name="VersionInlineText" Text="v—" FontSize="12"
-                                       Margin="8,0,0,0" VerticalAlignment="Center"
+                <StackPanel>
+                    <!-- 状态行：点击检查 -->
+                    <Grid x:Name="UpdateRow" Cursor="Hand" Background="Transparent"
+                          MinHeight="44" Margin="0,2"
+                          MouseLeftButtonUp="CheckUpdate_Click">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:SymbolIcon Grid.Column="0" Symbol="ArrowSync24" FontSize="18"
+                                       VerticalAlignment="Center" Margin="0,0,12,0" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="检查更新" FontSize="13"
+                                           Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                                <TextBlock x:Name="VersionInlineText" Text="v—" FontSize="12"
+                                           Margin="8,0,0,0" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource OasTextSecondaryBrush}" />
+                            </StackPanel>
+                            <TextBlock x:Name="UpdateStatusText" Text="点击检查是否有新版本"
+                                       FontSize="12" Margin="0,2,0,0" TextWrapping="Wrap"
                                        Foreground="{DynamicResource OasTextSecondaryBrush}" />
                         </StackPanel>
-                        <TextBlock x:Name="UpdateStatusText" Text="点击检查是否有新版本"
-                                   FontSize="12" Margin="0,2,0,0"
-                                   Foreground="{DynamicResource OasTextSecondaryBrush}" />
-                    </StackPanel>
-                    <ui:SymbolIcon Grid.Column="2" Symbol="ChevronRight24" FontSize="14"
-                                   VerticalAlignment="Center"
+                        <ui:SymbolIcon Grid.Column="2" Symbol="ChevronRight24" FontSize="14"
+                                       VerticalAlignment="Center"
+                                       Foreground="{DynamicResource OasTextTertiaryBrush}" />
+                    </Grid>
+
+                    <!-- 有新版本时展开：版本对比 + 更新说明 + 操作 -->
+                    <StackPanel x:Name="UpdateDetailPanel" Visibility="Collapsed"
+                                Margin="0,12,0,0">
+                        <Rectangle Height="1" Margin="0,0,0,12"
+                                   Fill="{DynamicResource OasBorderBrush}" />
+
+                        <!-- 版本对比 -->
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <TextBlock Text="当前" FontSize="11" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource OasTextTertiaryBrush}" />
+                            <TextBlock x:Name="CurrentVerText" Text="v—" FontSize="13"
+                                       Margin="6,0,0,0" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource OasTextSecondaryBrush}" />
+                            <ui:SymbolIcon Symbol="ArrowRight24" FontSize="12" Margin="10,0"
+                                           VerticalAlignment="Center"
+                                           Foreground="{DynamicResource OasTextTertiaryBrush}" />
+                            <TextBlock Text="最新" FontSize="11" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource OasTextTertiaryBrush}" />
+                            <TextBlock x:Name="LatestVerText" Text="v—" FontSize="15"
+                                       FontWeight="SemiBold" Margin="6,0,0,0"
+                                       VerticalAlignment="Center"
+                                       Foreground="{DynamicResource OasAccentBrush}" />
+                        </StackPanel>
+
+                        <!-- 更新说明 -->
+                        <TextBlock Text="更新说明" FontSize="11" Margin="0,4,0,4"
                                    Foreground="{DynamicResource OasTextTertiaryBrush}" />
-                </Grid>
+                        <Border CornerRadius="6" Padding="10" MaxHeight="160"
+                                Background="{DynamicResource ControlFillColorDefaultBrush}">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <TextBlock x:Name="ReleaseNoteText" Text="" FontSize="11"
+                                           TextWrapping="Wrap" LineHeight="17"
+                                           Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                            </ScrollViewer>
+                        </Border>
+
+                        <!-- 操作 -->
+                        <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                            <ui:Button x:Name="OpenReleaseButton" MinWidth="120" Height="32"
+                                       Content="打开发布页" Click="OpenRelease_Click" />
+                            <ui:Button x:Name="CopyLinkButton" MinWidth="100" Height="32"
+                                       Margin="8,0,0,0" Content="复制下载链接"
+                                       Click="CopyLink_Click" />
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
             </Border>
 
             <TextBlock Text="本软件为第三方桌面客户端，与网易及阴阳师官方无关。字体 MiSans 由小米发布（免费商用）；界面组件 WPF-UI（MIT）。"

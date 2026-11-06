@@ -52,6 +52,25 @@ public partial class AboutPage : UserControl
     }
 
     /// <summary>检查 GitHub Releases 是否有新版本。</summary>
+    /// <summary>最近一次检查到的下载/发布页地址。</summary>
+    private string _downloadUrl = "https://github.com/Eiyuuzaki/OASX/releases";
+
+    private void OpenRelease_Click(object sender, RoutedEventArgs e)
+        => OpenUrl(_downloadUrl);
+
+    private void CopyLink_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            System.Windows.Clipboard.SetText(_downloadUrl);
+            UpdateStatusText.Text = $"已复制链接：{_downloadUrl}";
+        }
+        catch (Exception ex)
+        {
+            UpdateStatusText.Text = $"复制失败：{ex.Message}";
+        }
+    }
+
     private async void CheckUpdate_Click(object sender,
         System.Windows.Input.MouseButtonEventArgs e)
     {
@@ -60,34 +79,33 @@ public partial class AboutPage : UserControl
         try
         {
             var result = await UpdateChecker.CheckAsync();
+            var stamp = DateTime.Now.ToString("HH:mm:ss");
             if (!result.Success)
             {
                 UpdateStatusText.Text = $"检查失败：{result.Error}";
+                UpdateDetailPanel.Visibility = Visibility.Collapsed;
                 return;
             }
             if (!result.HasUpdate)
             {
                 UpdateStatusText.Text = result.Note is null
-                    ? $"已是最新（v{result.CurrentVersion}）"
-                    : $"v{result.CurrentVersion} · {result.Note}";
+                    ? $"已是最新（v{result.CurrentVersion}）· {stamp}"
+                    : $"v{result.CurrentVersion} · {result.Note} · {stamp}";
+                UpdateDetailPanel.Visibility = Visibility.Collapsed;
                 return;
             }
+
+            // 有新版本：填充面板
             UpdateStatusText.Text =
-                $"发现新版本 {result.LatestVersion}（当前 v{result.CurrentVersion}）";
-            var msg = result.Note ?? "";
-            var choice = System.Windows.MessageBox.Show(
-                Window.GetWindow(this),
-                string.Join(Environment.NewLine,
-                    $"发现新版本 {result.LatestVersion}（当前 v{result.CurrentVersion}）",
-                    msg,
-                    "",
-                    "要打开发布页下载吗？"),
-                "OASX 更新", MessageBoxButton.YesNo, MessageBoxImage.Information);
-            if (choice == MessageBoxResult.Yes)
-            {
-                OpenUrl(result.DownloadUrl ?? result.ReleaseUrl
-                        ?? "https://github.com/Eiyuuzaki/OASX/releases");
-            }
+                $"发现新版本 v{result.LatestVersion} · 检查于 {stamp}";
+            CurrentVerText.Text = $"v{result.CurrentVersion}";
+            LatestVerText.Text = $"v{result.LatestVersion}";
+            ReleaseNoteText.Text = (result.Note ?? "").Trim().Length == 0
+                ? "（该版本没有提供说明）"
+                : result.Note!.Trim();
+            _downloadUrl = result.DownloadUrl ?? result.ReleaseUrl
+                           ?? "https://github.com/Eiyuuzaki/OASX/releases";
+            UpdateDetailPanel.Visibility = Visibility.Visible;
         }
         catch (Exception ex)
         {
