@@ -4,6 +4,7 @@ import android.content.SharedPreferences
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
@@ -12,11 +13,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -34,6 +37,17 @@ fun SettingsPage(
     var url by remember { mutableStateOf(currentBackend) }
     var status by remember { mutableStateOf("") }
     var theme by remember { mutableStateOf(Prefs.themeMode) }
+    var showNotify by remember { mutableStateOf(false) }
+    var showDevice by remember { mutableStateOf(false) }
+
+    if (showNotify) {
+        NotifyPage(onBack = { showNotify = false })
+        return
+    }
+    if (showDevice) {
+        DevicePage(onBack = { showDevice = false })
+        return
+    }
 
     Column(
         Modifier.fillMaxSize().padding(24.dp),
@@ -86,6 +100,44 @@ fun SettingsPage(
                     },
                 )
                 Text(label, modifier = Modifier.padding(top = 14.dp))
+            }
+        }
+
+        Text("模拟器", fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp))
+        Card(Modifier.fillMaxWidth().clickable { showDevice = true }) {
+            Row(
+                Modifier.fillMaxWidth().padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text("设备与实例", fontSize = 15.sp)
+                    Text(
+                        "切换当前调度器使用的模拟器",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Text("›", fontSize = 16.sp,
+                    color = MaterialTheme.colorScheme.primary)
+            }
+        }
+
+        Text("通知推送", fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp))
+        Card(Modifier.fillMaxWidth().clickable { showNotify = true }) {
+            Row(
+                Modifier.fillMaxWidth().padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text("推送渠道与参数", fontSize = 15.sp)
+                    Text(
+                        "结界寄养成熟提醒（onepush 渠道）",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Text("›", fontSize = 16.sp,
+                    color = MaterialTheme.colorScheme.primary)
             }
         }
 
