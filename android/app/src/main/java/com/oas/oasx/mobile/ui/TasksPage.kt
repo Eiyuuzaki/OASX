@@ -15,6 +15,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -25,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.oas.oasx.mobile.data.AccountContext
+import com.oas.oasx.mobile.data.I18n
 import com.oas.oasx.mobile.data.SchedulerSocket
 import com.oas.oasx.mobile.net.Api
 
@@ -34,13 +36,15 @@ fun TasksPage(backend: String) {
     val acct by AccountContext.state.collectAsStateWithLifecycle()
     val account = acct.current
     val script = account?.config
+    val i18nMap by I18n.map.collectAsState()
+    val t: (String) -> String = { key -> i18nMap[key] ?: key }
+
+    LaunchedEffect(Unit) { I18n.ensureLoaded() }
 
     var menu by remember(script) { mutableStateOf<Map<String, List<String>>?>(null) }
     var status by remember(script) { mutableStateOf("") }
     var confirmStop by remember(script) { mutableStateOf(false) }
     var argsTask by remember(script) { mutableStateOf<String?>(null) }
-    var argsJson by remember(script) { mutableStateOf<String?>(null) }
-    var argsError by remember(script) { mutableStateOf<String?>(null) }
 
     // 运行中任务（WS 实时）
     var runningTask by remember(script) { mutableStateOf<String?>(null) }
@@ -62,12 +66,10 @@ fun TasksPage(backend: String) {
 
     // 参数只读视图（点任务名进入）
     if (argsTask != null && script != null) {
-        ArgsView(
+        ArgsEditor(
             script = script,
             task = argsTask ?: "",
-            json = argsJson,
-            error = argsError,
-            onBack = { argsTask = null; argsJson = null; argsError = null },
+            onBack = { argsTask = null },
         )
         return
     }
@@ -119,7 +121,7 @@ fun TasksPage(backend: String) {
         LazyColumn {
             m.forEach { (group, tasks) ->
                 item {
-                    Text(group, fontSize = 14.sp,
+                    Text(t(group), fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
                 }
@@ -127,36 +129,14 @@ fun TasksPage(backend: String) {
                     val isRunning = runningTask == task
                     Card(
                         Modifier.fillMaxWidth().padding(vertical = 2.dp)
-                            .clickable {
-                                argsTask = task
-                                argsJson = null
-                                argsError = null
-                                Thread {
-                                    try {
-                                        val resp = Api.get("/$script/$task/args")
-                                        android.os.Handler(
-                                            android.os.Looper.getMainLooper()
-                                        ).post {
-                                            argsJson = resp
-                                            argsTask = task
-                                        }
-                                    } catch (e: Exception) {
-                                        android.os.Handler(
-                                            android.os.Looper.getMainLooper()
-                                        ).post {
-                                            argsError = e.message?.take(80)
-                                            argsTask = task
-                                        }
-                                    }
-                                }
-                            },
+                            .clickable { argsTask = task },
                     ) {
                         Row(
                             Modifier.fillMaxWidth().padding(12.dp, 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                task,
+                                t(task),
                                 Modifier.weight(1f),
                                 fontSize = 13.sp,
                                 color = if (isRunning) MaterialTheme.colorScheme.primary
@@ -198,66 +178,5 @@ fun TasksPage(backend: String) {
                 }
             },
         )
-    }
-}
-
-/// 任务参数只读视图：GET /{script}/{task}/args → 分组渲染。
-@Composable
-fun ArgsView(
-    script: String,
-    task: String,
-    json: String?,
-    error: String?,
-    onBack: () -> Unit,
-) {
-    Column(Modifier.fillMaxSize().padding(16.dp)) {
-        Text(
-            "← 返回",
-            Modifier.clickable { onBack() },
-            fontSize = 14.sp,
-            color = MaterialTheme.colorScheme.primary,
-        )
-        Text(task, fontSize = 20.sp, modifier = Modifier.padding(top = 8.dp))
-        Text("参数（只读）· $script", fontSize = 12.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 10.dp))
-
-        val parsed: Map<String, List<Map<String, kotlinx.serialization.json.JsonElement>>>? =
-            try {
-                json?.let { Api.json.decodeFromString(it) }
-            } catch (e: Exception) {
-                null
-            }
-
-        LazyColumn(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)) {
-            if (error != null) {
-                item {
-                    Text("加载失败：$error", fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.error)
-                }
-            } else if (parsed == null) {
-                item {
-                    Text("解析中…", fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            } else {
-                parsed.forEach { (group, fields) ->
-                    item {
-                        Text(group, fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(top = 8.dp, bottom = 2.dp))
-                    }
-                    items(fields) { f ->
-                        val name = f["title"]?.toString()?.trim('"') ?: ""
-                        val value = f["value"]?.toString()?.trim('"') ?: ""
-                        Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
-                            Text(name, Modifier.weight(1f), fontSize = 13.sp)
-                            Text(value.ifBlank { "—" }, fontSize = 13.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                }
-            }
-        }
     }
 }
