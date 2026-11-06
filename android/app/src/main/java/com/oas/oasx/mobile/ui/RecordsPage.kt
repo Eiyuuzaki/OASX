@@ -48,11 +48,17 @@ fun RecordsPage(backend: String) {
                 onClick = { subTab = 1 },
                 label = { Text("实时日志") },
             )
+            androidx.compose.foundation.layout.Spacer(Modifier.padding(4.dp))
+            FilterChip(
+                selected = subTab == 2,
+                onClick = { subTab = 2 },
+                label = { Text("错误") },
+            )
         }
-        if (subTab == 1) {
-            LogsPage(backend)
-        } else {
-            StatsView(backend)
+        when (subTab) {
+            1 -> LogsPage(backend)
+            2 -> ErrorsPage(onBack = { subTab = 0 })
+            else -> StatsView(backend)
         }
     }
 }

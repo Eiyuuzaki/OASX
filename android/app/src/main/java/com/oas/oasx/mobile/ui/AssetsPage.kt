@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.oas.oasx.mobile.data.AccountContext
+import com.oas.oasx.mobile.data.CollectApi
 import com.oas.oasx.mobile.net.Api
 import com.oas.oasx.mobile.net.LedgerResp
 import com.oas.oasx.mobile.net.ResourceDatesResp
@@ -51,6 +52,41 @@ fun AssetsPage(backend: String) {
     var error by remember(acctKey, mode) { mutableStateOf<String?>(null) }
     var loading by remember(acctKey, mode) { mutableStateOf(false) }
     var showPicker by remember { mutableStateOf(false) }
+    // ── 采集控制 ──
+    var collecting by remember(acctKey) { mutableStateOf<Boolean?>(null) }
+    var collectMsg by remember(acctKey) { mutableStateOf("") }
+    var collectBusy by remember(acctKey) { mutableStateOf(false) }
+
+    LaunchedEffect(acctKey, backend) {
+        val acc = account ?: return@LaunchedEffect
+        try {
+            collecting = kotlinx.coroutines.withContext(
+                kotlinx.coroutines.Dispatchers.IO,
+            ) { CollectApi.status(acc.config).running }
+        } catch (e: Exception) {
+            collecting = null
+        }
+    }
+
+    fun runCollect(action: suspend (String) -> Unit, okMsg: String) {
+        val acc = account ?: return
+        collectBusy = true
+        collectMsg = "执行中…"
+        Thread {
+            try {
+                kotlinx.coroutines.runBlocking { action(acc.config) }
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    collectMsg = okMsg
+                    collectBusy = false
+                }
+            } catch (e: Exception) {
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    collectMsg = "失败：${e.message?.take(80)}"
+                    collectBusy = false
+                }
+            }
+        }.start()
+    }
 
     LaunchedEffect(acctKey, mode, backend) {
         val acc = account ?: return@LaunchedEffect
@@ -109,6 +145,40 @@ fun AssetsPage(backend: String) {
             fontSize = 12.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+
+        // ── 采集控制行 ──
+        Row(
+            Modifier.fillMaxWidth().padding(top = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                when (collecting) {
+                    true -> "● 采集中"
+                    false -> "○ 未采集"
+                    null -> "? 状态未知"
+                },
+                fontSize = 12.sp,
+                color = if (collecting == true) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            TextButton(
+                enabled = !collectBusy,
+                onClick = { runCollect({ c -> CollectApi.collectNow(c) }, "已请求采集") },
+            ) { Text("立即采集", fontSize = 12.sp) }
+            TextButton(
+                enabled = !collectBusy,
+                onClick = { runCollect({ c -> CollectApi.start(c) }, "已启动采集") },
+            ) { Text("启动", fontSize = 12.sp) }
+            TextButton(
+                enabled = !collectBusy,
+                onClick = { runCollect({ c -> CollectApi.stop(c) }, "已停止采集") },
+            ) { Text("停止", fontSize = 12.sp) }
+        }
+        if (collectMsg.isNotBlank()) {
+            Text(collectMsg, fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
 
         // 模式 chips
         Row(
