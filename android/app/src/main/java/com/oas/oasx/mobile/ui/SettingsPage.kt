@@ -39,6 +39,7 @@ fun SettingsPage(
     var theme by remember { mutableStateOf(Prefs.themeMode) }
     var showNotify by remember { mutableStateOf(false) }
     var showDevice by remember { mutableStateOf(false) }
+    var showTransfer by remember { mutableStateOf(false) }
 
     if (showNotify) {
         NotifyPage(onBack = { showNotify = false })
@@ -46,6 +47,13 @@ fun SettingsPage(
     }
     if (showDevice) {
         DevicePage(onBack = { showDevice = false })
+        return
+    }
+    if (showTransfer) {
+        TransferPage(
+            onBack = { showTransfer = false },
+            context = androidx.compose.ui.platform.LocalContext.current,
+        )
         return
     }
 
@@ -113,6 +121,25 @@ fun SettingsPage(
                     Text("设备与实例", fontSize = 15.sp)
                     Text(
                         "切换当前调度器使用的模拟器",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Text("›", fontSize = 16.sp,
+                    color = MaterialTheme.colorScheme.primary)
+            }
+        }
+
+        Text("配置传输", fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp))
+        Card(Modifier.fillMaxWidth().clickable { showTransfer = true }) {
+            Row(
+                Modifier.fillMaxWidth().padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text("导出 / 导入配置", fontSize = 15.sp)
+                    Text(
+                        "备份到手机文件，或从文件导入",
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

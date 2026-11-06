@@ -54,10 +54,17 @@ fun RecordsPage(backend: String) {
                 onClick = { subTab = 2 },
                 label = { Text("错误") },
             )
+            androidx.compose.foundation.layout.Spacer(Modifier.padding(4.dp))
+            FilterChip(
+                selected = subTab == 3,
+                onClick = { subTab = 3 },
+                label = { Text("绘卷") },
+            )
         }
         when (subTab) {
             1 -> LogsPage(backend)
             2 -> ErrorsPage(onBack = { subTab = 0 })
+            3 -> HuijuanPage(onBack = { subTab = 0 })
             else -> StatsView(backend)
         }
     }

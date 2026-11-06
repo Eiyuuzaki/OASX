@@ -80,6 +80,13 @@ object Api {
         throw RuntimeException("响应解析失败：$path")
     }
 
+    /// POST 带 JSON 体 + 解析（导入等写操作）。
+    inline fun <reified T> postJsonWithBodyOrThrow(path: String, jsonBody: String): T = try {
+        json.decodeFromString(postWithBody(path, jsonBody))
+    } catch (e: kotlinx.serialization.SerializationException) {
+        throw RuntimeException("响应解析失败：$path")
+    }
+
     /// PUT + 解析。
     inline fun <reified T> putJsonOrThrow(path: String, jsonBody: String): T = try {
         json.decodeFromString(put(path, jsonBody))
