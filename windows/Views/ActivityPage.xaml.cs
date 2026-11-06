@@ -506,13 +506,16 @@ public partial class ActivityPage : UserControl
             }
             else
             {
-                var nameO = (own.CardName ?? own.CardItem ?? "").Replace("/", " · ");
+                // 后端 own 只给 itemid，名字在顶层 card_names 映射里
+                var itemId = own.ItemId ?? "";
+                var rawName = state.CardNames?.GetValueOrDefault(itemId) ?? "";
+                var nameO = (rawName.Length > 0 ? rawName : itemId).Replace("/", " · ");
                 var maturedO = (own.Remaining ?? 0) <= 0;
                 var tsO = TimeSpan.FromSeconds(own.Remaining ?? 0);
                 FillOwnCard(nameO, maturedO ? "可收取" : $"{tsO.Hours}小时{tsO.Minutes:00}分后成熟",
                     maturedO ? $"{own.EndText} 可收取" : $"{own.EndText} 收取",
                     Math.Clamp(1 - (own.Remaining ?? 0) / ((own.Hours ?? 6) * 3600.0), 0, 1),
-                    IconKeyOf(own.CardName), !maturedO);
+                    IconKeyOf(rawName), !maturedO);
             }
         }
         catch (Exception ex)

@@ -94,10 +94,23 @@ public static class OasApi
         return (res.IsSuccessStatusCode, body);
     }
 
+    /// <summary>后端单行日志（GET /logs/{script} 的 lines 元素）。</summary>
+    public record LogLine(
+        string FileName,
+        int LineNo,
+        long Offset,
+        long ByteLength,
+        string Text,
+        bool LineTruncated);
+
     public record LogLines(
         string ScriptName,
         string? LiveCursor,
-        List<string> Lines);
+        List<LogLine> Lines)
+    {
+        /// <summary>纯文本行（供 UI 直接绑定）。</summary>
+        public List<string> Texts => Lines?.Select(x => x.Text).ToList() ?? [];
+    }
 
     /// <summary>GET /logs/{script}?limit=… → 历史日志（文本行）</summary>
     public static async Task<LogLines?> GetLogHistoryAsync(

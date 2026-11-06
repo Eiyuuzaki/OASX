@@ -164,7 +164,10 @@ public partial class DashboardPage : UserControl
             }
             else
             {
-                var nameO = (own.CardName ?? own.CardItem ?? "").Replace("/", " · ");
+                // 后端 own 只给 itemid，名字在顶层 card_names 映射里
+                var itemId = own.ItemId ?? "";
+                var rawName = state.CardNames?.GetValueOrDefault(itemId) ?? "";
+                var nameO = (rawName.Length > 0 ? rawName : itemId).Replace("/", " · ");
                 var maturedO = (own.Remaining ?? 0) <= 0;
                 var tsO = TimeSpan.FromSeconds(own.Remaining ?? 0);
                 FillDashCard(OwnCardName, OwnCountdown, OwnEnd, OwnRemain,
@@ -173,7 +176,7 @@ public partial class DashboardPage : UserControl
                     maturedO ? "去收取" : $"{tsO.Hours}小时{tsO.Minutes:00}分",
                     maturedO ? null : $"{own.EndText} 收取",
                     Math.Clamp(1 - (own.Remaining ?? 0) / ((own.Hours ?? 6) * 3600.0), 0, 1),
-                    IconKeyOf(own.CardName), !maturedO);
+                    IconKeyOf(rawName), !maturedO);
             }
         }
         catch (Exception ex)

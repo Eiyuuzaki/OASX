@@ -304,8 +304,8 @@ public partial class WorkbenchPage : UserControl
         StateText.Text = "状态查询中…";
         var state = await OasApi.GetScriptStateAsync(script);
         StateText.Text = state is null ? "状态：未知" : $"状态：{state.State}";
-        StartButton.IsEnabled = state?.State != "running";
-        StopButton.IsEnabled = state?.State == "running";
+        StartButton.IsEnabled = !IsRunningState(state?.State);
+        StopButton.IsEnabled = IsRunningState(state?.State);
     }
 
     private async void StartButton_Click(object sender, RoutedEventArgs e)
@@ -325,6 +325,10 @@ public partial class WorkbenchPage : UserControl
         StateText.Text = ok ? "已发送停止" : $"停止失败：{body}";
         await RefreshStateAsync(script);
     }
+
+    /// <summary>脚本是否处于运行态（大小写不敏感，兼容 RUNNING/running）。</summary>
+    private static bool IsRunningState(string? state) =>
+        state is not null && state.Equals("running", StringComparison.OrdinalIgnoreCase);
 }
 
 /// <summary>

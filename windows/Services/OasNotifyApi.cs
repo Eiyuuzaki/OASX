@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace OASX.Services;
 
@@ -17,9 +18,17 @@ public static class OasNotifyApi
         int? Hours, string? CardItem, string? CardName,
         int? Remaining, bool? Empty, bool? Unknown, string? Error);
 
+    /// <summary>自结界卡：后端只返回 itemid，卡片名要经 CardNames 映射。
+    /// ★ ItemId 必须显式绑定 "itemid"——SnakeCaseLower 会把它写成 item_id，
+    ///   与后端字段（无下划线）不匹配，导致读不到卡片名。</summary>
+    public record OwnSlot(
+        [property: JsonPropertyName("itemid")] string? ItemId,
+        int? Hours, string? StartText, string? EndText,
+        int? Remaining, bool? Empty, bool? Unknown, string? Error);
+
     public record FosterState(
         bool Success, string ConfigName,
-        FosterSlot? Foster, FosterSlot? Own,
+        FosterSlot? Foster, OwnSlot? Own,
         Dictionary<string, string>? CardNames,
         bool NotifyEnabled, string? CardType,
         string? CardTypeSource, OasActivityApi.LiveRole? LiveRole, string? Error);
