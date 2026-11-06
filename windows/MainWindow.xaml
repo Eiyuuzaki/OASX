@@ -51,6 +51,8 @@
                                        Icon="{ui:SymbolIcon Book24}" />
                 <ui:NavigationViewItem Content="日志" TargetPageType="{x:Type views:LogPage}"
                                        Icon="{ui:SymbolIcon SlideText24}" />
+                <ui:NavigationViewItem Content="错误记录" TargetPageType="{x:Type views:ErrorPage}"
+                                       Icon="{ui:SymbolIcon ErrorCircle24}" />
             </ui:NavigationView.MenuItems>
             <!-- 侧栏底部账号块：头像 + 名称，点击弹出账号列表 -->
             <ui:NavigationView.PaneFooter>
