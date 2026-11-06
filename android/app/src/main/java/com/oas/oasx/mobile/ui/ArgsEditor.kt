@@ -46,7 +46,9 @@ fun ArgsEditor(script: String, task: String, onBack: () -> Unit) {
 
     LaunchedEffect(script, task, reload) {
         try {
-            argsJson = Api.get("/$script/$task/args")
+            argsJson = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                Api.get("/$script/$task/args")
+            }
             error = null
         } catch (e: Exception) {
             error = e.message?.take(100)

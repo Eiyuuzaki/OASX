@@ -79,9 +79,15 @@ fun StatsView(backend: String) {
     var selected by remember(account?.config) { mutableStateOf<String?>(null) }
     var stats by remember(account?.config) { mutableStateOf<StatsResponse?>(null) }
     var error by remember(account?.config) { mutableStateOf<String?>(null) }
+    var datesLoading by remember(account?.config) { mutableStateOf(false) }
+    var statsLoading by remember(account?.config) { mutableStateOf(false) }
+    var datesLoaded by remember(account?.config) { mutableStateOf(false) }
 
     LaunchedEffect(account?.config, backend) {
         val script = account?.config ?: return@LaunchedEffect
+        datesLoading = true
+        datesLoaded = false
+        error = null
         try {
             val resp = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 Api.getJsonOrThrow<com.oas.oasx.mobile.data.StatsDatesResponse>(
@@ -90,21 +96,29 @@ fun StatsView(backend: String) {
             dates = resp.dates
             selected = resp.dates.firstOrNull()
         } catch (e: Exception) {
-            error = e.message
+            error = e.message?.take(100)
         }
+        datesLoading = false
+        datesLoaded = true
     }
 
     LaunchedEffect(account?.config, selected) {
         val script = account?.config ?: return@LaunchedEffect
-        val date = selected ?: return@LaunchedEffect
+        val date = selected ?: run {
+            stats = null
+            return@LaunchedEffect
+        }
+        statsLoading = true
         try {
             stats = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 Api.getJsonOrThrow<StatsResponse>("/stats/$script?date=$date")
             }
             error = null
         } catch (e: Exception) {
-            error = e.message
+            stats = null
+            error = e.message?.take(100)
         }
+        statsLoading = false
     }
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
@@ -159,10 +173,27 @@ fun StatsView(backend: String) {
                     }
                 }
             }
-        } else if (error == null) {
-            Text("加载中…", fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 8.dp))
+        } else {
+            // 明确区分四种状态，任何分支都不会永久显示"加载中"
+            when {
+                account == null -> Text("先在首页选择账号", fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp))
+                datesLoading -> Text("读取日期列表…", fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp))
+                statsLoading -> Text("读取统计数据…", fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp))
+                datesLoaded && dates.isEmpty() -> Text(
+                    "该账号暂无统计数据（脚本跑过一次后才会有）",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp))
+                else -> Text("无数据", fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp))
+            }
         }
     }
 }

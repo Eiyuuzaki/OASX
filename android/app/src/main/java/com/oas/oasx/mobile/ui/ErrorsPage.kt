@@ -83,9 +83,15 @@ fun ErrorsPage(onBack: () -> Unit) {
             )
             val d = detail
             if (d == null) {
-                Text("加载中…", fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 10.dp))
+                if (error != null) {
+                    Text("详情加载失败：$error", fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(top = 10.dp))
+                } else {
+                    Text("加载中…", fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 10.dp))
+                }
                 return@Column
             }
             Text(

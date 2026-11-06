@@ -33,11 +33,16 @@ fun LogsPage(backend: String) {
     val script = account?.config
 
     val lines = remember(script) { mutableStateListOf<String>() }
-    var status by remember(script) { mutableStateOf("连接中…") }
+    var status by remember(script) {
+        mutableStateOf(if (script == null) "未选择账号" else "连接中…")
+    }
     val listState = rememberLazyListState()
 
     LaunchedEffect(script, backend) {
-        if (script == null) return@LaunchedEffect
+        if (script == null) {
+            status = "未选择账号"
+            return@LaunchedEffect
+        }
         lines.clear()
         LogStream().connect(script, backend).collect { event ->
             when (event) {

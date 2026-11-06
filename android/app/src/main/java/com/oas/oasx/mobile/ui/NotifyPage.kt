@@ -52,9 +52,12 @@ fun NotifyPage(onBack: () -> Unit) {
     LaunchedEffect(Unit) {
         loading = true
         try {
-            val p = Api.getJsonOrThrow<NotifyApi.ProvidersResp>("/notify/providers")
+            val (p, c) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                val prov = Api.getJsonOrThrow<NotifyApi.ProvidersResp>("/notify/providers")
+                val cfg = Api.getJsonOrThrow<NotifyApi.ConfigResp>("/notify/config")
+                prov to cfg
+            }
             providers = p.providers
-            val c = Api.getJsonOrThrow<NotifyApi.ConfigResp>("/notify/config")
             enable = c.notifyEnable
             cycleHours = c.cycleHours.toString()
             val (pv, params) = NotifyApi.parseYaml(c.notifyConfig)

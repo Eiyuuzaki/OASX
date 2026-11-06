@@ -79,12 +79,16 @@ fun DevicePage(onBack: () -> Unit) {
         val cfg = config ?: return@LaunchedEffect
         status = ""
         try {
-            current = Api.getJsonOrThrow<DeviceCurrent>("/device/current?config_name=$cfg")
+            current = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                Api.getJsonOrThrow<DeviceCurrent>("/device/current?config_name=$cfg")
+            }
         } catch (e: Exception) {
             status = "读取当前设备失败：${e.message?.take(80)}"
         }
         try {
-            val ins = Api.getJsonOrThrow<DeviceInstances>("/device/instances")
+            val ins = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                Api.getJsonOrThrow<DeviceInstances>("/device/instances")
+            }
             instances = ins.instances
             adbDevices = ins.adbDevices
         } catch (e: Exception) {
