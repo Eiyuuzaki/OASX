@@ -11,6 +11,7 @@
     <SolidColorBrush x:Key="OasSurfaceTertiaryBrush" Color="#383838" />
     <SolidColorBrush x:Key="OasBorderBrush" Color="#414141" />
     <SolidColorBrush x:Key="OasBorderStrongBrush" Color="#505050" />
+    <SolidColorBrush x:Key="OasLogTimeBrush" Color="#4DD0E1" />
     <SolidColorBrush x:Key="OasTextPrimaryBrush" Color="#F5F5F5" />
     <SolidColorBrush x:Key="OasTextSecondaryBrush" Color="#B8B8B8" />
     <SolidColorBrush x:Key="OasTextTertiaryBrush" Color="#929292" />

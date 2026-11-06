@@ -34,7 +34,13 @@
                 Background="{DynamicResource OasSurfaceBrush}"
                 BorderBrush="{DynamicResource OasBorderBrush}" BorderThickness="1">
             <Grid>
-                <StackPanel Orientation="Horizontal">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <!-- 第 1 行：调度器 + 启停 -->
+                <StackPanel Grid.Row="0" Orientation="Horizontal">
                     <ui:SymbolIcon Symbol="SlideText24" FontSize="16"
                                    VerticalAlignment="Center" Margin="0,0,8,0" />
                     <ComboBox x:Name="ScriptSelector" MinWidth="180" MinHeight="32"
@@ -47,12 +53,25 @@
                                Margin="8,0,0,0" Click="StopButton_Click"
                                Icon="{ui:SymbolIcon Stop24}" Content="停止" />
                 </StackPanel>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
-                            VerticalAlignment="Center">
+
+                <!-- 第 2 行：筛选 + 计数 + 自动滚动 + 清空（独立一行，窄窗口也不重叠） -->
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,8,0,0">
+                    <TextBlock Text="级别" FontSize="12" VerticalAlignment="Center"
+                               Margin="0,0,6,0"
+                               Foreground="{DynamicResource OasTextTertiaryBrush}" />
+                    <ComboBox x:Name="LevelFilter" MinWidth="120" MinHeight="32"
+                              VerticalAlignment="Center"
+                              SelectedIndex="0"
+                              SelectionChanged="LevelFilter_SelectionChanged">
+                        <ComboBoxItem Content="全部级别" />
+                        <ComboBoxItem Content="警告+错误" />
+                        <ComboBoxItem Content="仅错误" />
+                    </ComboBox>
                     <TextBlock x:Name="LineCountText" Text="" FontSize="12"
-                               VerticalAlignment="Center" Margin="0,0,12,0"
+                               VerticalAlignment="Center" Margin="12,0,0,0"
                                Foreground="{DynamicResource OasTextTertiaryBrush}" />
                     <ui:ToggleSwitch x:Name="AutoScrollSwitch" VerticalAlignment="Center"
+                                     Margin="12,0,0,0"
                                      IsChecked="True" Content="自动滚动" />
                     <ui:Button MinWidth="72" MinHeight="32" Margin="12,0,0,0"
                                Content="清空" Click="ClearButton_Click" />
@@ -75,10 +94,17 @@
                          ScrollViewer.ScrollChanged="LogList_ScrollChanged">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <TextBlock Text="{Binding}"
+                            <!-- 分段着色：时间戳(青) / 级别(蓝/黄/红) / 正文(默认) -->
+                            <TextBlock TextWrapping="NoWrap"
                                        FontFamily="Consolas, Cascadia Mono, Microsoft YaHei UI"
-                                       FontSize="12.5"
-                                       Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                                       FontSize="12.5">
+                                <Run Text="{Binding Time, Mode=OneWay}"
+                                     Foreground="{DynamicResource OasLogTimeBrush}" /><Run
+                                     Text="{Binding Level, Mode=OneWay}"
+                                     Foreground="{Binding LevelBrush}" /><Run
+                                     Text="{Binding Rest, Mode=OneWay}"
+                                     Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                            </TextBlock>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                     <ListBox.ItemsPanel>
