@@ -86,9 +86,31 @@
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
-                    <TextBlock x:Name="DetailTitle" Grid.Row="0"
-                               Text="选择左侧记录查看详情" FontSize="15"
-                               Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                    <Grid Grid.Row="0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Name="DetailTitle" Grid.Column="0"
+                                   Text="选择左侧记录查看详情" FontSize="15"
+                                   VerticalAlignment="Center"
+                                   Foreground="{DynamicResource OasTextPrimaryBrush}" />
+                        <!-- 对齐 Flutter：复制日志 / 保存日志 / 保存截图 -->
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <ui:Button x:Name="CopyLogButton" MinWidth="88" Height="30"
+                                       Content="复制日志" IsEnabled="False"
+                                       ToolTip="把 log.txt 全文复制到剪贴板"
+                                       Click="CopyLog_Click" />
+                            <ui:Button x:Name="SaveLogButton" MinWidth="88" Height="30"
+                                       Margin="8,0,0,0" Content="保存日志" IsEnabled="False"
+                                       ToolTip="另存为 .txt 文件"
+                                       Click="SaveLog_Click" />
+                            <ui:Button x:Name="SaveAllImagesButton" MinWidth="88" Height="30"
+                                       Margin="8,0,0,0" Content="保存截图" IsEnabled="False"
+                                       ToolTip="把该记录的所有截图保存到指定目录"
+                                       Click="SaveAllImages_Click" />
+                        </StackPanel>
+                    </Grid>
                     <TextBlock x:Name="DetailMeta" Grid.Row="1" FontSize="11"
                                Margin="0,4,0,8"
                                Foreground="{DynamicResource OasTextTertiaryBrush}" />

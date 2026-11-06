@@ -21,6 +21,9 @@ public partial class ErrorPage : UserControl
         public OasErrorApi.ErrorItem Source { get; init; } = null!;
     }
 
+    /// <summary>当前打开的详情（复制/保存用）。</summary>
+    private OasErrorApi.ErrorDetail? _current;
+
     public ErrorPage()
     {
         InitializeComponent();
@@ -80,6 +83,10 @@ public partial class ErrorPage : UserControl
         DetailMeta.Text = "";
         LogText.Text = "";
         ImagePanel.Children.Clear();
+        _current = null;
+        CopyLogButton.IsEnabled = false;
+        SaveLogButton.IsEnabled = false;
+        SaveAllImagesButton.IsEnabled = false;
 
         var detail = await OasErrorApi.DetailAsync(row.Id);
         if (detail is null)
@@ -94,7 +101,11 @@ public partial class ErrorPage : UserControl
         DetailMeta.Text = $"{detail.Log?.FileName ?? "log.txt"} · "
                           + $"{detail.Log?.Content.Length ?? 0} 字符 · "
                           + $"{detail.Images.Count} 张截图";
+        _current = detail;
         LogText.Text = detail.Log?.Content ?? "（无内容）";
+        CopyLogButton.IsEnabled = true;
+        SaveLogButton.IsEnabled = true;
+        SaveAllImagesButton.IsEnabled = detail.Images.Count > 0;
 
         // 截图：逐张加载
         foreach (var img in detail.Images)
@@ -133,5 +144,82 @@ public partial class ErrorPage : UserControl
         {
             return null;
         }
+    }
+
+    // ==================== 复制 / 保存（对齐 Flutter error_records_panel） ====================
+
+    /// <summary>把当前错误日志复制到剪贴板。</summary>
+    private void CopyLog_Click(object sender, RoutedEventArgs e)
+    {
+        var text = _current?.Log?.Content;
+        if (string.IsNullOrEmpty(text)) return;
+        try
+        {
+            Clipboard.SetText(text);
+            DetailMeta.Text = "已复制日志到剪贴板";
+        }
+        catch (Exception ex)
+        {
+            DetailMeta.Text = $"复制失败：{ex.Message}";
+        }
+    }
+
+    /// <summary>另存为 .txt（默认文件名对齐 Flutter：错误日志-{id}.txt）。</summary>
+    private void SaveLog_Click(object sender, RoutedEventArgs e)
+    {
+        var detail = _current;
+        var text = detail?.Log?.Content;
+        if (detail is null || string.IsNullOrEmpty(text)) return;
+
+        var dlg = new Microsoft.Win32.SaveFileDialog
+        {
+            Title = "保存错误日志",
+            FileName = $"错误日志-{detail.Id}.txt",
+            Filter = "文本文件 (*.txt)|*.txt|所有文件 (*.*)|*.*",
+        };
+        if (dlg.ShowDialog() != true) return;
+        try
+        {
+            System.IO.File.WriteAllText(dlg.FileName, text, System.Text.Encoding.UTF8);
+            DetailMeta.Text = $"已保存到 {dlg.FileName}";
+        }
+        catch (Exception ex)
+        {
+            DetailMeta.Text = $"保存失败：{ex.Message}";
+        }
+    }
+
+    /// <summary>把该记录的所有截图保存到用户选择的目录。</summary>
+    private async void SaveAllImages_Click(object sender, RoutedEventArgs e)
+    {
+        var detail = _current;
+        if (detail is null || detail.Images.Count == 0) return;
+
+        var dlg = new Microsoft.Win32.OpenFolderDialog { Title = "选择截图保存目录" };
+        if (dlg.ShowDialog() != true) return;
+
+        var ok = 0;
+        var fail = 0;
+        foreach (var img in detail.Images)
+        {
+            try
+            {
+                var bytes = await OasApi.Http.GetByteArrayAsync(
+                    OasErrorApi.ImageUrl(detail.Id, img.Name));
+                var safe = img.Name;
+                foreach (var ch in new[] { '<', '>', ':', '"', '/', '\\', '|', '?', '*' })
+                    safe = safe.Replace(ch, '_');
+                var path = System.IO.Path.Combine(dlg.FolderName, safe);
+                await System.IO.File.WriteAllBytesAsync(path, bytes);
+                ok++;
+            }
+            catch
+            {
+                fail++;
+            }
+        }
+        DetailMeta.Text = fail == 0
+            ? $"已保存 {ok} 张截图到 {dlg.FolderName}"
+            : $"已保存 {ok} 张，{fail} 张失败";
     }
 }
