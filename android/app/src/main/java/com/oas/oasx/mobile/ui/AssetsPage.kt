@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Card
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -28,24 +27,34 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.oas.oasx.mobile.data.AccountContext
-import com.oas.oasx.mobile.data.ResourceAggregator
 import com.oas.oasx.mobile.data.CollectApi
+import com.oas.oasx.mobile.data.ResourceAggregator
 import com.oas.oasx.mobile.net.Api
 import com.oas.oasx.mobile.net.LedgerResp
 import com.oas.oasx.mobile.net.ResourceDatesResp
 import com.oas.oasx.mobile.net.ResourceDay
+import com.oas.oasx.mobile.ui.components.OasBody
+import com.oas.oasx.mobile.ui.components.OasCaption
+import com.oas.oasx.mobile.ui.components.OasCard
+import com.oas.oasx.mobile.ui.components.OasCardLevel
+import com.oas.oasx.mobile.ui.components.OasError
+import com.oas.oasx.mobile.ui.components.OasLabel
+import com.oas.oasx.mobile.ui.components.OasMetric
+import com.oas.oasx.mobile.ui.components.OasPageTitle
+import com.oas.oasx.mobile.ui.components.OasStateBlock
+import com.oas.oasx.mobile.ui.theme.Spacing
 import java.io.InputStream
 
-/// 资产页：账号维度，三种模式（单日快照 / 7天 / 30天）+ 货币图标。
-/// 账号统一来自 AccountContext（单一来源），本页不自行拉角色列表。
+/// 资产页：账号维度，三视图（单日/7天/30天）+ 货币图标 + 采集控制。
+/// 全部使用 M3 语义组件。
 @Composable
 fun AssetsPage(backend: String) {
     val acct by AccountContext.state.collectAsStateWithLifecycle()
     val account = acct.current
     val acctKey = account?.key
+    val context = LocalContext.current
 
     var mode by remember { mutableIntStateOf(0) }
     var rows by remember(acctKey, mode) { mutableStateOf<List<RowModel>?>(null) }
@@ -53,8 +62,7 @@ fun AssetsPage(backend: String) {
     var error by remember(acctKey, mode) { mutableStateOf<String?>(null) }
     var loading by remember(acctKey, mode) { mutableStateOf(false) }
     var showPicker by remember { mutableStateOf(false) }
-    val context = androidx.compose.ui.platform.LocalContext.current
-    // ── 采集控制 ──
+
     var collecting by remember(acctKey) { mutableStateOf<Boolean?>(null) }
     var collectMsg by remember(acctKey) { mutableStateOf("") }
     var collectBusy by remember(acctKey) { mutableStateOf(false) }
@@ -62,9 +70,9 @@ fun AssetsPage(backend: String) {
     LaunchedEffect(acctKey, backend) {
         val acc = account ?: return@LaunchedEffect
         try {
-            collecting = kotlinx.coroutines.withContext(
-                kotlinx.coroutines.Dispatchers.IO,
-            ) { CollectApi.status(acc.config).running }
+            collecting = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                CollectApi.status(acc.config).running
+            }
         } catch (e: Exception) {
             collecting = null
         }
@@ -101,11 +109,7 @@ fun AssetsPage(backend: String) {
                     val dates = Api.getJsonOrThrow<ResourceDatesResp>(
                         "/resource/${enc(acc.config)}/dates?role_key=" + enc(acc.roleKey))
                     val d = dates.dates.firstOrNull() ?: ""
-                    if (d.isEmpty()) {
-                        null
-                    } else {
-                        loadDay(context, acc.config, acc.roleKey, d)
-                    }
+                    if (d.isEmpty()) null else loadDay(context, acc.config, acc.roleKey, d)
                 } else {
                     loadLedger(context, acc.config, acc.roleKey, if (mode == 1) 7 else 30)
                 }
@@ -122,163 +126,134 @@ fun AssetsPage(backend: String) {
         loading = false
     }
 
-    Column(Modifier.fillMaxSize().padding(16.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("资产", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
-            if (acct.accounts.isNotEmpty()) {
-                Text(
-                    "切换账号",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.clickable { showPicker = true },
-                )
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(Spacing.md),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ) {
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                OasPageTitle("资产", Modifier.weight(1f))
+                if (acct.accounts.isNotEmpty()) {
+                    TextButton(onClick = { showPicker = true }) {
+                        Text("切换账号", style = MaterialTheme.typography.labelLarge)
+                    }
+                }
             }
-        }
-
-        // 账号行
-        Text(
-            account?.let { "${it.name} Lv${it.level} · ${it.serverName} · ${it.config}" }
-                ?: when {
-                    acct.loading -> "账号加载中…"
-                    acct.error != null -> "账号加载失败"
-                    acct.loaded -> "无可用账号"
-                    else -> "准备中…"
-                },
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        // ── 采集控制行 ──
-        Row(
-            Modifier.fillMaxWidth().padding(top = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                when (collecting) {
-                    true -> "● 采集中"
-                    false -> "○ 未采集"
-                    null -> "? 状态未知"
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = if (collecting == true) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
+            OasCaption(
+                account?.let { "${it.name} Lv${it.level} · ${it.serverName} · ${it.config}" }
+                    ?: when {
+                        acct.loading -> "账号加载中…"
+                        acct.error != null -> "账号加载失败"
+                        acct.loaded -> "无可用账号"
+                        else -> "准备中…"
+                    },
             )
-            TextButton(
-                enabled = !collectBusy,
-                onClick = { runCollect({ c -> CollectApi.collectNow(c) }, "已请求采集") },
-            ) { Text("立即采集", style = MaterialTheme.typography.bodySmall) }
-            TextButton(
-                enabled = !collectBusy,
-                onClick = { runCollect({ c -> CollectApi.start(c) }, "已启动采集") },
-            ) { Text("启动", style = MaterialTheme.typography.bodySmall) }
-            TextButton(
-                enabled = !collectBusy,
-                onClick = { runCollect({ c -> CollectApi.stop(c) }, "已停止采集") },
-            ) { Text("停止", style = MaterialTheme.typography.bodySmall) }
-        }
-        if (collectMsg.isNotBlank()) {
-            Text(collectMsg, style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
-        // 模式 chips
-        Row(
-            Modifier.fillMaxWidth().padding(top = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            listOf("单日快照" to 0, "近 7 天" to 1, "近 30 天" to 2).forEach { (label, index) ->
-                FilterChip(
-                    selected = mode == index,
-                    onClick = { mode = index },
-                    label = { Text(label, style = MaterialTheme.typography.bodySmall) },
-                )
+        // 采集控制
+        if (account != null) {
+            item {
+                OasCard {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        OasLabel("采集")
+                        Text(
+                            when (collecting) {
+                                true -> "● 采集中"
+                                false -> "○ 未采集"
+                                null -> "? 未知"
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (collecting == true) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(start = Spacing.sm),
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                        TextButton(
+                            enabled = !collectBusy,
+                            onClick = {
+                                runCollect({ c -> CollectApi.collectNow(c) }, "已请求采集")
+                            },
+                        ) { Text("立即采集", style = MaterialTheme.typography.labelLarge) }
+                        TextButton(
+                            enabled = !collectBusy,
+                            onClick = { runCollect({ c -> CollectApi.start(c) }, "已启动采集") },
+                        ) { Text("启动", style = MaterialTheme.typography.labelLarge) }
+                        TextButton(
+                            enabled = !collectBusy,
+                            onClick = { runCollect({ c -> CollectApi.stop(c) }, "已停止采集") },
+                        ) { Text("停止", style = MaterialTheme.typography.labelLarge) }
+                    }
+                    if (collectMsg.isNotBlank()) OasCaption(collectMsg)
+                }
             }
         }
-        if (header.isNotBlank()) {
-            Text(header, style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp))
+
+        // 视图模式
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                listOf("单日快照" to 0, "近 7 天" to 1, "近 30 天" to 2).forEach { (label, index) ->
+                    FilterChip(
+                        selected = mode == index,
+                        onClick = { mode = index },
+                        label = { Text(label) },
+                    )
+                }
+            }
         }
 
         when {
-            account == null -> {
-                Card(Modifier.fillMaxWidth().padding(top = 12.dp)) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text(
-                            when {
-                                acct.loading -> "正在加载账号…"
-                                acct.error != null -> "账号加载失败"
-                                acct.loaded -> "没有可用账号"
-                                else -> "准备中…"
-                            },
-                            style = MaterialTheme.typography.titleSmall,
-                            color = if (acct.error != null) MaterialTheme.colorScheme.error
-                                    else MaterialTheme.colorScheme.onSurface,
-                        )
-                        acct.error?.let {
-                            Text(it, style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        if (!acct.loading) {
-                            TextButton(onClick = {
-                                AccountContext.refreshInBackground()
-                            }) {
-                                Text(if (acct.error != null) "重试" else "重新加载")
-                            }
-                        }
-                    }
-                }
+            account == null -> item {
+                OasStateBlock(
+                    loading = acct.loading,
+                    error = acct.error,
+                    emptyText = if (acct.loaded) "没有可用账号" else null,
+                    onRetry = if (acct.loading) null else {
+                        { AccountContext.refreshInBackground() }
+                    },
+                )
             }
-            error != null -> {
-                Card(Modifier.fillMaxWidth().padding(top = 12.dp)) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text("读取失败", style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error)
-                        Text(error ?: "", style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
+            loading -> item {
+                OasStateBlock(loading = true, error = null)
             }
-            loading || rows == null -> {
-                Text("读取中…", style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 12.dp))
+            error != null -> item {
+                OasCard { OasError(error ?: "") }
+            }
+            rows.isNullOrEmpty() -> item {
+                OasStateBlock(loading = false, error = null, emptyText = "该区间没有资源数据")
             }
             else -> {
-                val data = rows ?: emptyList()
-                if (data.isEmpty()) {
-                    Text("该区间没有资源数据", style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 12.dp))
-                } else {
-                    LazyColumn(Modifier.fillMaxSize().padding(top = 4.dp)) {
-                        items(data) { row ->
-                            Row(
-                                Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                CurrencyIcon(row.icon, modifier = Modifier.size(28.dp))
-                                Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
-                                    Text(row.name, style = MaterialTheme.typography.bodyMedium)
-                                    if (mode != 0) {
-                                        Text("起 ${fmt(row.base)}", style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    }
-                                }
-                                Column(horizontalAlignment = Alignment.End) {
-                                    Text(fmt(row.count), style = MaterialTheme.typography.titleMedium)
-                                    if (mode != 0) {
-                                        Text(
-                                            if (row.delta == 0L) "持平"
-                                            else (if (row.delta > 0L) "+" else "") + fmt(row.delta),
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = if (row.delta >= 0L)
-                                                MaterialTheme.colorScheme.primary
-                                                else MaterialTheme.colorScheme.error,
-                                        )
-                                    }
-                                }
+                if (header.isNotBlank()) {
+                    item { OasCaption(header) }
+                }
+                items(rows ?: emptyList()) { row ->
+                    Row(
+                        Modifier.fillMaxWidth().padding(vertical = Spacing.xs),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        CurrencyIcon(row.icon, modifier = Modifier.size(32.dp))
+                        Column(Modifier.weight(1f).padding(horizontal = Spacing.sm)) {
+                            OasBody(row.name)
+                            if (mode != 0) {
+                                OasCaption("起 ${fmt(row.base)}")
+                            }
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                fmt(row.count),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            if (mode != 0) {
+                                Text(
+                                    if (row.delta == 0L) "持平"
+                                    else (if (row.delta > 0L) "+" else "") + fmt(row.delta),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (row.delta >= 0L)
+                                        MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.error,
+                                )
                             }
                         }
                     }
@@ -324,15 +299,14 @@ private fun loadDay(
 ): Pair<List<RowModel>, String> {
     val day = Api.getJsonOrThrow<ResourceDay>(
         "/resource/${enc(config)}?date=$date&role_key=" + enc(roleKey))
-    // 对齐 WPF：图标白名单 + (图标,名称) 聚合 + 按图标去重
     val cards = ResourceAggregator.aggregate(
         context = context,
         raw = day.items.map { Triple(it.id, it.name, it.count) },
         deltas = day.items.associate { it.name to (it.delta ?: 0L) },
         icons = day.items.associate { it.name to it.icon },
     )
-    val rows = cards.map { RowModel(it.name, it.count, 0, 0, it.icon) }
-    return rows to "${day.date} · 采集于 ${day.updatedAt.ifBlank { "—" }}"
+    return cards.map { RowModel(it.name, it.count, 0, 0, it.icon) } to
+        "${day.date} · 采集于 ${day.updatedAt.ifBlank { "—" }}"
 }
 
 private fun loadLedger(
@@ -343,24 +317,15 @@ private fun loadLedger(
 ): Pair<List<RowModel>, String> {
     val ledger = Api.getJsonOrThrow<LedgerResp>(
         "/resource/${enc(config)}/ledger?days=$days&role_key=" + enc(roleKey))
-    // 账本项没有 icon 字段，白名单按 name 无法判定——沿用后端已过滤的 delta 项，
-    // 但补齐图标名以便展示（ledger 的 icon 由后端在 items 内提供）
     val cards = ResourceAggregator.aggregate(
         context = context,
         raw = ledger.items.map { Triple(it.id, it.name, it.count) },
         deltas = ledger.items.associate { it.name to (it.delta ?: 0L) },
-        icons = ledger.items.associate { it.name to (it.icon ?: "") },
+        icons = ledger.items.associate { it.name to it.icon },
     )
-    val rows = cards.map {
-        RowModel(
-            name = it.name,
-            count = it.count,
-            delta = it.delta,
-            base = it.count - it.delta,
-            icon = it.icon,
-        )
-    }
-    return rows to "近 $days 天 · 基线 ${ledger.baseDate.ifBlank { "缺失" }} → ${ledger.lastDate}"
+    return cards.map {
+        RowModel(it.name, it.count, it.delta, it.count - it.delta, it.icon)
+    } to "近 $days 天 · 基线 ${ledger.baseDate.ifBlank { "缺失" }} → ${ledger.lastDate}"
 }
 
 /// 从 assets/currency/{name}.png 读取；缺失显示首字占位。
@@ -394,7 +359,7 @@ fun CurrencyIcon(base: String?, modifier: Modifier = Modifier) {
         ) {
             Text(
                 baseName.firstOrNull()?.toString() ?: "?",
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }

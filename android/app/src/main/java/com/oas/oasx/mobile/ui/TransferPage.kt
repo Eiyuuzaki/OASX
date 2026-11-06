@@ -91,14 +91,14 @@ fun TransferPage(onBack: () -> Unit, context: Context) {
         Text(
             "← 返回",
             Modifier.padding(end = 8.dp),
-            fontSize = 14.sp,
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.primary,
         )
-        Text("配置传输", fontSize = 22.sp)
+        Text("配置传输", style = MaterialTheme.typography.headlineSmall)
         Text(
             caps?.let { "后端支持 v${it.version} · 上限 ${it.maxBytes / 1024} KB" }
                 ?: "读取后端能力…",
-            fontSize = 12.sp,
+            style = MaterialTheme.typography.bodySmall,
             color = if (capOk) MaterialTheme.colorScheme.onSurfaceVariant
                     else MaterialTheme.colorScheme.error,
         )
@@ -127,15 +127,15 @@ fun TransferPage(onBack: () -> Unit, context: Context) {
         // ── 范围 + 模式 ──
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(selected = byTask == 0, onClick = { byTask = 0 },
-                label = { Text("整份配置", fontSize = 12.sp) })
+                label = { Text("整份配置", style = MaterialTheme.typography.bodySmall) })
             FilterChip(selected = byTask == 1, onClick = { byTask = 1 },
-                label = { Text("单个任务", fontSize = 12.sp) })
+                label = { Text("单个任务", style = MaterialTheme.typography.bodySmall) })
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(selected = mode == "backup", onClick = { mode = "backup" },
-                label = { Text("备份（含敏感）", fontSize = 12.sp) })
+                label = { Text("备份（含敏感）", style = MaterialTheme.typography.bodySmall) })
             FilterChip(selected = mode == "share", onClick = { mode = "share" },
-                label = { Text("分享（脱敏）", fontSize = 12.sp) })
+                label = { Text("分享（脱敏）", style = MaterialTheme.typography.bodySmall) })
         }
 
         if (byTask == 1) {
@@ -196,7 +196,7 @@ fun TransferPage(onBack: () -> Unit, context: Context) {
                         }
                     }.start()
                 },
-            ) { Text("导出到文件", fontSize = 13.sp) }
+            ) { Text("导出到文件", style = MaterialTheme.typography.bodyMedium) }
 
             TextButton(
                 enabled = capOk && !busy && config != null,
@@ -222,14 +222,14 @@ fun TransferPage(onBack: () -> Unit, context: Context) {
                         }
                     }.start()
                 },
-            ) { Text("预览", fontSize = 13.sp) }
+            ) { Text("预览", style = MaterialTheme.typography.bodyMedium) }
         }
 
         // ── 预览区 ──
         if (preview.isNotBlank()) {
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(10.dp)) {
-                    Text(preview, fontSize = 10.sp, lineHeight = 14.sp,
+                    Text(preview, style = MaterialTheme.typography.labelSmall,
                         fontFamily = FontFamily.Monospace,
                         color = MaterialTheme.colorScheme.onSurface)
                 }
@@ -237,12 +237,12 @@ fun TransferPage(onBack: () -> Unit, context: Context) {
         }
 
         // ── 导入 ──
-        Text("导入", fontSize = 14.sp, color = MaterialTheme.colorScheme.primary,
+        Text("导入", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(top = 8.dp))
         Text(
             if (byTask == 1) "把任务参数写入所选配置"
             else "整份导入会新建配置（不覆盖已有）",
-            fontSize = 11.sp,
+            style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         TextButton(
@@ -284,10 +284,10 @@ fun TransferPage(onBack: () -> Unit, context: Context) {
                     }
                 }.start()
             },
-        ) { Text("选择文件并导入", fontSize = 13.sp) }
+        ) { Text("选择文件并导入", style = MaterialTheme.typography.bodyMedium) }
 
         if (status.isNotBlank()) {
-            Text(status, fontSize = 12.sp,
+            Text(status, style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }

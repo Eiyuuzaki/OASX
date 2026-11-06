@@ -1,6 +1,7 @@
 package com.oas.oasx.mobile.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -8,11 +9,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -23,14 +25,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.oas.oasx.mobile.data.AccountContext
 import com.oas.oasx.mobile.data.I18n
 import com.oas.oasx.mobile.data.SchedulerSocket
 import com.oas.oasx.mobile.net.Api
+import com.oas.oasx.mobile.ui.components.OasBody
+import com.oas.oasx.mobile.ui.components.OasCaption
+import com.oas.oasx.mobile.ui.components.OasCard
+import com.oas.oasx.mobile.ui.components.OasPageTitle
+import com.oas.oasx.mobile.ui.components.OasSectionTitle
+import com.oas.oasx.mobile.ui.components.OasStateBlock
+import com.oas.oasx.mobile.ui.theme.Spacing
 
-/// 任务页：任务分组（/script_menu）+ 脚本启停 + 运行中高亮 + 参数只读查看。
+/// 任务页：任务分组 + 启停（停止有确认）+ 运行高亮 + 参数编辑入口。
 @Composable
 fun TasksPage(backend: String) {
     val acct by AccountContext.state.collectAsStateWithLifecycle()
@@ -39,15 +47,16 @@ fun TasksPage(backend: String) {
     val i18nMap by I18n.map.collectAsState()
     val t: (String) -> String = { key -> i18nMap[key] ?: key }
 
-    LaunchedEffect(Unit) { I18n.ensureLoaded() }
-
     var menu by remember(script) { mutableStateOf<Map<String, List<String>>?>(null) }
+    var menuLoading by remember(script) { mutableStateOf(false) }
     var status by remember(script) { mutableStateOf("") }
     var confirmStop by remember(script) { mutableStateOf(false) }
     var argsTask by remember(script) { mutableStateOf<String?>(null) }
 
-    // 运行中任务（WS 实时）
     var runningTask by remember(script) { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) { I18n.ensureLoaded() }
+
     LaunchedEffect(script, backend) {
         if (script == null) return@LaunchedEffect
         SchedulerSocket().connect(script, backend).collect { snap ->
@@ -57,6 +66,7 @@ fun TasksPage(backend: String) {
 
     LaunchedEffect(script) {
         if (script == null) return@LaunchedEffect
+        menuLoading = true
         try {
             menu = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 Api.getJsonOrThrow<Map<String, List<String>>>("/script_menu")
@@ -64,9 +74,10 @@ fun TasksPage(backend: String) {
         } catch (e: Exception) {
             status = "任务菜单加载失败：${e.message?.take(60)}"
         }
+        menuLoading = false
     }
 
-    // 参数只读视图（点任务名进入）
+    // 参数编辑子页
     if (argsTask != null && script != null) {
         ArgsEditor(
             script = script,
@@ -76,77 +87,87 @@ fun TasksPage(backend: String) {
         return
     }
 
-    Column(Modifier.fillMaxSize().padding(16.dp)) {
-        Text("任务", style = MaterialTheme.typography.headlineSmall)
-        Text(
-            "调度器 ${script ?: "—"} · 点任务名查看参数（只读）",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 12.dp),
-        )
-
-        Row(Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
-            Button(
-                onClick = {
-                    if (script == null) return@Button
-                    Thread {
-                        try {
-                            Api.get("/$script/start")
-                            status = "已发送启动"
-                        } catch (e: Exception) {
-                            status = "启动失败：${e.message?.take(60)}"
-                        }
-                    }.start()
-                },
-                modifier = Modifier.weight(1f),
-            ) { Text("启动") }
-            androidx.compose.foundation.layout.Spacer(Modifier.padding(6.dp))
-            OutlinedButton(
-                onClick = { confirmStop = true },
-                modifier = Modifier.weight(1f),
-            ) { Text("停止") }
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(Spacing.md),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ) {
+        item {
+            OasPageTitle("任务")
+            OasCaption("调度器 ${script ?: "—"} · 点任务名编辑参数")
         }
 
-        if (status.isNotEmpty()) {
-            Text(status, style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 8.dp))
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                Button(
+                    onClick = {
+                        if (script == null) return@Button
+                        Thread {
+                            try {
+                                Api.get("/$script/start")
+                                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                                    status = "已发送启动"
+                                }
+                            } catch (e: Exception) {
+                                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                                    status = "启动失败：${e.message?.take(60)}"
+                                }
+                            }
+                        }.start()
+                    },
+                    modifier = Modifier.weight(1f),
+                    enabled = script != null,
+                ) { Text("启动") }
+                OutlinedButton(
+                    onClick = { confirmStop = true },
+                    modifier = Modifier.weight(1f),
+                    enabled = script != null,
+                ) { Text("停止") }
+            }
+            if (status.isNotEmpty()) {
+                OasCaption(status, Modifier.padding(top = Spacing.xs))
+            }
         }
 
-        val m = menu
-        if (m == null) {
-            Text("任务菜单加载中…", style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-            return@Column
-        }
-
-        LazyColumn {
-            m.forEach { (group, tasks) ->
-                item {
-                    Text(t(group), style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
-                }
-                items(tasks) { task ->
-                    val isRunning = runningTask == task
-                    Card(
-                        Modifier.fillMaxWidth().padding(vertical = 2.dp)
-                            .clickable { argsTask = task },
-                    ) {
-                        Row(
-                            Modifier.fillMaxWidth().padding(12.dp, 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
+        when {
+            script == null -> item {
+                OasStateBlock(
+                    loading = false,
+                    error = null,
+                    emptyText = "先在首页选择账号",
+                )
+            }
+            menuLoading -> item { OasStateBlock(loading = true, error = null) }
+            menu == null -> item {
+                OasStateBlock(loading = false, error = null, emptyText = "任务菜单加载失败")
+            }
+            else -> {
+                (menu ?: emptyMap()).forEach { (group, tasks) ->
+                    item {
+                        OasSectionTitle(t(group), Modifier.padding(top = Spacing.sm))
+                    }
+                    items(tasks) { task ->
+                        val isRunning = runningTask == task
+                        OasCard(
+                            modifier = Modifier.clickable { argsTask = task },
                         ) {
-                            Text(
-                                t(task),
-                                Modifier.weight(1f),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = if (isRunning) MaterialTheme.colorScheme.primary
-                                        else MaterialTheme.colorScheme.onSurface,
-                            )
-                            if (isRunning) {
-                                Text("● 运行中", style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.primary)
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                OasBody(
+                                    t(task),
+                                    Modifier.weight(1f),
+                                    color = if (isRunning) MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.onSurface,
+                                )
+                                if (isRunning) {
+                                    Text(
+                                        "● 运行中",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                    )
+                                }
                             }
                         }
                     }
@@ -155,29 +176,30 @@ fun TasksPage(backend: String) {
         }
     }
 
-    // 停止确认对话框
     if (confirmStop && script != null) {
-        androidx.compose.material3.AlertDialog(
+        AlertDialog(
             onDismissRequest = { confirmStop = false },
             title = { Text("停止脚本") },
             text = { Text("确认停止 $script 的脚本执行？") },
             confirmButton = {
-                androidx.compose.material3.TextButton(onClick = {
+                TextButton(onClick = {
                     confirmStop = false
                     Thread {
                         try {
                             Api.get("/$script/stop")
-                            status = "已发送停止"
+                            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                                status = "已发送停止"
+                            }
                         } catch (e: Exception) {
-                            status = "停止失败：${e.message?.take(60)}"
+                            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                                status = "停止失败：${e.message?.take(60)}"
+                            }
                         }
                     }.start()
                 }) { Text("确认停止") }
             },
             dismissButton = {
-                androidx.compose.material3.TextButton(onClick = { confirmStop = false }) {
-                    Text("取消")
-                }
+                TextButton(onClick = { confirmStop = false }) { Text("取消") }
             },
         )
     }

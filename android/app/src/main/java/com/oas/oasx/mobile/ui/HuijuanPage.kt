@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Card
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -22,16 +21,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.oas.oasx.mobile.data.AccountContext
 import com.oas.oasx.mobile.data.HuijuanApi
+import com.oas.oasx.mobile.ui.components.OasBody
+import com.oas.oasx.mobile.ui.components.OasCaption
+import com.oas.oasx.mobile.ui.components.OasCard
+import com.oas.oasx.mobile.ui.components.OasPageTitle
+import com.oas.oasx.mobile.ui.components.OasSectionTitle
+import com.oas.oasx.mobile.ui.components.OasStateBlock
+import com.oas.oasx.mobile.ui.theme.Spacing
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/// 绘卷：区服棋盘进度（每个卷的达成度 + 个人贡献）。
-///
-/// 非活动期（所有卷 end_text 已过）显示明确提示，不展示上期遗留分数。
+/// 绘卷：区服棋盘进度。非活动期不展示上期遗留分数。
 @Composable
 fun HuijuanPage(onBack: () -> Unit) {
     val acct by AccountContext.state.collectAsStateWithLifecycle()
@@ -53,104 +56,63 @@ fun HuijuanPage(onBack: () -> Unit) {
         loading = false
     }
 
-    Column(Modifier.fillMaxSize().padding(16.dp)) {
+    Column(
+        Modifier.fillMaxSize().padding(horizontal = Spacing.md, vertical = Spacing.sm),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                "← 返回",
-                Modifier.padding(end = 12.dp),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Text("绘卷", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
-            TextButton(onClick = { reload++ }) { Text("刷新", style = MaterialTheme.typography.bodySmall) }
+            TextButton(onClick = onBack) {
+                Text("返回", style = MaterialTheme.typography.labelLarge)
+            }
+            OasPageTitle("绘卷", Modifier.weight(1f))
+            TextButton(onClick = { reload++ }) {
+                Text("刷新", style = MaterialTheme.typography.labelLarge)
+            }
         }
-        Text(
-            account?.let { "${it.name} · ${it.serverName}" } ?: "未选择账号",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        OasCaption(account?.let { "${it.name} · ${it.serverName}" } ?: "未选择账号")
 
-        error?.let {
-            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(top = 8.dp))
-        }
+        error?.let { OasCaption(it) }
 
         val b = board
         when {
-            loading && b == null -> Text("读取中…", style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 12.dp))
-            b == null -> Text("暂无数据", style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 12.dp))
-            !b.success -> Text(b.error ?: "读取失败", style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(top = 12.dp))
-            !HuijuanApi.isActive(b) -> {
-                // 非活动期：不展示上期遗留分数
-                Text(
-                    "当前不在绘卷活动期",
-                    style = MaterialTheme.typography.titleSmall,
-                    modifier = Modifier.padding(top = 16.dp),
-                )
-                Text(
-                    "活动结束后不再显示上期分数。下一次活动开启后自动恢复。",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp),
-                )
+            loading && b == null -> OasStateBlock(loading = true, error = null)
+            b == null -> OasStateBlock(
+                loading = false, error = null, emptyText = "暂无数据")
+            !b.success -> OasStateBlock(
+                loading = false, error = b.error ?: "读取失败")
+            !HuijuanApi.isActive(b) -> OasCard {
+                OasSectionTitle("当前不在绘卷活动期")
+                OasCaption("活动结束后不再显示上期分数。下一次活动开启后自动恢复。")
             }
             else -> {
-                Text(
-                    "第 ${b.issue} 期 · 目标 ${fmt(b.threshold)}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
-                )
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OasCaption("第 ${b.issue} 期 · 目标 ${fmt(b.threshold)}")
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     items(b.scrolls) { sc ->
-                        Card(Modifier.fillMaxWidth()) {
-                            Column(Modifier.padding(12.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
+                        OasCard {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                OasBody(sc.name.ifBlank { "卷 ${sc.id}" }, Modifier.weight(1f))
+                                if (sc.finished) {
                                     Text(
-                                        sc.name.ifBlank { "卷 ${sc.id}" },
-                                        Modifier.weight(1f),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                    )
-                                    if (sc.finished) {
-                                        Text("✓ 已达成", style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.primary)
-                                    }
-                                }
-                                Text(
-                                    "区服 ${fmt(sc.score)} · ${"%.2f".format(sc.percent)}%",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(top = 2.dp),
-                                )
-                                LinearProgressIndicator(
-                                    progress = { (sc.percent / 100.0).toFloat().coerceIn(0f, 1f) },
-                                    modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
-                                )
-                                Row(Modifier.fillMaxWidth().padding(top = 6.dp)) {
-                                    Text(
-                                        "我的贡献 ${fmt(sc.selfScore)}",
+                                        "✓ 已达成",
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.weight(1f),
+                                        color = MaterialTheme.colorScheme.primary,
                                     )
-                                    sc.selfRank?.let {
-                                        Text("排名 $it", style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    }
                                 }
-                                Text(
-                                    "${sc.beginText} → ${sc.endText}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(top = 2.dp),
-                                )
                             }
+                            OasCaption("区服 ${fmt(sc.score)} · " +
+                                "${"%.2f".format(sc.percent)}%")
+                            LinearProgressIndicator(
+                                progress = { (sc.percent / 100.0).toFloat().coerceIn(0f, 1f) },
+                                modifier = Modifier.fillMaxWidth()
+                                    .padding(vertical = Spacing.xs),
+                            )
+                            Row(Modifier.fillMaxWidth()) {
+                                OasCaption("我的贡献 ${fmt(sc.selfScore)}", Modifier.weight(1f))
+                                sc.selfRank?.let {
+                                    OasCaption("排名 $it")
+                                }
+                            }
+                            OasCaption("${sc.beginText} → ${sc.endText}")
                         }
                     }
                 }

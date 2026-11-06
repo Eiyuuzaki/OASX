@@ -25,6 +25,11 @@ object Prefs {
         get() = prefs.getString("themeMode", "system") ?: "system"
         set(value) = prefs.edit().putString("themeMode", value).apply()
 
+    /// 是否启用 M3 动态取色（Android 12+）。
+    var dynamicColor: Boolean
+        get() = prefs.getBoolean("dynamicColor", true)
+        set(value) = prefs.edit().putBoolean("dynamicColor", value).apply()
+
     /// 当前账号（config 名 + role_key），跨启动记忆。
     var currentConfig: String?
         get() = prefs.getString("currentConfig", null)

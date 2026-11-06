@@ -72,7 +72,11 @@ fun ArgsEditor(script: String, task: String, onBack: () -> Unit) {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.primary,
         )
-        Text(I18n.t(task), fontSize = 20.sp, modifier = Modifier.padding(top = 8.dp))
+        Text(
+            I18n.t(task),
+            style = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier.padding(top = 8.dp),
+        )
         Text(
             "参数 · $script · 点任意项修改",
             style = MaterialTheme.typography.bodySmall,

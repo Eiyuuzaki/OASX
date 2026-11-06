@@ -101,11 +101,15 @@ fun OasMetric(
 
 /// 正文：bodyMedium
 @Composable
-fun OasBody(text: String, modifier: Modifier = Modifier) {
+fun OasBody(
+    text: String,
+    modifier: Modifier = Modifier,
+    color: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurface,
+) {
     Text(
         text = text,
         style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurface,
+        color = color,
         modifier = modifier,
     )
 }

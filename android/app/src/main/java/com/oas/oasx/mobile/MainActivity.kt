@@ -27,7 +27,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
@@ -45,22 +44,21 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Android 15+ 默认强制 edge-to-edge：显式开启并交由 Scaffold 处理 inset，
-        // 避免内容绘制到状态栏下方造成标题与状态栏重叠。
         enableEdgeToEdge()
         Prefs.init(this)
         Api.baseUrl = Prefs.backend
 
         setContent {
             var themeMode by remember { mutableStateOf(Prefs.themeMode) }
+            var dynamicColor by remember { mutableStateOf(Prefs.dynamicColor) }
             var backend by remember { mutableStateOf(Prefs.backend) }
             val dark = when (themeMode) {
                 "light" -> false
                 "dark" -> true
                 else -> isSystemInDarkTheme()
             }
-            OasxTheme(darkTheme = dark) {
-                // 状态栏图标明暗跟随主题：浅色主题用深色图标，否则白字看不清。
+            OasxTheme(darkTheme = dark, dynamicColor = dynamicColor) {
+                // 状态栏图标明暗跟随主题
                 val view = LocalView.current
                 SideEffect {
                     val window = (view.context as? ComponentActivity)?.window ?: return@SideEffect
@@ -69,8 +67,15 @@ class MainActivity : ComponentActivity() {
                         isAppearanceLightNavigationBars = !dark
                     }
                 }
-                Surface(Modifier.fillMaxSize(), color = androidx.compose.material3.MaterialTheme.colorScheme.surface) {
-                    OasxApp(backend = backend) { newBackend ->
+                Surface(
+                    Modifier.fillMaxSize(),
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.surface,
+                ) {
+                    OasxApp(
+                        backend = backend,
+                        onThemeChanged = { themeMode = it },
+                        onDynamicColorChanged = { dynamicColor = it },
+                    ) { newBackend ->
                         backend = newBackend
                         Api.baseUrl = newBackend
                         lifecycleScope.launch { AccountContext.ensureLoaded(force = true) }
@@ -85,7 +90,12 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun OasxApp(backend: String, onBackendSaved: (String) -> Unit) {
+fun OasxApp(
+    backend: String,
+    onThemeChanged: (String) -> Unit,
+    onDynamicColorChanged: (Boolean) -> Unit,
+    onBackendSaved: (String) -> Unit,
+) {
     val tabs = listOf(
         Triple("首页", Icons.Filled.Home, 0),
         Triple("资产", Icons.Filled.AccountBalanceWallet, 1),
@@ -110,10 +120,7 @@ fun OasxApp(backend: String, onBackendSaved: (String) -> Unit) {
             }
         },
     ) { pad ->
-        // ★ 必须应用 Scaffold 提供的 inset，否则内容会顶到状态栏/导航栏下面。
-        androidx.compose.foundation.layout.Box(
-            Modifier.fillMaxSize().padding(pad),
-        ) {
+        androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().padding(pad)) {
             when (effectiveTab) {
                 0 -> HomePage(Prefs.backend)
                 1 -> AssetsPage(Prefs.backend)
@@ -121,7 +128,8 @@ fun OasxApp(backend: String, onBackendSaved: (String) -> Unit) {
                 3 -> RecordsPage(Prefs.backend)
                 else -> SettingsPage(
                     currentBackend = backend,
-                    onThemeChanged = { Prefs.themeMode = it },
+                    onThemeChanged = onThemeChanged,
+                    onDynamicColorChanged = onDynamicColorChanged,
                     onBackendSaved = onBackendSaved,
                 )
             }

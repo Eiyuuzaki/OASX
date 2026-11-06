@@ -1,5 +1,6 @@
 package com.oas.oasx.mobile.ui
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -7,10 +8,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Card
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -21,45 +22,42 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.oas.oasx.mobile.data.AccountContext
 import com.oas.oasx.mobile.net.Api
 import com.oas.oasx.mobile.data.StatsResponse
+import com.oas.oasx.mobile.ui.components.OasBody
+import com.oas.oasx.mobile.ui.components.OasCaption
+import com.oas.oasx.mobile.ui.components.OasCard
+import com.oas.oasx.mobile.ui.components.OasCardLevel
+import com.oas.oasx.mobile.ui.components.OasError
+import com.oas.oasx.mobile.ui.components.OasLabel
+import com.oas.oasx.mobile.ui.components.OasMetric
+import com.oas.oasx.mobile.ui.components.OasPageTitle
+import com.oas.oasx.mobile.ui.components.OasSectionTitle
+import com.oas.oasx.mobile.ui.components.OasStateBlock
+import com.oas.oasx.mobile.ui.theme.Spacing
 
-/// 记录页：子页签「统计」/「实时日志」（规范五入口下聚合运行记录类信息）。
+/// 记录页：统计 / 实时日志 / 错误 / 绘卷 四个子页签。
 @Composable
 fun RecordsPage(backend: String) {
     var subTab by remember { mutableIntStateOf(0) }
+
     Column(Modifier.fillMaxSize()) {
-        Row(
-            Modifier.fillMaxWidth().padding(16.dp, 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text("记录", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
-            FilterChip(
-                selected = subTab == 0,
-                onClick = { subTab = 0 },
-                label = { Text("统计") },
-            )
-            androidx.compose.foundation.layout.Spacer(Modifier.padding(4.dp))
-            FilterChip(
-                selected = subTab == 1,
-                onClick = { subTab = 1 },
-                label = { Text("实时日志") },
-            )
-            androidx.compose.foundation.layout.Spacer(Modifier.padding(4.dp))
-            FilterChip(
-                selected = subTab == 2,
-                onClick = { subTab = 2 },
-                label = { Text("错误") },
-            )
-            androidx.compose.foundation.layout.Spacer(Modifier.padding(4.dp))
-            FilterChip(
-                selected = subTab == 3,
-                onClick = { subTab = 3 },
-                label = { Text("绘卷") },
-            )
+        Column(Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm)) {
+            OasPageTitle("记录")
+            Row(
+                Modifier.fillMaxWidth().padding(top = Spacing.sm),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
+                listOf("统计", "日志", "错误", "绘卷").forEachIndexed { idx, label ->
+                    FilterChip(
+                        selected = subTab == idx,
+                        onClick = { subTab = idx },
+                        label = { Text(label) },
+                    )
+                }
+            }
         }
         when (subTab) {
             1 -> LogsPage(backend)
@@ -121,78 +119,63 @@ fun StatsView(backend: String) {
         statsLoading = false
     }
 
-    Column(Modifier.fillMaxSize().padding(16.dp)) {
+    Column(
+        Modifier.fillMaxSize().padding(horizontal = Spacing.md),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ) {
         if (dates.isNotEmpty()) {
-            Text(
-                "日期：${selected ?: "—"}（共 ${dates.size} 天）",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            androidx.compose.material3.Button(onClick = {
-                val idx = dates.indexOf(selected)
-                if (idx >= 0 && idx < dates.size - 1) selected = dates[idx + 1]
-                else selected = dates.firstOrNull()
-            }, modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)) { Text("切换日期") }
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                OasCaption("日期 ${selected ?: "—"}（共 ${dates.size} 天）", Modifier.weight(1f))
+                TextButton(onClick = {
+                    val idx = dates.indexOf(selected)
+                    selected = if (idx >= 0 && idx < dates.size - 1) dates[idx + 1]
+                    else dates.firstOrNull()
+                }) { Text("切换", style = MaterialTheme.typography.labelLarge) }
+            }
         }
 
-        error?.let {
-            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(top = 8.dp))
-        }
+        error?.let { OasError(it) }
 
         val s = stats
-        if (s != null) {
-            Row(Modifier.fillMaxWidth()) {
-                StatTile("总时长", formatDuration(s.totalRuntimeSeconds), Modifier.weight(1f))
-                StatTile("任务次数", "${s.totalTaskRunCount}", Modifier.weight(1f))
-                StatTile("战斗场次", "${s.totalBattleCount}", Modifier.weight(1f))
-            }
-            Text("各任务", style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 14.dp, bottom = 4.dp))
-            LazyColumn {
-                items(s.tasks.entries.toList()) { (name, t) ->
-                    Card(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                        Column(Modifier.padding(12.dp)) {
-                            Text(name, style = MaterialTheme.typography.bodyMedium)
-                            Text(
-                                "执行 ${t.runCount} 次 · 共 " +
-                                    formatDuration(t.totalDurationSeconds),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+        when {
+            account == null -> OasStateBlock(
+                loading = false, error = null, emptyText = "先在首页选择账号")
+            datesLoading -> OasStateBlock(loading = true, error = null)
+            statsLoading -> OasStateBlock(loading = true, error = null)
+            datesLoaded && dates.isEmpty() -> OasStateBlock(
+                loading = false, error = null,
+                emptyText = "该账号暂无统计数据（脚本跑过一次后才会有）")
+            s == null -> OasStateBlock(
+                loading = false, error = null, emptyText = "无数据")
+            else -> {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                ) {
+                    StatTile("总时长", formatDuration(s.totalRuntimeSeconds), Modifier.weight(1f))
+                    StatTile("任务次数", "${s.totalTaskRunCount}", Modifier.weight(1f))
+                    StatTile("战斗场次", "${s.totalBattleCount}", Modifier.weight(1f))
+                }
+                OasSectionTitle("各任务", Modifier.padding(top = Spacing.sm))
+                LazyColumn(
+                    Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                ) {
+                    items(s.tasks.entries.toList()) { (name, t) ->
+                        OasCard {
+                            OasBody(name)
+                            OasCaption("执行 ${t.runCount} 次 · 共 " +
+                                formatDuration(t.totalDurationSeconds))
                             t.runs.takeLast(3).reversed().forEach { run ->
-                                Text(
-                                    "  ${run.startTime.takeLast(8)} · " +
-                                        formatDuration(run.durationSeconds),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
+                                OasCaption("  ${run.startTime.takeLast(8)} · " +
+                                    formatDuration(run.durationSeconds))
                             }
                         }
                     }
                 }
-            }
-        } else {
-            // 明确区分四种状态，任何分支都不会永久显示"加载中"
-            when {
-                account == null -> Text("先在首页选择账号", style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 8.dp))
-                datesLoading -> Text("读取日期列表…", style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 8.dp))
-                statsLoading -> Text("读取统计数据…", style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 8.dp))
-                datesLoaded && dates.isEmpty() -> Text(
-                    "该账号暂无统计数据（脚本跑过一次后才会有）",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 8.dp))
-                else -> Text("无数据", style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 8.dp))
             }
         }
     }
@@ -200,12 +183,9 @@ fun StatsView(backend: String) {
 
 @Composable
 fun StatTile(label: String, value: String, modifier: Modifier = Modifier) {
-    Card(modifier.fillMaxWidth()) {
-        Column(Modifier.padding(10.dp)) {
-            Text(label, style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(value, style = MaterialTheme.typography.titleMedium)
-        }
+    OasCard(modifier = modifier, level = OasCardLevel.Emphasis) {
+        OasLabel(label)
+        OasMetric(value)
     }
 }
 
