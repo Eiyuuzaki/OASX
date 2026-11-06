@@ -3,6 +3,7 @@ package com.oas.oasx.mobile
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -19,43 +20,56 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import com.oas.oasx.mobile.data.AccountContext
-import com.oas.oasx.mobile.net.Api
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.launch
+import com.oas.oasx.mobile.data.AccountContext
 import com.oas.oasx.mobile.data.Prefs
+import com.oas.oasx.mobile.net.Api
 import com.oas.oasx.mobile.ui.AssetsPage
 import com.oas.oasx.mobile.ui.HomePage
 import com.oas.oasx.mobile.ui.RecordsPage
 import com.oas.oasx.mobile.ui.SettingsPage
 import com.oas.oasx.mobile.ui.TasksPage
 import com.oas.oasx.mobile.ui.theme.OasxTheme
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Android 15+ 默认强制 edge-to-edge：显式开启并交由 Scaffold 处理 inset，
+        // 避免内容绘制到状态栏下方造成标题与状态栏重叠。
+        enableEdgeToEdge()
         Prefs.init(this)
         Api.baseUrl = Prefs.backend
 
         setContent {
-            var themeMode by androidx.compose.runtime.remember {
-                androidx.compose.runtime.mutableStateOf(Prefs.themeMode)
-            }
-            var backend by androidx.compose.runtime.remember {
-                androidx.compose.runtime.mutableStateOf(Prefs.backend)
-            }
+            var themeMode by remember { mutableStateOf(Prefs.themeMode) }
+            var backend by remember { mutableStateOf(Prefs.backend) }
             val dark = when (themeMode) {
                 "light" -> false
                 "dark" -> true
                 else -> isSystemInDarkTheme()
             }
             OasxTheme(darkTheme = dark) {
-                Surface(Modifier.fillMaxSize()) {
+                // 状态栏图标明暗跟随主题：浅色主题用深色图标，否则白字看不清。
+                val view = LocalView.current
+                SideEffect {
+                    val window = (view.context as? ComponentActivity)?.window ?: return@SideEffect
+                    WindowCompat.getInsetsController(window, view).apply {
+                        isAppearanceLightStatusBars = !dark
+                        isAppearanceLightNavigationBars = !dark
+                    }
+                }
+                Surface(Modifier.fillMaxSize(), color = androidx.compose.material3.MaterialTheme.colorScheme.surface) {
                     OasxApp(backend = backend) { newBackend ->
                         backend = newBackend
                         Api.baseUrl = newBackend
@@ -80,7 +94,6 @@ fun OasxApp(backend: String, onBackendSaved: (String) -> Unit) {
         Triple("设置", Icons.Filled.Settings, 4),
     )
     var tab by remember { mutableIntStateOf(0) }
-    // 未配置后端地址：强制先走设置页
     val effectiveTab = if (Prefs.backend.isBlank()) 4 else tab
 
     Scaffold(
@@ -97,16 +110,21 @@ fun OasxApp(backend: String, onBackendSaved: (String) -> Unit) {
             }
         },
     ) { pad ->
-        when (effectiveTab) {
-            0 -> HomePage(Prefs.backend)
-            1 -> AssetsPage(Prefs.backend)
-            2 -> TasksPage(Prefs.backend)
-            3 -> RecordsPage(Prefs.backend)
-            else -> SettingsPage(
-                currentBackend = backend,
-                onThemeChanged = { Prefs.themeMode = it },
-                onBackendSaved = onBackendSaved,
-            )
+        // ★ 必须应用 Scaffold 提供的 inset，否则内容会顶到状态栏/导航栏下面。
+        androidx.compose.foundation.layout.Box(
+            Modifier.fillMaxSize().padding(pad),
+        ) {
+            when (effectiveTab) {
+                0 -> HomePage(Prefs.backend)
+                1 -> AssetsPage(Prefs.backend)
+                2 -> TasksPage(Prefs.backend)
+                3 -> RecordsPage(Prefs.backend)
+                else -> SettingsPage(
+                    currentBackend = backend,
+                    onThemeChanged = { Prefs.themeMode = it },
+                    onBackendSaved = onBackendSaved,
+                )
+            }
         }
     }
 }
