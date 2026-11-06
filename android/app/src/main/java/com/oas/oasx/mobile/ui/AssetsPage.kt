@@ -7,12 +7,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -32,92 +31,86 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.oas.oasx.mobile.data.AccountContext
-import com.oas.oasx.mobile.data.Prefs
 import com.oas.oasx.mobile.net.Api
 import com.oas.oasx.mobile.net.LedgerResp
 import com.oas.oasx.mobile.net.ResourceDatesResp
 import com.oas.oasx.mobile.net.ResourceDay
-import com.oas.oasx.mobile.data.RoleEntry
-import com.oas.oasx.mobile.data.RolesResponse
 import java.io.InputStream
 
 /// 资产页：账号维度，三种模式（单日快照 / 7天 / 30天）+ 货币图标。
-///
-/// 与 WPF ResourcePage 对齐：页内自带账号下拉，不依赖首页先选账号——
-/// 打开资产页时若全局无当前账号，自动取第一个有角色的调度器账号并记住。
+/// 账号统一来自 AccountContext（单一来源），本页不自行拉角色列表。
 @Composable
 fun AssetsPage(backend: String) {
     val acct by AccountContext.state.collectAsStateWithLifecycle()
-    var selfAccount by remember { mutableStateOf<AccountContext.Account?>(null) }
+    val account = acct.current
+    val acctKey = account?.key
+
     var mode by remember { mutableIntStateOf(0) }
-    var rows by remember { mutableStateOf<List<RowModel>?>(null) }
-    var header by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf<String?>(null) }
-    var reload by remember { mutableIntStateOf(0) }
+    var rows by remember(acctKey, mode) { mutableStateOf<List<RowModel>?>(null) }
+    var header by remember(acctKey, mode) { mutableStateOf("") }
+    var error by remember(acctKey, mode) { mutableStateOf<String?>(null) }
+    var loading by remember(acctKey, mode) { mutableStateOf(false) }
     var showPicker by remember { mutableStateOf(false) }
-    var loadingAccounts by remember { mutableStateOf(false) }
 
-    // 当前生效账号：优先全局当前账号，否则页内自选
-    val effective = acct.current ?: selfAccount
-
-    // 全局无账号时，本页自行拉一次角色列表并落定第一个
-    LaunchedEffect(acct.current, selfAccount) {
-        if (acct.current != null || selfAccount != null) return@LaunchedEffect
-        loadingAccounts = true
-        try {
-            val list = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                loadAllAccounts()
-            }
-            selfAccount = list.firstOrNull()
-            if (selfAccount != null) {
-                Prefs.currentConfig =
-                    "${selfAccount!!.config}|${selfAccount!!.roleKey}"
-            }
-        } catch (e: Exception) {
-            error = "账号加载失败：${e.message?.take(80)}"
-        }
-        loadingAccounts = false
-    }
-
-    LaunchedEffect(effective?.config, effective?.roleKey, mode, reload) {
-        val acc = effective ?: return@LaunchedEffect
-        rows = null
+    LaunchedEffect(acctKey, mode, backend) {
+        val acc = account ?: return@LaunchedEffect
+        loading = true
         error = null
+        rows = null
         try {
             val result = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 if (mode == 0) {
                     val dates = Api.getJsonOrThrow<ResourceDatesResp>(
-                        "/resource/${acc.config}/dates?role_key=" + enc(acc.roleKey))
+                        "/resource/${enc(acc.config)}/dates?role_key=" + enc(acc.roleKey))
                     val d = dates.dates.firstOrNull() ?: ""
-                    loadDay(acc.config, acc.roleKey, d)
+                    if (d.isEmpty()) {
+                        null
+                    } else {
+                        loadDay(acc.config, acc.roleKey, d)
+                    }
                 } else {
                     loadLedger(acc.config, acc.roleKey, if (mode == 1) 7 else 30)
                 }
             }
-            rows = result.first
-            header = result.second
+            if (result == null) {
+                error = "该账号没有采集记录"
+            } else {
+                rows = result.first
+                header = result.second
+            }
         } catch (e: Exception) {
-            error = e.message?.take(100)
+            error = e.message?.take(120)
         }
+        loading = false
     }
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("资产", fontSize = 22.sp, modifier = Modifier.weight(1f))
-            Text(
-                "切换账号",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.clickable { showPicker = true },
-            )
+            if (acct.accounts.isNotEmpty()) {
+                Text(
+                    "切换账号",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.clickable { showPicker = true },
+                )
+            }
         }
+
+        // 账号行
         Text(
-            effective?.let { "${it.name} Lv${it.level} · ${it.serverName} · ${it.config}" }
-                ?: if (loadingAccounts) "账号加载中…" else "无可用账号",
+            account?.let { "${it.name} Lv${it.level} · ${it.serverName} · ${it.config}" }
+                ?: when {
+                    acct.loading -> "账号加载中…"
+                    acct.error != null -> "账号加载失败"
+                    acct.loaded -> "无可用账号"
+                    else -> "准备中…"
+                },
             fontSize = 12.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
+        // 模式 chips
         Row(
             Modifier.fillMaxWidth().padding(top = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -130,51 +123,90 @@ fun AssetsPage(backend: String) {
                 )
             }
         }
-        Text(header, fontSize = 12.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 4.dp))
-
-        error?.let {
-            Text(it, fontSize = 12.sp, color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(top = 8.dp))
+        if (header.isNotBlank()) {
+            Text(header, fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp))
         }
 
-        val data = rows
         when {
-            effective == null -> Text(
-                if (loadingAccounts) "读取账号中…" else "无可用账号（需先在各调度器下登录游戏）",
-                fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 12.dp),
-            )
-            data == null -> Text("读取中…", fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 8.dp))
-            else -> LazyColumn(Modifier.fillMaxSize().padding(top = 4.dp)) {
-                items(data) { row ->
-                    Row(
-                        Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        CurrencyIcon(row.icon, modifier = Modifier.size(28.dp))
-                        Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
-                            Text(row.name, fontSize = 14.sp)
-                            if (mode != 0) {
-                                Text("起 ${fmt(row.base)}", fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            account == null -> {
+                Card(Modifier.fillMaxWidth().padding(top = 12.dp)) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text(
+                            when {
+                                acct.loading -> "正在加载账号…"
+                                acct.error != null -> "账号加载失败"
+                                acct.loaded -> "没有可用账号"
+                                else -> "准备中…"
+                            },
+                            fontSize = 15.sp,
+                            color = if (acct.error != null) MaterialTheme.colorScheme.error
+                                    else MaterialTheme.colorScheme.onSurface,
+                        )
+                        acct.error?.let {
+                            Text(it, fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        if (!acct.loading) {
+                            TextButton(onClick = {
+                                AccountContext.refreshInBackground()
+                            }) {
+                                Text(if (acct.error != null) "重试" else "重新加载")
                             }
                         }
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text(fmt(row.count), fontSize = 16.sp)
-                            if (mode != 0) {
-                                Text(
-                                    if (row.delta == 0L) "持平"
-                                    else (if (row.delta > 0L) "+" else "") + fmt(row.delta),
-                                    fontSize = 13.sp,
-                                    color = if (row.delta >= 0L)
-                                        MaterialTheme.colorScheme.primary
-                                        else MaterialTheme.colorScheme.error,
-                                )
+                    }
+                }
+            }
+            error != null -> {
+                Card(Modifier.fillMaxWidth().padding(top = 12.dp)) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text("读取失败", fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.error)
+                        Text(error ?: "", fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+            loading || rows == null -> {
+                Text("读取中…", fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 12.dp))
+            }
+            else -> {
+                val data = rows ?: emptyList()
+                if (data.isEmpty()) {
+                    Text("该区间没有资源数据", fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 12.dp))
+                } else {
+                    LazyColumn(Modifier.fillMaxSize().padding(top = 4.dp)) {
+                        items(data) { row ->
+                            Row(
+                                Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                CurrencyIcon(row.icon, modifier = Modifier.size(28.dp))
+                                Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
+                                    Text(row.name, fontSize = 14.sp)
+                                    if (mode != 0) {
+                                        Text("起 ${fmt(row.base)}", fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text(fmt(row.count), fontSize = 16.sp)
+                                    if (mode != 0) {
+                                        Text(
+                                            if (row.delta == 0L) "持平"
+                                            else (if (row.delta > 0L) "+" else "") + fmt(row.delta),
+                                            fontSize = 13.sp,
+                                            color = if (row.delta >= 0L)
+                                                MaterialTheme.colorScheme.primary
+                                                else MaterialTheme.colorScheme.error,
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -185,13 +217,12 @@ fun AssetsPage(backend: String) {
 
     if (showPicker) {
         AccountSwitcherDialog(
-            accounts = acct.accounts.ifEmpty { listOfNotNull(selfAccount) },
-            current = effective,
-            loading = acct.loading || loadingAccounts,
+            accounts = acct.accounts,
+            current = account,
+            loading = acct.loading,
             error = acct.error,
             onSelect = { acc ->
                 AccountContext.select(acc)
-                selfAccount = acc
                 showPicker = false
             },
             onRefresh = {
@@ -213,44 +244,16 @@ data class RowModel(
 
 private fun enc(s: String): String = java.net.URLEncoder.encode(s, "UTF-8")
 
-/// 拉取所有调度器的角色并扁平化（资产页自助用，无需全局上下文已加载）。
-private fun loadAllAccounts(): List<AccountContext.Account> {
-    val configs = Api.configList()
-    val out = mutableListOf<AccountContext.Account>()
-    configs.forEach { config ->
-        try {
-            val resp = Api.getJsonOrThrow<RolesResponse>(
-                "/resource/${enc(config)}/roles")
-            resp.roles.forEach { r: RoleEntry ->
-                out.add(
-                    AccountContext.Account(
-                        config = config,
-                        roleKey = r.roleKey,
-                        name = r.name,
-                        level = r.level,
-                        serverName = r.serverName,
-                        lastUpdated = r.lastUpdated,
-                        dates = r.dates,
-                    ),
-                )
-            }
-        } catch (e: Exception) {
-            // 单个调度器失败不影响其它
-        }
-    }
-    return out
-}
-
 private fun loadDay(config: String, roleKey: String, date: String): Pair<List<RowModel>, String> {
     val day = Api.getJsonOrThrow<ResourceDay>(
-        "/resource/$config?date=$date&role_key=" + enc(roleKey))
+        "/resource/${enc(config)}?date=$date&role_key=" + enc(roleKey))
     val rows = day.items.map { RowModel(it.name, it.count, 0, 0, it.icon) }
     return rows to "${day.date} · 采集于 ${day.updatedAt.ifBlank { "—" }}"
 }
 
 private fun loadLedger(config: String, roleKey: String, days: Int): Pair<List<RowModel>, String> {
     val ledger = Api.getJsonOrThrow<LedgerResp>(
-        "/resource/$config/ledger?days=$days&role_key=" + enc(roleKey))
+        "/resource/${enc(config)}/ledger?days=$days&role_key=" + enc(roleKey))
     val rows = ledger.items.filter { it.delta != null }.map {
         RowModel(
             name = it.name,

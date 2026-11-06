@@ -32,7 +32,7 @@ class SchedulerSocket {
     fun connect(script: String, baseUrl: String): Flow<Snapshot> = callbackFlow {
         val wsUrl = baseUrl.trimEnd('/')
             .replaceFirst("http://", "ws://")
-            .replaceFirst("https://", "wss://") + "/ws/$script"
+            .replaceFirst("https://", "wss://") + "/ws/" + java.net.URLEncoder.encode(script, "UTF-8")
         var backoff = 500L
         var closed = false
         var currentWs: WebSocket? = null

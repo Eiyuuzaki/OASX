@@ -29,7 +29,8 @@ class LogStream {
     private val json = Json { ignoreUnknownKeys = true }
 
     fun connect(script: String, baseUrl: String): Flow<Event> = callbackFlow {
-        val url = baseUrl.trimEnd('/') + "/log/$script/stream"
+        val url = baseUrl.trimEnd('/') + "/log/" +
+            java.net.URLEncoder.encode(script, "UTF-8") + "/stream"
         var backoff = 500L
         var closed = false
         var es: EventSource? = null

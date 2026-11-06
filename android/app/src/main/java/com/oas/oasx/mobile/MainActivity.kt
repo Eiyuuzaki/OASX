@@ -73,10 +73,10 @@ class MainActivity : ComponentActivity() {
                     OasxApp(backend = backend) { newBackend ->
                         backend = newBackend
                         Api.baseUrl = newBackend
-                        lifecycleScope.launch { AccountContext.refresh() }
+                        lifecycleScope.launch { AccountContext.ensureLoaded(force = true) }
                     }
                     androidx.compose.runtime.LaunchedEffect(Unit) {
-                        if (backend.isNotEmpty()) AccountContext.refresh()
+                        if (backend.isNotEmpty()) AccountContext.ensureLoaded()
                     }
                 }
             }
