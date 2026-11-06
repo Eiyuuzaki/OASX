@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.oas.oasx.mobile.data.AccountContext
+import com.oas.oasx.mobile.data.ResourceAggregator
 import com.oas.oasx.mobile.data.CollectApi
 import com.oas.oasx.mobile.net.Api
 import com.oas.oasx.mobile.net.LedgerResp
@@ -52,6 +53,7 @@ fun AssetsPage(backend: String) {
     var error by remember(acctKey, mode) { mutableStateOf<String?>(null) }
     var loading by remember(acctKey, mode) { mutableStateOf(false) }
     var showPicker by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
     // ── 采集控制 ──
     var collecting by remember(acctKey) { mutableStateOf<Boolean?>(null) }
     var collectMsg by remember(acctKey) { mutableStateOf("") }
@@ -102,10 +104,10 @@ fun AssetsPage(backend: String) {
                     if (d.isEmpty()) {
                         null
                     } else {
-                        loadDay(acc.config, acc.roleKey, d)
+                        loadDay(context, acc.config, acc.roleKey, d)
                     }
                 } else {
-                    loadLedger(acc.config, acc.roleKey, if (mode == 1) 7 else 30)
+                    loadLedger(context, acc.config, acc.roleKey, if (mode == 1) 7 else 30)
                 }
             }
             if (result == null) {
@@ -314,23 +316,48 @@ data class RowModel(
 
 private fun enc(s: String): String = java.net.URLEncoder.encode(s, "UTF-8")
 
-private fun loadDay(config: String, roleKey: String, date: String): Pair<List<RowModel>, String> {
+private fun loadDay(
+    context: android.content.Context,
+    config: String,
+    roleKey: String,
+    date: String,
+): Pair<List<RowModel>, String> {
     val day = Api.getJsonOrThrow<ResourceDay>(
         "/resource/${enc(config)}?date=$date&role_key=" + enc(roleKey))
-    val rows = day.items.map { RowModel(it.name, it.count, 0, 0, it.icon) }
+    // 对齐 WPF：图标白名单 + (图标,名称) 聚合 + 按图标去重
+    val cards = ResourceAggregator.aggregate(
+        context = context,
+        raw = day.items.map { Triple(it.id, it.name, it.count) },
+        deltas = day.items.associate { it.name to (it.delta ?: 0L) },
+        icons = day.items.associate { it.name to it.icon },
+    )
+    val rows = cards.map { RowModel(it.name, it.count, 0, 0, it.icon) }
     return rows to "${day.date} · 采集于 ${day.updatedAt.ifBlank { "—" }}"
 }
 
-private fun loadLedger(config: String, roleKey: String, days: Int): Pair<List<RowModel>, String> {
+private fun loadLedger(
+    context: android.content.Context,
+    config: String,
+    roleKey: String,
+    days: Int,
+): Pair<List<RowModel>, String> {
     val ledger = Api.getJsonOrThrow<LedgerResp>(
         "/resource/${enc(config)}/ledger?days=$days&role_key=" + enc(roleKey))
-    val rows = ledger.items.filter { it.delta != null }.map {
+    // 账本项没有 icon 字段，白名单按 name 无法判定——沿用后端已过滤的 delta 项，
+    // 但补齐图标名以便展示（ledger 的 icon 由后端在 items 内提供）
+    val cards = ResourceAggregator.aggregate(
+        context = context,
+        raw = ledger.items.map { Triple(it.id, it.name, it.count) },
+        deltas = ledger.items.associate { it.name to (it.delta ?: 0L) },
+        icons = ledger.items.associate { it.name to (it.icon ?: "") },
+    )
+    val rows = cards.map {
         RowModel(
             name = it.name,
             count = it.count,
-            delta = it.delta ?: 0L,
-            base = it.count - (it.delta ?: 0L),
-            icon = null,
+            delta = it.delta,
+            base = it.count - it.delta,
+            icon = it.icon,
         )
     }
     return rows to "近 $days 天 · 基线 ${ledger.baseDate.ifBlank { "缺失" }} → ${ledger.lastDate}"

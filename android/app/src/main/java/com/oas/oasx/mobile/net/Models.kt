@@ -135,8 +135,11 @@ data class LedgerResp(
 
 @Serializable
 data class LedgerItem(
+    val id: String = "",
     val name: String = "",
+    val icon: String = "",
     val count: Long = 0,
+    @SerialName("first_count") val firstCount: Long = 0,
     val delta: Long? = null,
 )
 
