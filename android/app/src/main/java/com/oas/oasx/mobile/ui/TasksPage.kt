@@ -4,13 +4,21 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Inbox
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Task
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -33,12 +41,14 @@ import com.oas.oasx.mobile.net.Api
 import com.oas.oasx.mobile.ui.components.OasBody
 import com.oas.oasx.mobile.ui.components.OasCaption
 import com.oas.oasx.mobile.ui.components.OasCard
-import com.oas.oasx.mobile.ui.components.OasPageTitle
+import com.oas.oasx.mobile.ui.components.OasCardTone
+import com.oas.oasx.mobile.ui.components.OasPageHeader
 import com.oas.oasx.mobile.ui.components.OasSectionTitle
 import com.oas.oasx.mobile.ui.components.OasStateBlock
+import com.oas.oasx.mobile.ui.components.contentColorFor
 import com.oas.oasx.mobile.ui.theme.Spacing
 
-/// 任务页：任务分组 + 启停（停止有确认）+ 运行高亮 + 参数编辑入口。
+/// 任务页：分组 + 启停（确认）+ 运行高亮 + 参数编辑入口。
 @Composable
 fun TasksPage(backend: String) {
     val acct by AccountContext.state.collectAsStateWithLifecycle()
@@ -52,7 +62,6 @@ fun TasksPage(backend: String) {
     var status by remember(script) { mutableStateOf("") }
     var confirmStop by remember(script) { mutableStateOf(false) }
     var argsTask by remember(script) { mutableStateOf<String?>(null) }
-
     var runningTask by remember(script) { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) { I18n.ensureLoaded() }
@@ -77,13 +86,8 @@ fun TasksPage(backend: String) {
         menuLoading = false
     }
 
-    // 参数编辑子页
     if (argsTask != null && script != null) {
-        ArgsEditor(
-            script = script,
-            task = argsTask ?: "",
-            onBack = { argsTask = null },
-        )
+        ArgsEditor(script = script, task = argsTask ?: "", onBack = { argsTask = null })
         return
     }
 
@@ -93,8 +97,40 @@ fun TasksPage(backend: String) {
         verticalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         item {
-            OasPageTitle("任务")
-            OasCaption("调度器 ${script ?: "—"} · 点任务名编辑参数")
+            OasPageHeader(
+                title = "任务",
+                subtitle = "调度器 ${script ?: "—"} · 点任务名编辑参数",
+                icon = Icons.Filled.Task,
+            )
+        }
+
+        // 当前执行卡：有任务时用 primary 突出
+        if (runningTask != null) {
+            item {
+                OasCard(tone = OasCardTone.Primary) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Filled.PlayArrow,
+                            contentDescription = null,
+                            tint = contentColorFor(OasCardTone.Primary),
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Spacer(Modifier.size(Spacing.sm))
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                "正在执行",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = contentColorFor(OasCardTone.Primary),
+                            )
+                            Text(
+                                t(runningTask ?: ""),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = contentColorFor(OasCardTone.Primary),
+                            )
+                        }
+                    }
+                }
+            }
         }
 
         item {
@@ -117,12 +153,20 @@ fun TasksPage(backend: String) {
                     },
                     modifier = Modifier.weight(1f),
                     enabled = script != null,
-                ) { Text("启动") }
+                ) {
+                    Icon(Icons.Filled.PlayArrow, null, Modifier.size(18.dp))
+                    Spacer(Modifier.size(Spacing.xs))
+                    Text("启动")
+                }
                 OutlinedButton(
                     onClick = { confirmStop = true },
                     modifier = Modifier.weight(1f),
                     enabled = script != null,
-                ) { Text("停止") }
+                ) {
+                    Icon(Icons.Filled.Stop, null, Modifier.size(18.dp))
+                    Spacer(Modifier.size(Spacing.xs))
+                    Text("停止")
+                }
             }
             if (status.isNotEmpty()) {
                 OasCaption(status, Modifier.padding(top = Spacing.xs))
@@ -132,14 +176,18 @@ fun TasksPage(backend: String) {
         when {
             script == null -> item {
                 OasStateBlock(
-                    loading = false,
-                    error = null,
+                    loading = false, error = null,
                     emptyText = "先在首页选择账号",
+                    emptyIcon = Icons.Filled.Inbox,
                 )
             }
             menuLoading -> item { OasStateBlock(loading = true, error = null) }
             menu == null -> item {
-                OasStateBlock(loading = false, error = null, emptyText = "任务菜单加载失败")
+                OasStateBlock(
+                    loading = false, error = null,
+                    emptyText = "任务菜单加载失败",
+                    emptyIcon = Icons.Filled.Inbox,
+                )
             }
             else -> {
                 (menu ?: emptyMap()).forEach { (group, tasks) ->
@@ -149,23 +197,26 @@ fun TasksPage(backend: String) {
                     items(tasks) { task ->
                         val isRunning = runningTask == task
                         OasCard(
+                            tone = if (isRunning) OasCardTone.Primary
+                                   else OasCardTone.Neutral,
                             modifier = Modifier.clickable { argsTask = task },
                         ) {
                             Row(
                                 Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                OasBody(
+                                Text(
                                     t(task),
-                                    Modifier.weight(1f),
-                                    color = if (isRunning) MaterialTheme.colorScheme.primary
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = if (isRunning) contentColorFor(OasCardTone.Primary)
                                             else MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.weight(1f),
                                 )
                                 if (isRunning) {
                                     Text(
-                                        "● 运行中",
+                                        "运行中",
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.primary,
+                                        color = contentColorFor(OasCardTone.Primary),
                                     )
                                 }
                             }

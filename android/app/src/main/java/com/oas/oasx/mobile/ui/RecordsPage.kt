@@ -3,11 +3,17 @@ package com.oas.oasx.mobile.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Assessment
+import androidx.compose.material.icons.filled.Inbox
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -31,21 +37,24 @@ import com.oas.oasx.mobile.ui.components.OasCaption
 import com.oas.oasx.mobile.ui.components.OasCard
 import com.oas.oasx.mobile.ui.components.OasCardTone
 import com.oas.oasx.mobile.ui.components.OasError
-import com.oas.oasx.mobile.ui.components.OasLabel
-import com.oas.oasx.mobile.ui.components.OasMetric
-import com.oas.oasx.mobile.ui.components.OasPageTitle
+import com.oas.oasx.mobile.ui.components.OasPageHeader
 import com.oas.oasx.mobile.ui.components.OasSectionTitle
+import com.oas.oasx.mobile.ui.components.OasStatCard
 import com.oas.oasx.mobile.ui.components.OasStateBlock
 import com.oas.oasx.mobile.ui.theme.Spacing
 
-/// 记录页：统计 / 实时日志 / 错误 / 绘卷 四个子页签。
+/// 记录页：统计 / 日志 / 错误 / 绘卷。
 @Composable
 fun RecordsPage(backend: String) {
     var subTab by remember { mutableIntStateOf(0) }
 
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm)) {
-            OasPageTitle("记录")
+            OasPageHeader(
+                title = "记录",
+                subtitle = "运行统计与日志",
+                icon = Icons.Filled.Assessment,
+            )
             Row(
                 Modifier.fillMaxWidth().padding(top = Spacing.sm),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -68,7 +77,7 @@ fun RecordsPage(backend: String) {
     }
 }
 
-/// 统计视图：日期切换 + 总览磁贴 + 各任务 runs。
+/// 统计视图：日期切换 + 三色指标卡 + 各任务明细。
 @Composable
 fun StatsView(backend: String) {
     val acct by AccountContext.state.collectAsStateWithLifecycle()
@@ -142,23 +151,45 @@ fun StatsView(backend: String) {
         val s = stats
         when {
             account == null -> OasStateBlock(
-                loading = false, error = null, emptyText = "先在首页选择账号")
-            datesLoading -> OasStateBlock(loading = true, error = null)
-            statsLoading -> OasStateBlock(loading = true, error = null)
+                loading = false, error = null,
+                emptyText = "先在首页选择账号", emptyIcon = Icons.Filled.Inbox,
+            )
+            datesLoading || statsLoading -> OasStateBlock(loading = true, error = null)
             datesLoaded && dates.isEmpty() -> OasStateBlock(
                 loading = false, error = null,
-                emptyText = "该账号暂无统计数据（脚本跑过一次后才会有）")
+                emptyText = "该账号暂无统计数据（脚本跑过一次后才会有）",
+                emptyIcon = Icons.Filled.Inbox,
+            )
             s == null -> OasStateBlock(
-                loading = false, error = null, emptyText = "无数据")
+                loading = false, error = null,
+                emptyText = "无数据", emptyIcon = Icons.Filled.Inbox,
+            )
             else -> {
+                // 三色指标卡
+                OasStatCard(
+                    label = "总运行时长",
+                    value = formatDuration(s.totalRuntimeSeconds),
+                    icon = Icons.Filled.Timer,
+                    tone = OasCardTone.Primary,
+                )
                 Row(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 ) {
-                    StatTile("总时长", formatDuration(s.totalRuntimeSeconds), Modifier.weight(1f))
-                    StatTile("任务次数", "${s.totalTaskRunCount}", Modifier.weight(1f))
-                    StatTile("战斗场次", "${s.totalBattleCount}", Modifier.weight(1f))
+                    OasStatCard(
+                        label = "任务次数",
+                        value = "${s.totalTaskRunCount}",
+                        tone = OasCardTone.Secondary,
+                        modifier = Modifier.weight(1f),
+                    )
+                    OasStatCard(
+                        label = "战斗场次",
+                        value = "${s.totalBattleCount}",
+                        tone = OasCardTone.Tertiary,
+                        modifier = Modifier.weight(1f),
+                    )
                 }
+
                 OasSectionTitle("各任务", Modifier.padding(top = Spacing.sm))
                 LazyColumn(
                     Modifier.fillMaxSize(),
@@ -183,10 +214,7 @@ fun StatsView(backend: String) {
 
 @Composable
 fun StatTile(label: String, value: String, modifier: Modifier = Modifier) {
-    OasCard(modifier = modifier, tone = OasCardTone.Primary) {
-        OasLabel(label)
-        OasMetric(value)
-    }
+    OasStatCard(label = label, value = value, tone = OasCardTone.Primary, modifier = modifier)
 }
 
 fun formatDuration(seconds: Double): String {

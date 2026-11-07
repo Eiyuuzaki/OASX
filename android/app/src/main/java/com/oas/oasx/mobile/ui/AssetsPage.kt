@@ -5,13 +5,19 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.Inbox
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -38,16 +44,16 @@ import com.oas.oasx.mobile.net.ResourceDay
 import com.oas.oasx.mobile.ui.components.OasBody
 import com.oas.oasx.mobile.ui.components.OasCaption
 import com.oas.oasx.mobile.ui.components.OasCard
+import com.oas.oasx.mobile.ui.components.OasCardTone
 import com.oas.oasx.mobile.ui.components.OasError
-import com.oas.oasx.mobile.ui.components.OasLabel
-import com.oas.oasx.mobile.ui.components.OasMetric
-import com.oas.oasx.mobile.ui.components.OasPageTitle
+import com.oas.oasx.mobile.ui.components.OasPageHeader
 import com.oas.oasx.mobile.ui.components.OasStateBlock
+import com.oas.oasx.mobile.ui.components.captionColorFor
+import com.oas.oasx.mobile.ui.components.contentColorFor
 import com.oas.oasx.mobile.ui.theme.Spacing
 import java.io.InputStream
 
-/// 资产页：账号维度，三视图（单日/7天/30天）+ 货币图标 + 采集控制。
-/// 全部使用 M3 语义组件。
+/// 资产页：账号维度，三视图 + 货币图标 + 采集控制。
 @Composable
 fun AssetsPage(backend: String) {
     val acct by AccountContext.state.collectAsStateWithLifecycle()
@@ -131,68 +137,80 @@ fun AssetsPage(backend: String) {
         verticalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                OasPageTitle("资产", Modifier.weight(1f))
-                if (acct.accounts.isNotEmpty()) {
-                    TextButton(onClick = { showPicker = true }) {
-                        Text("切换账号", style = MaterialTheme.typography.labelLarge)
+            OasPageHeader(
+                title = "资产",
+                subtitle = account?.let { "${it.name} Lv${it.level} · ${it.serverName}" }
+                    ?: "未选择账号",
+                icon = Icons.Filled.AccountBalanceWallet,
+                action = if (acct.accounts.isNotEmpty()) {
+                    {
+                        TextButton(onClick = { showPicker = true }) {
+                            Text("切换", style = MaterialTheme.typography.labelLarge)
+                        }
                     }
-                }
-            }
-            OasCaption(
-                account?.let { "${it.name} Lv${it.level} · ${it.serverName} · ${it.config}" }
-                    ?: when {
-                        acct.loading -> "账号加载中…"
-                        acct.error != null -> "账号加载失败"
-                        acct.loaded -> "无可用账号"
-                        else -> "准备中…"
-                    },
+                } else null,
             )
         }
 
-        // 采集控制
+        // 采集控制卡：按状态着色
         if (account != null) {
             item {
-                OasCard {
+                OasCard(
+                    tone = if (collecting == true) OasCardTone.Primary
+                           else OasCardTone.NeutralHigh,
+                ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        OasLabel("采集")
+                        Icon(
+                            Icons.Filled.Refresh,
+                            contentDescription = null,
+                            tint = if (collecting == true) contentColorFor(OasCardTone.Primary)
+                                   else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Spacer(Modifier.size(Spacing.sm))
                         Text(
                             when (collecting) {
-                                true -> "● 采集中"
-                                false -> "○ 未采集"
-                                null -> "? 未知"
+                                true -> "采集中"
+                                false -> "未采集"
+                                null -> "状态未知"
                             },
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = if (collecting == true) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(start = Spacing.sm),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = if (collecting == true) contentColorFor(OasCardTone.Primary)
+                                    else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f),
                         )
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                         TextButton(
                             enabled = !collectBusy,
                             onClick = {
                                 runCollect({ c -> CollectApi.collectNow(c) }, "已请求采集")
                             },
-                        ) { Text("立即采集", style = MaterialTheme.typography.labelLarge) }
+                        ) { Text("采集", style = MaterialTheme.typography.labelLarge) }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                         TextButton(
                             enabled = !collectBusy,
-                            onClick = { runCollect({ c -> CollectApi.start(c) }, "已启动采集") },
+                            onClick = { runCollect({ c -> CollectApi.start(c) }, "已启动") },
                         ) { Text("启动", style = MaterialTheme.typography.labelLarge) }
                         TextButton(
                             enabled = !collectBusy,
-                            onClick = { runCollect({ c -> CollectApi.stop(c) }, "已停止采集") },
+                            onClick = { runCollect({ c -> CollectApi.stop(c) }, "已停止") },
                         ) { Text("停止", style = MaterialTheme.typography.labelLarge) }
                     }
-                    if (collectMsg.isNotBlank()) OasCaption(collectMsg)
+                    if (collectMsg.isNotBlank()) {
+                        Text(
+                            collectMsg,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (collecting == true) captionColorFor(OasCardTone.Primary)
+                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
         }
 
-        // 视图模式
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                listOf("单日快照" to 0, "近 7 天" to 1, "近 30 天" to 2).forEach { (label, index) ->
+                listOf("单日" to 0, "近7天" to 1, "近30天" to 2).forEach { (label, index) ->
                     FilterChip(
                         selected = mode == index,
                         onClick = { mode = index },
@@ -208,6 +226,7 @@ fun AssetsPage(backend: String) {
                     loading = acct.loading,
                     error = acct.error,
                     emptyText = if (acct.loaded) "没有可用账号" else null,
+                    emptyIcon = Icons.Filled.Inbox,
                     onRetry = if (acct.loading) null else {
                         { AccountContext.refreshInBackground() }
                     },
@@ -217,42 +236,53 @@ fun AssetsPage(backend: String) {
                 OasStateBlock(loading = true, error = null)
             }
             error != null -> item {
-                OasCard { OasError(error ?: "") }
+                OasCard(tone = OasCardTone.Error) { OasError(error ?: "") }
             }
             rows.isNullOrEmpty() -> item {
-                OasStateBlock(loading = false, error = null, emptyText = "该区间没有资源数据")
+                OasStateBlock(
+                    loading = false, error = null,
+                    emptyText = "该区间没有资源数据",
+                    emptyIcon = Icons.Filled.Inbox,
+                )
             }
             else -> {
                 if (header.isNotBlank()) {
                     item { OasCaption(header) }
                 }
                 items(rows ?: emptyList()) { row ->
-                    Row(
-                        Modifier.fillMaxWidth().padding(vertical = Spacing.xs),
-                        verticalAlignment = Alignment.CenterVertically,
+                    // 关键资源（有增量的）用 primary 容器突出
+                    val highlight = mode != 0 && row.delta != 0L
+                    OasCard(
+                        tone = if (highlight) OasCardTone.NeutralHigh
+                               else OasCardTone.Neutral,
                     ) {
-                        CurrencyIcon(row.icon, modifier = Modifier.size(32.dp))
-                        Column(Modifier.weight(1f).padding(horizontal = Spacing.sm)) {
-                            OasBody(row.name)
-                            if (mode != 0) {
-                                OasCaption("起 ${fmt(row.base)}")
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CurrencyIcon(row.icon, modifier = Modifier.size(32.dp))
+                            Spacer(Modifier.size(Spacing.sm))
+                            Column(Modifier.weight(1f)) {
+                                OasBody(row.name)
+                                if (mode != 0) {
+                                    OasCaption("起 ${fmt(row.base)}")
+                                }
                             }
-                        }
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text(
-                                fmt(row.count),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            if (mode != 0) {
+                            Column(horizontalAlignment = Alignment.End) {
                                 Text(
-                                    if (row.delta == 0L) "持平"
-                                    else (if (row.delta > 0L) "+" else "") + fmt(row.delta),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = if (row.delta >= 0L)
-                                        MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.error,
+                                    fmt(row.count),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                 )
+                                if (mode != 0) {
+                                    Text(
+                                        if (row.delta == 0L) "持平"
+                                        else (if (row.delta > 0L) "+" else "") + fmt(row.delta),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = if (row.delta > 0L)
+                                            MaterialTheme.colorScheme.primary
+                                        else if (row.delta < 0L)
+                                            MaterialTheme.colorScheme.error
+                                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
                             }
                         }
                     }
