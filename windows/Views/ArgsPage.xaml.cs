@@ -245,9 +245,24 @@ public partial class ArgsPage : Page
             return;
         }
         var ok = await OasArgsApi.PutArgValueAsync(_script, _task, group, name, type, value);
-        StatusText.Text = ok
-            ? $"{name} 已保存 ✓"
-            : $"{name} 保存失败";
+        if (!ok)
+        {
+            StatusText.Text = $"{name} 保存失败";
+            return;
+        }
+
+        // ⚠️ 调度器运行中：脚本子进程持有内存配置，任务结束/延迟时会
+        // auto save 整体写回，覆盖外部写入。已写入文件仍会被冲掉。
+        var state = await OasApi.GetScriptStateAsync(_script);
+        if (OasApi.IsScriptRunning(state?.State))
+        {
+            StatusText.Text =
+                $"{name} 已写入，但调度器运行中——任务存档时会覆盖本次修改，建议停止脚本后再调整";
+        }
+        else
+        {
+            StatusText.Text = $"{name} 已保存 ✓";
+        }
     }
 
     private static string JsonToString(JsonElement v) => v.ValueKind switch

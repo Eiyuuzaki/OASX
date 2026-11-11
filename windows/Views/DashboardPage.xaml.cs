@@ -535,14 +535,18 @@ public partial class DashboardPage : UserControl
 
     private void OnStateReceived(string state)
     {
-        Dispatcher.Invoke(() => SetScheduler(state, null));
+        Dispatcher.Invoke(() =>
+        {
+            _lastState = state;
+            SetScheduler(state, null);
+        });
     }
 
     private void OnScheduleReceived(ScheduleData sched)
     {
         Dispatcher.Invoke(() =>
         {
-            SetScheduler(null, sched);
+            SetScheduler(_lastState, sched);
 
             // 今日待执行 = pending + waiting
             TodayPendingText.Text = (sched.Pending.Count + sched.Waiting.Count).ToString("N0");
@@ -586,11 +590,19 @@ public partial class DashboardPage : UserControl
     private static int Min(int a, int b) => a < b ? a : b;
 
     /// <summary>调度器状态（state 优先，其次从队列推断）。</summary>
+    /// <summary>最近一次 WS {"state":...} 的权威状态（schedule 消息复用）。</summary>
+    private string? _lastState;
+
     private void SetScheduler(string? state, ScheduleData? sched)
     {
-        var running = state is not null
-            ? state.Contains("RUNNING", StringComparison.OrdinalIgnoreCase)
-            : sched?.Running is not null;
+        // ★ state 为 null（schedule 消息）时用缓存的上次权威状态；
+        //   绝不能从 sched.Running 推断——后端 running 槽位语义是
+        //   「下一个要跑的任务」，停止时也有值，会导致停止后仍显示运行中。
+        var effectiveState = state ?? _lastState;
+        var running = effectiveState is not null
+            ? effectiveState.Contains("RUNNING", StringComparison.OrdinalIgnoreCase)
+            : sched?.Running is not null && sched.Running.Name.Length > 0
+              && _socket?.IsRunning == true;
         _schedulerRunning = running;
 
         SchedulerDot.Fill = new SolidColorBrush(running

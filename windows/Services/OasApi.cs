@@ -57,6 +57,10 @@ public static class OasApi
 
     public record ScriptState(string State, string Time);
 
+    /// <summary>脚本是否处于运行态（大小写不敏感，兼容 RUNNING/running）。</summary>
+    public static bool IsScriptRunning(string? state) =>
+        state is not null && state.Equals("running", StringComparison.OrdinalIgnoreCase);
+
     /// <summary>GET /{script}/state → 脚本运行状态。
     /// ⚠️ 后端在特定状态下长时间不返回（实测阻塞 120s+），
     /// 必须 5s 超时按"未知"处理，不能让调用方干等。</summary>
