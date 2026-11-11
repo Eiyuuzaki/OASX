@@ -409,6 +409,21 @@ public partial class DashboardPage : UserControl
                 return;
             }
             var date = entry.Dates[0];
+
+            // 总分：本期五卷已贡献积分合计（/huijuan self_scores）
+            long myScore = 0;
+            try
+            {
+                var huijuan = await OasHuijuanApi.GetBoardAsync(entry.Config);
+                myScore = huijuan?.Scrolls.Sum(x => x.SelfScore) ?? 0;
+                ScrollScorePanel.Visibility = Visibility.Visible;
+                ScrollScoreText.Text = FormatCount(myScore);
+            }
+            catch
+            {
+                ScrollScorePanel.Visibility = Visibility.Collapsed;
+            }
+
             var day = await OasResourceApi.GetResourceDayAsync(
                 entry.Config, date, entry.RoleKey);
             // ★ 只统计碎片：『绘卷积分』（5 条 10/10/12/10/10）是跨期不变的

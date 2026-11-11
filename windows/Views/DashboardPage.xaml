@@ -201,7 +201,7 @@
                             BorderBrush="{DynamicResource OasBorderBrush}" BorderThickness="1">
                         <StackPanel Orientation="Horizontal">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock Text="剩余碎片" FontSize="11" VerticalAlignment="Center"
+                                <TextBlock Text="碎片" FontSize="11" VerticalAlignment="Center"
                                            Foreground="{DynamicResource OasTextSecondaryBrush}" />
                                 <TextBlock x:Name="ScrollTotalText" Text="—" FontSize="18"
                                            FontWeight="SemiBold" VerticalAlignment="Center"
@@ -214,6 +214,20 @@
                             <Rectangle Width="1" Height="24" Margin="16,0"
                                        Fill="{DynamicResource OasBorderBrush}"
                                        x:Name="ScrollSeparator" />
+                            <!-- 总分：本期五卷已贡献积分合计（/huijuan self_scores） -->
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                                        x:Name="ScrollScorePanel" Visibility="Collapsed">
+                                <TextBlock Text="总分" FontSize="11" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource OasTextSecondaryBrush}" />
+                                <TextBlock x:Name="ScrollScoreText" Text="—" FontSize="18"
+                                           FontWeight="SemiBold" VerticalAlignment="Center"
+                                           Margin="8,0,0,0"
+                                           FontFamily="{StaticResource AppFontFamily}"
+                                           Foreground="{DynamicResource OasAccentBrush}" />
+                            </StackPanel>
+                            <Rectangle Width="1" Height="24" Margin="16,0"
+                                       Fill="{DynamicResource OasBorderBrush}"
+                                       x:Name="ScrollSeparator2" />
                             <ItemsControl x:Name="ScrollParts" VerticalAlignment="Center">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
