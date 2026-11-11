@@ -357,19 +357,6 @@ public partial class DashboardPage : UserControl
         await RefreshTodayStatsAsync(entry.Config);
     }
 
-    /// <summary>绘卷碎片贡献分值：大=100 / 中=20 / 小=10，绘卷积分 1:1。</summary>
-    private static int ScrollWeight(string name)
-    {
-        if (string.IsNullOrEmpty(name)) return 1;
-        if (name.Contains("·大", StringComparison.Ordinal) || name.EndsWith("大", StringComparison.Ordinal))
-            return 100;
-        if (name.Contains("·中", StringComparison.Ordinal) || name.EndsWith("中", StringComparison.Ordinal))
-            return 20;
-        if (name.Contains("·小", StringComparison.Ordinal) || name.EndsWith("小", StringComparison.Ordinal))
-            return 10;
-        return 1;
-    }
-
     /// <summary>绘卷分项行：图标优先（小/中/大有本地图标），无图标回退短文本。</summary>
     public sealed class ScrollPartVm
     {
@@ -424,8 +411,11 @@ public partial class DashboardPage : UserControl
             var date = entry.Dates[0];
             var day = await OasResourceApi.GetResourceDayAsync(
                 entry.Config, date, entry.RoleKey);
+            // ★ 只统计碎片：『绘卷积分』（5 条 10/10/12/10/10）是跨期不变的
+            //   陈旧 currency 遗留（实测 10-19 → 11-11 数值恒定，跨 84→85 期），
+            //   与本期无关；碎片才是可上交的库存
             var scrollItems = (day?.Items ?? [])
-                .Where(i => i.Name.Contains("绘卷", StringComparison.Ordinal) && i.Count > 0)
+                .Where(i => i.Name.Contains("绘卷碎片", StringComparison.Ordinal) && i.Count > 0)
                 .ToList();
             if (scrollItems.Count == 0)
             {
@@ -437,9 +427,8 @@ public partial class DashboardPage : UserControl
                 ScrollBadge.Visibility = Visibility.Collapsed;
                 return;
             }
-            // 加权积分：碎片按分值折算，积分本身 1:1
-            var total = scrollItems.Sum(i => i.Count * ScrollWeight(i.Name));
-            var delta = scrollItems.Sum(i => (i.Delta ?? 0) * ScrollWeight(i.Name));
+            var total = scrollItems.Sum(i => i.Count);
+            var delta = scrollItems.Sum(i => i.Delta ?? 0);
             ScrollTotalText.Text = FormatCount(total);
             ScrollDeltaText.Text = delta == 0 ? "" : FormatDelta(delta);
             ScrollDeltaText.Foreground = new SolidColorBrush(delta >= 0
@@ -450,22 +439,14 @@ public partial class DashboardPage : UserControl
             // 短标签取 · 后缀（无 · 用原名），每行 数量 + 今日增量
             var groups = scrollItems
                 .GroupBy(i => i.Name)
-                .Select(g =>
+                .Select(g => new
                 {
-                    var weight = ScrollWeight(g.Key);
-                    var count = g.Sum(x => x.Count);
-                    var delta = g.Sum(x => x.Delta ?? 0);
-                    return new
-                    {
-                        Name = g.Key,
-                        Icon = LoadIcon(g.First().Icon),
-                        Count = count,
-                        Delta = delta,
-                        Points = count * weight,
-                        DeltaPoints = delta * weight,
-                    };
+                    Name = g.Key,
+                    Icon = LoadIcon(g.First().Icon),
+                    Count = g.Sum(x => x.Count),
+                    Delta = g.Sum(x => x.Delta ?? 0),
                 })
-                .OrderByDescending(x => x.Points)
+                .OrderByDescending(x => x.Count)
                 .ToList();
 
             ScrollParts.ItemsSource = groups.Select(g =>
@@ -477,8 +458,8 @@ public partial class DashboardPage : UserControl
                     IconVisibility = hasIcon ? Visibility.Visible : Visibility.Collapsed,
                     Label = ShortLabel(g.Name),
                     LabelVisibility = hasIcon ? Visibility.Collapsed : Visibility.Visible,
-                    CountText = FormatCount(g.Points),
-                    DeltaText = g.DeltaPoints == 0 ? "" : FormatDelta(g.DeltaPoints),
+                    CountText = FormatCount(g.Count),
+                    DeltaText = g.Delta == 0 ? "" : FormatDelta(g.Delta),
                     DeltaBrush = new SolidColorBrush(g.Delta >= 0
                         ? Color.FromRgb(0x16, 0xA3, 0x4A)
                         : Color.FromRgb(0xDC, 0x45, 0x45)),
