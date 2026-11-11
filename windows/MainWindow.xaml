@@ -53,6 +53,8 @@
                                        Icon="{ui:SymbolIcon SlideText24}" />
                 <ui:NavigationViewItem Content="错误记录" TargetPageType="{x:Type views:ErrorPage}"
                                        Icon="{ui:SymbolIcon ErrorCircle24}" />
+                <ui:NavigationViewItem Content="设备管理" TargetPageType="{x:Type views:DevicePage}"
+                                       Icon="{ui:SymbolIcon PlugConnected24}" />
                 <ui:NavigationViewItem Content="配置传输" TargetPageType="{x:Type views:TransferPage}"
                                        Icon="{ui:SymbolIcon ArrowSwap24}" />
             </ui:NavigationView.MenuItems>

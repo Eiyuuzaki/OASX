@@ -547,13 +547,26 @@ public partial class DashboardPage : UserControl
             // 今日待执行 = pending + waiting
             TodayPendingText.Text = (sched.Pending.Count + sched.Waiting.Count).ToString("N0");
 
-            // 任务队列：pending + waiting 取前 5
-            var items = sched.Pending.Concat(sched.Waiting).ToList();
-            QueueList.ItemsSource = items.Take(5).Select(q => new QueueVm
+            // 任务队列：当前任务（首行标状态）+ pending + waiting，取前 5
+            // 后端语义 running=pending_task[0]、pending=[1:]——单任务时
+            // pending+waiting 恒空，只显示它们会造成"队列永远空"的误解
+            var items = new List<QueueVm>();
+            if (sched.Running is { } cur && cur.Name.Length > 0)
+            {
+                items.Add(new QueueVm
+                {
+                    Name = I18nMenu.Tr(cur.Name),
+                    NextRunLabel = _schedulerRunning
+                        ? (cur.NextRun.Length > 0 ? $"计划 {cur.NextRun[Min(10, cur.NextRun.Length)..]}" : "执行中")
+                        : (cur.NextRun.Length > 0 ? $"待执行 {cur.NextRun[Min(10, cur.NextRun.Length)..]}" : ""),
+                });
+            }
+            items.AddRange(sched.Pending.Concat(sched.Waiting).Select(q => new QueueVm
             {
                 Name = I18nMenu.Tr(q.Name),
                 NextRunLabel = q.NextRun.Length > 0 ? $"下次 {q.NextRun[Min(10, q.NextRun.Length)..]}" : "",
-            }).ToList();
+            }));
+            QueueList.ItemsSource = items.Take(5);
             QueueEmptyText.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
 
             // 当前执行任务（running 语义 = 下一个要跑的；显示与否看调度器状态）

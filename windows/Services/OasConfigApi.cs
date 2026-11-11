@@ -1,4 +1,6 @@
+using System.Net.Http;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -79,4 +81,50 @@ public static class OasDeviceApi
             $"/device/current?config_name={Uri.EscapeDataString(config)}",
             JsonOptions, cts.Token);
     }
+
+    public record DeviceInstance(
+        string InstanceName, string DisplayName, string Serial,
+        int? AdbPort, bool Online, string? Model, string? Brand,
+        bool? Root, string? Emulator);
+
+    public record DeviceInstancesResponse(
+        List<DeviceInstance> Instances, List<string> AdbDevices);
+
+    /// <summary>GET /device/instances → 本机实例列表（MuMu 枚举 + adb 兜底）。</summary>
+    public static async Task<DeviceInstancesResponse?> ListInstancesAsync()
+    {
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+            return await OasApi.Http.GetFromJsonAsync<DeviceInstancesResponse>(
+                "/device/instances", JsonOptions, cts.Token);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>PUT /device/current → 切换配置的 serial（只改配置，不重启脚本）。</summary>
+    public static async Task<(bool Ok, string Body)> SwitchAsync(
+        string configName, string serial)
+    {
+        try
+        {
+            var body = JsonSerializer.Serialize(
+                new SwitchBody(configName, serial), JsonOptions);
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+            var res = await OasApi.Http.PutAsync(
+                "/device/current",
+                new StringContent(body, Encoding.UTF8, "application/json"),
+                cts.Token);
+            return (res.IsSuccessStatusCode, await res.Content.ReadAsStringAsync(cts.Token));
+        }
+        catch (Exception ex)
+        {
+            return (false, ex.Message);
+        }
+    }
+
+    private record SwitchBody(string ConfigName, string Serial);
 }
