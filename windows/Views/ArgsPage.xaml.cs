@@ -126,6 +126,9 @@ public partial class ArgsPage : Page
             {
                 box.ToolTip = desc;
             }
+            // ★ 必须注册 _saveMap：布尔分支在此提前 return，
+            //   漏注册会导致 SaveFor 静默跳过（勾选永远保存不上）
+            _saveMap[check] = (group, name, type);
             return box;
         }
 
