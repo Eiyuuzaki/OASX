@@ -28,13 +28,15 @@ public partial class ArgsPage : Page
         InitializeComponent();
         _script = script;
         _task = task;
-        TitleText.Text = $"{_script} / {I18nMenu.Tr(_task)} 参数";
+        TitleText.Text = $"{_script} / {OasI18n.Tr(_task)} 参数";
         _ = LoadArgsAsync();
     }
 
     private async Task LoadArgsAsync()
     {
         StatusText.Text = "加载中…";
+        // 翻译表只拉一次；后端旧版本没有该接口时静默退回本地表
+        await OasI18n.EnsureLoadedAsync();
         GroupsPanel.Children.Clear();
         _saveMap.Clear();
         try
@@ -60,13 +62,13 @@ public partial class ArgsPage : Page
             var name = arg.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
             // ⚠️ i18n 键是 API 的 name（serial='serial'），不是 title（"Serial"）：
             // Tr(name) → 模拟器 Serial；title 仅作回退
-            var title = I18nMenu.Tr(name) != name ? I18nMenu.Tr(name)
+            var title = OasI18n.Tr(name) != name ? OasI18n.Tr(name)
                 : (arg.TryGetProperty("title", out var t) && !string.IsNullOrEmpty(t.GetString())
-                    ? t.GetString()! : name);
+                    ? OasI18n.Tr(t.GetString()!) : name);
             var type = arg.TryGetProperty("type", out var ty) ? ty.GetString() ?? "string" : "string";
             var value = arg.TryGetProperty("value", out var v) ? JsonToString(v) : "";
             var desc = arg.TryGetProperty("description", out var de) ? de.GetString() ?? "" : "";
-            desc = I18nMenu.Tr(desc);
+            desc = OasI18n.Tr(desc);
             var enumOptions = arg.TryGetProperty("enumEnum", out var ee) && ee.ValueKind == JsonValueKind.Array
                 ? ee.EnumerateArray().Select(x => x.GetString() ?? "").ToList()
                 : null;
@@ -89,7 +91,7 @@ public partial class ArgsPage : Page
                     new TextBlock
                     {
                         // 参数组名也是 i18n 键（device→模拟器设置）
-                        Text = $"{I18nMenu.Tr(group)}（{args.Count}）",
+                        Text = $"{OasI18n.Tr(group)}（{args.Count}）",
                         FontSize = 14,
                         FontWeight = FontWeights.SemiBold,
                         FontFamily = (FontFamily)Application.Current
@@ -203,20 +205,32 @@ public partial class ArgsPage : Page
         return box;
     }
 
+    /// <summary>枚举下拉项：显示翻译，保存原始枚举值。</summary>
+    private sealed class EnumOptionVm
+    {
+        public string Value { get; init; } = "";
+        public string Display { get; init; } = "";
+        public override string ToString() => Display;
+    }
+
     private Control BuildEnumEditor(string value, List<string> options)
     {
+        var items = options
+            .Select(v => new EnumOptionVm { Value = v, Display = OasI18n.Tr(v) })
+            .ToList();
         var combo = new System.Windows.Controls.ComboBox
         {
             MinWidth = 140,
             HorizontalAlignment = HorizontalAlignment.Stretch,
-            ItemsSource = options,
+            ItemsSource = items,
         };
-        combo.SelectedIndex = options.IndexOf(value);
+        combo.SelectedItem = items.FirstOrDefault(x => x.Value == value)
+                             ?? items.FirstOrDefault();
         combo.SelectionChanged += async (_, _) =>
         {
-            if (combo.SelectedItem is string v && _saveMap.TryGetValue(combo, out var meta))
+            if (combo.SelectedItem is EnumOptionVm v && _saveMap.TryGetValue(combo, out var meta))
             {
-                await SaveArgAsync(meta.Group, meta.Name, meta.Type, v);
+                await SaveArgAsync(meta.Group, meta.Name, meta.Type, v.Value);
             }
         };
         return combo;
