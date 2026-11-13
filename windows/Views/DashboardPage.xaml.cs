@@ -65,6 +65,9 @@ public partial class DashboardPage : UserControl
             {
                 await RefreshEnvironmentAsync();
                 await LoadFosterDashAsync();
+                // 绘卷徽标也要随周期刷新：上次刷新时游戏可能在战斗/读条，
+                // /huijuan 读不到内存就会把徽标隐藏，而采样数据随后就恢复了。
+                await LoadScrollBadgeAsync(GlobalAccountContext.Instance.Current);
             };
             _timer.Start();
             _ = LoadFosterDashAsync();
@@ -371,8 +374,13 @@ public partial class DashboardPage : UserControl
 
     /// <summary>绘卷积分徽标：仅当日采样含绘卷数据时显示（活动期标记）。
     /// 非活动期（最新采样非今日 / 无绘卷项）自动隐藏。</summary>
-    private async Task LoadScrollBadgeAsync(AccountEntry entry)
+    private async Task LoadScrollBadgeAsync(AccountEntry? entry)
     {
+        ScrollBadge.Visibility = Visibility.Collapsed;
+        if (entry is null)
+        {
+            return;
+        }
         try
         {
             if (entry.Dates.Count == 0)
