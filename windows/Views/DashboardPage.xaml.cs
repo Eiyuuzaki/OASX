@@ -360,6 +360,20 @@ public partial class DashboardPage : UserControl
         await RefreshTodayStatsAsync(entry.Config);
     }
 
+    /// <summary>绘卷碎片贡献分值：大=100 / 中=20 / 小=10，其余 1:1。
+    /// 上交后按此折算成分，用于"剩余"的估算展示。</summary>
+    private static int ScrollWeight(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return 1;
+        if (name.Contains("·大", StringComparison.Ordinal) || name.EndsWith("大", StringComparison.Ordinal))
+            return 100;
+        if (name.Contains("·中", StringComparison.Ordinal) || name.EndsWith("中", StringComparison.Ordinal))
+            return 20;
+        if (name.Contains("·小", StringComparison.Ordinal) || name.EndsWith("小", StringComparison.Ordinal))
+            return 10;
+        return 1;
+    }
+
     /// <summary>绘卷分项行：图标优先（小/中/大有本地图标），无图标回退短文本。</summary>
     public sealed class ScrollPartVm
     {
@@ -418,18 +432,26 @@ public partial class DashboardPage : UserControl
             }
             var date = entry.Dates[0];
 
-            // 总分：本期五卷已贡献积分合计（/huijuan self_scores）
+            // 已投总分：本期五卷已贡献积分合计（/huijuan self_scores）
+            // 剩余：未上交碎片按 大100/中20/小10 折算（上交即变分）
             long myScore = 0;
+            long remainScore = 0;
             try
             {
                 var huijuan = await OasHuijuanApi.GetBoardAsync(entry.Config);
                 myScore = huijuan?.Scrolls.Sum(x => x.SelfScore) ?? 0;
+                remainScore = (huijuan?.Fragments ?? [])
+                    .Where(f => f.Name.Contains("绘卷碎片", StringComparison.Ordinal))
+                    .Sum(f => f.Count * ScrollWeight(f.Name));
                 ScrollScorePanel.Visibility = Visibility.Visible;
                 ScrollScoreText.Text = FormatCount(myScore);
+                ScrollRemainPanel.Visibility = Visibility.Visible;
+                ScrollRemainText.Text = FormatCount(remainScore);
             }
             catch
             {
                 ScrollScorePanel.Visibility = Visibility.Collapsed;
+                ScrollRemainPanel.Visibility = Visibility.Collapsed;
             }
 
             var day = await OasResourceApi.GetResourceDayAsync(

@@ -228,6 +228,20 @@
                             <Rectangle Width="1" Height="24" Margin="16,0"
                                        Fill="{DynamicResource OasBorderBrush}"
                                        x:Name="ScrollSeparator2" />
+                            <!-- 剩余：未上交碎片按 大100/中20/小10 折算的积分 -->
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                                        x:Name="ScrollRemainPanel" Visibility="Collapsed">
+                                <TextBlock Text="剩余" FontSize="11" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource OasTextSecondaryBrush}" />
+                                <TextBlock x:Name="ScrollRemainText" Text="—" FontSize="18"
+                                           FontWeight="SemiBold" VerticalAlignment="Center"
+                                           Margin="8,0,0,0"
+                                           FontFamily="{StaticResource AppFontFamily}"
+                                           Foreground="{DynamicResource OasAccentBrush}" />
+                            </StackPanel>
+                            <Rectangle Width="1" Height="24" Margin="16,0"
+                                       Fill="{DynamicResource OasBorderBrush}"
+                                       x:Name="ScrollSeparator3" />
                             <ItemsControl x:Name="ScrollParts" VerticalAlignment="Center">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
